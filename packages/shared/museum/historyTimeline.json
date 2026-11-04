@@ -1,0 +1,82 @@
+[
+  {
+    "id": "history-0",
+    "period": "1878–1902",
+    "title": "Khởi nguồn Newton Heath",
+    "description": "Thành lập năm 1878; đổi tên thành Manchester United năm 1902.",
+    "x": 3200,
+    "y": 610,
+    "source": "https://www.manutd.com/en/club/history/history-by-decade",
+    "lastVerifiedAt": "2026-11-04"
+  },
+  {
+    "id": "history-1",
+    "period": "1902–1931",
+    "title": "Những vinh quang đầu tiên",
+    "description": "Vô địch quốc gia năm 1908 và 1911; Old Trafford mở cửa năm 1910.",
+    "x": 3200,
+    "y": 915,
+    "source": "https://www.manutd.com/en/club/history/history-by-decade",
+    "lastVerifiedAt": "2026-11-04"
+  },
+  {
+    "id": "history-2",
+    "period": "1932–1945",
+    "title": "Qua những năm gian khó",
+    "description": "Vô địch Second Division năm 1936; bóng đá bị gián đoạn bởi chiến tranh.",
+    "x": 3200,
+    "y": 1220,
+    "source": "https://www.manutd.com/en/club/history/history-by-decade",
+    "lastVerifiedAt": "2026-11-04"
+  },
+  {
+    "id": "history-3",
+    "period": "1945–1969",
+    "title": "Thời đại Sir Matt Busby",
+    "description": "Tái thiết sau Munich 1958; vô địch châu Âu năm 1968.",
+    "x": 3200,
+    "y": 1525,
+    "source": "https://www.manutd.com/en/club/history/history-by-decade",
+    "lastVerifiedAt": "2026-11-04"
+  },
+  {
+    "id": "history-4",
+    "period": "1970–1986",
+    "title": "Chuyển giao thế hệ",
+    "description": "Trở lại hạng cao nhất năm 1975; FA Cup 1977, 1983 và 1985.",
+    "x": 3200,
+    "y": 1830,
+    "source": "https://www.manutd.com/en/club/history/history-by-decade",
+    "lastVerifiedAt": "2026-11-04"
+  },
+  {
+    "id": "history-5",
+    "period": "1986–2013",
+    "title": "Kỷ nguyên Sir Alex",
+    "description": "13 chức vô địch Premier League; cú ăn ba năm 1999.",
+    "x": 3200,
+    "y": 2135,
+    "source": "https://www.manutd.com/en/club/history/history-by-decade",
+    "lastVerifiedAt": "2026-11-04"
+  },
+  {
+    "id": "history-6",
+    "period": "2013–2026",
+    "title": "Những chương tiếp nối",
+    "description": "FA Cup 2016, 2024; Europa League 2017; League Cup 2017, 2023.",
+    "x": 3200,
+    "y": 2440,
+    "source": "https://www.manutd.com/en/club/history/history-by-decade",
+    "lastVerifiedAt": "2026-11-04"
+  },
+  {
+    "id": "history-7",
+    "period": "2026 →",
+    "title": "Chương Michael Carrick",
+    "description": "Carrick trở thành HLV trưởng tháng 1/2026; hợp đồng đến 2028.",
+    "x": 3200,
+    "y": 2745,
+    "source": "https://www.manutd.com/en/news/manchester-united-confirm-michael-carrick-coaching-staff-2026",
+    "lastVerifiedAt": "2026-11-04"
+  }
+]

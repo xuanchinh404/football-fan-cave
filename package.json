@@ -1,0 +1,31 @@
+{
+  "name": "hoi-vao-hang",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n WEB,SERVER -c cyan,magenta \"npm run dev -w apps/web\" \"npm run dev -w apps/server\"",
+    "build": "npm run build -w apps/web && npm run build -w apps/server",
+    "test": "tsx --test tests/*.test.ts",
+    "test:e2e": "playwright test tests/e2e/world3d.spec.ts",
+    "start": "npm run start -w apps/server",
+    "format": "prettier --write --ignore-unknown apps packages tests docs assets *.ts *.json *.yml *.md",
+    "validate:museum": "tsx scripts/validate-museum.ts",
+    "test:e2e:legacy": "playwright test tests/e2e/game.spec.ts tests/e2e/red-cave.spec.ts tests/e2e/museum.spec.ts",
+    "test:auth": "tsx scripts/test-auth.ts",
+    "validate:assets": "node scripts/validate-assets.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.2.0",
+    "prettier": "^3.6.2",
+    "sharp": "^0.35.5",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

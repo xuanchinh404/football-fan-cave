@@ -1,0 +1,68 @@
+.three-canvas canvas {
+  touch-action: none;
+  outline: none;
+}
+.three-controls {
+  position: absolute;
+  bottom: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f7ead0;
+  background: #1b2939cc;
+  border: 1px solid #cabd8544;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 10px;
+  white-space: normal;
+  max-width: 470px;
+  text-align: center;
+  pointer-events: none;
+}
+.three-controls b {
+  color: #f4ce7e;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+}
+.three-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  background: #263241;
+  color: #fff0cd;
+  padding: 40px;
+  z-index: 50;
+  text-align: center;
+}
+/* The React HUD stays intact; screen-space art signposts no longer stand in for world objects. */
+.app-shell:has(.three-canvas) .world-title,
+.app-shell:has(.three-canvas) .explore-note,
+.app-shell:has(.three-canvas) .world-signposts {
+  display: none;
+}
+.app-shell:has(.three-canvas) .world-vignette {
+  box-shadow: none;
+  background: linear-gradient(0deg, #17213733, transparent 20%);
+}
+.app-shell:has(.three-canvas) .area-card {
+  max-width: 430px;
+}
+@media (max-width: 700px) {
+  .three-controls {
+    bottom: 92px;
+    max-width: calc(100% - 28px);
+    padding: 6px 9px;
+    font-size: 9px;
+    white-space: normal;
+    text-align: center;
+  }
+  .three-controls span {
+    max-width: 220px;
+  }
+}

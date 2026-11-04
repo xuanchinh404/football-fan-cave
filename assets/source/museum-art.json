@@ -1,0 +1,9 @@
+{
+  "createdAt": "2026-11-04",
+  "tool": "image_gen",
+  "source": "museum-ferguson-bust.png",
+  "runtime": "apps/web/public/art/museum-ferguson-bust.png",
+  "description": "Original AI-generated bronze tribute bust of Sir Alex Ferguson with folded arms, glasses, dark red marble pedestal and blank plaque; warm gold and crimson lighting; transparent background. Not copied from the real Old Trafford statue or an existing photograph.",
+  "prompt": "Isolated transparent game sprite for a Phaser fantasy football museum. Original bronze tribute bust of Sir Alex Ferguson, smiling, glasses, suit, arms folded, three quarters toward right. Waist-up sculpture on dark red marble plinth with brass trim and blank plaque. Original sculptural interpretation; do not replicate a real statue or existing photograph. Detailed bronze patina, cinematic hand-painted polished 3D game art, warm golden highlights and subtle crimson rim lighting. Full object, transparent alpha, no text, logos, watermark, floor or setting.",
+  "rightsNote": "Generated project artwork, not an official club photograph or licensed club asset. No third-party image pixels were provided to generation. Publicity and trademark clearance for commercial distribution has not been assessed."
+}

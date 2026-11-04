@@ -1,0 +1,160 @@
+.museum-breadcrumb {
+  position: absolute;
+  left: 345px;
+  top: 25px;
+  padding: 11px 20px;
+  border: 1px solid #b98b63;
+  border-radius: 25px;
+  background: linear-gradient(#33303b, #151421);
+  color: #fff0dc;
+  font-size: 13px;
+  box-shadow: 0 3px 15px #0008;
+}
+.museum-breadcrumb span {
+  padding: 0 14px;
+  color: #f1b45c;
+}
+.museum-location {
+  position: absolute;
+  bottom: 150px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 2px 8px #000;
+}
+.museum-location span {
+  display: block;
+  color: #f6bd71;
+  letter-spacing: 5px;
+  font-size: 9px;
+}
+.museum-location strong {
+  display: block;
+  color: #ffe7b9;
+  font-family: Georgia, serif;
+  font-size: 19px;
+  margin: 6px;
+}
+.museum-location small {
+  color: #bca99b;
+  font-size: 10px;
+}
+.museum-actions {
+  position: absolute;
+  right: 22px;
+  bottom: 175px;
+  width: 210px;
+  display: grid;
+  gap: 7px;
+}
+.museum-actions button {
+  color: #ffe8b6;
+  background: linear-gradient(110deg, #582532, #271622);
+  border: 1px solid #b58046;
+  border-radius: 5px;
+  padding: 10px 12px;
+  text-align: left;
+  box-shadow: 0 3px 10px #0007;
+}
+.museum-actions p {
+  font-size: 10px;
+  color: #d9b988;
+  text-align: center;
+}
+.museum-shell .world-title,
+.museum-shell .explore-note,
+.museum-shell .world-signposts {
+  display: none;
+}
+.museum-shell .area-card h1 {
+  font-size: 17px;
+}
+.museum-shell .map-widget {
+  width: 175px;
+}
+.museum-exhibit {
+  white-space: pre-line;
+  line-height: 1.9;
+  color: #dac4ab;
+  max-height: 46vh;
+  overflow: auto;
+}
+.museum-exhibit-mark {
+  font-size: 56px;
+  color: #f3bf6b;
+  margin: 10px 0;
+}
+.museum-source {
+  display: block;
+  color: #dba759;
+  font-size: 12px;
+  margin: 18px 0;
+}
+.museum-shell .world-vignette {
+  box-shadow: inset 0 0 100px #16071766;
+}
+.museum-shell .map-large {
+  max-height: 48vh;
+}
+.museum-shell .map-large svg {
+  max-height: 48vh;
+}
+.museum-map {
+  background: #29101e;
+}
+.museum-shell .chat-panel {
+  max-width: 320px;
+}
+.museum-shell .interaction-prompt {
+  z-index: 30;
+}
+@media (max-width: 900px) {
+  .museum-breadcrumb {
+    left: 20px;
+    top: 105px;
+    font-size: 10px;
+  }
+  .museum-actions {
+    width: 170px;
+    right: 12px;
+    bottom: 210px;
+  }
+  .museum-location {
+    bottom: 150px;
+    width: 250px;
+  }
+}
+@media (max-width: 640px) {
+  .museum-breadcrumb {
+    top: 92px;
+    left: 12px;
+    padding: 7px 10px;
+    font-size: 9px;
+  }
+  .museum-actions {
+    right: 10px;
+    bottom: 280px;
+    width: 135px;
+    gap: 4px;
+  }
+  .museum-actions button {
+    font-size: 10px;
+    padding: 7px;
+  }
+  .museum-actions p {
+    font-size: 8px;
+  }
+  .museum-location {
+    bottom: 164px;
+  }
+  .museum-location strong {
+    font-size: 14px;
+  }
+  .museum-shell .map-widget {
+    width: 105px;
+  }
+  .museum-shell .area-card h1 {
+    font-size: 12px;
+  }
+}

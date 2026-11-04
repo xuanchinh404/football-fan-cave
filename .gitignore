@@ -1,0 +1,10 @@
+node_modules/
+apps/web/dist/
+.env
+.env.*
+!.env.example
+playwright-report/
+test-results/
+.DS_Store
+
+apps/web/dist-grand-test/

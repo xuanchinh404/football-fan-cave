@@ -1,0 +1,368 @@
+import {
+  CAVES,
+  GRAND_PLACES,
+  GRAND_SOLIDS,
+  GRAND_ORIGIN,
+  GRAND_SCALE,
+  grandWire,
+  grandMetres,
+  grandHeight,
+  grandWalkable,
+  type CaveId,
+} from './grandHall';
+import { HALL, exhibits, hallObstacles } from './museum/index';
+import { RED_CAVE } from './cave';
+export type TeamId = 'united' | 'arsenal' | 'liverpool' | 'chelsea' | 'city' | 'common';
+export type MapId = 'plaza' | 'hall-of-legends' | TeamId | CaveId;
+export type Point = { x: number; y: number };
+export type Profile = { nickname: string; team: TeamId; avatar: number };
+export type Player = Profile &
+  Point & {
+    id: string;
+    map: MapId;
+    direction: number;
+    moving: boolean;
+    height?: number;
+    seated?: boolean;
+  };
+export type ChatMessage = {
+  id: string;
+  playerId: string;
+  nickname: string;
+  team: TeamId;
+  text: string;
+  time: number;
+  system?: boolean;
+  map?: MapId;
+  channel?: 'room' | 'nearby';
+};
+export const TEAMS: {
+  id: TeamId;
+  name: string;
+  short: string;
+  color: string;
+  icon: string;
+  tagline: string;
+}[] = [
+  {
+    id: 'united',
+    name: 'Hang Quỷ Đỏ',
+    short: 'Quỷ Đỏ',
+    color: '#ff493b',
+    icon: '♆',
+    tagline: 'Phong độ là nhất thời. Tình yêu là mãi mãi.',
+  },
+  {
+    id: 'arsenal',
+    name: 'Hang Pháo Thủ',
+    short: 'Pháo Thủ',
+    color: '#ff6c37',
+    icon: '➶',
+    tagline: 'Giữ lửa đam mê, chờ ngày nâng cúp.',
+  },
+  {
+    id: 'liverpool',
+    name: 'Hang The Kop',
+    short: 'The Kop',
+    color: '#ff457b',
+    icon: '♜',
+    tagline: 'Bạn sẽ không bao giờ đi một mình.',
+  },
+  {
+    id: 'chelsea',
+    name: 'Hang The Blues',
+    short: 'The Blues',
+    color: '#4088ff',
+    icon: '♞',
+    tagline: 'Sắc xanh không bao giờ phai.',
+  },
+  {
+    id: 'city',
+    name: 'Hang Citizens',
+    short: 'Citizens',
+    color: '#38e4f5',
+    icon: '✦',
+    tagline: 'Bầu trời xanh, câu chuyện mới.',
+  },
+  {
+    id: 'common',
+    name: 'Trung lập',
+    short: 'Trung lập',
+    color: '#c470ff',
+    icon: '◈',
+    tagline: 'Khác màu áo, chung nhịp đập.',
+  },
+];
+export const MAP_SIZE = { width: 6000, height: 5000 };
+export const SPAWN = grandWire(0, 27);
+export const SPEED = 220;
+export const RUN_SPEED=330;
+export type Interaction = Point & {
+  id: string;
+  label: string;
+  kind:
+    | 'portal'
+    | 'shop'
+    | 'score'
+    | 'support'
+    | 'event'
+    | 'seat'
+    | 'statue'
+    | 'board'
+    | 'passage'
+    | 'photo'
+    | 'exhibit'
+    | 'minigame'
+    | 'wallet'
+    | 'ranking';
+  target?: MapId;
+  destination?: Point;
+};
+export const PORTALS: Interaction[] = CAVES.map((c) => ({
+  ...grandWire(c.x, c.z + 0.9),
+  id: c.id,
+  label: c.name,
+  kind: 'portal',
+  target: c.id,
+}));
+export type Rect = { x: number; y: number; w: number; h: number };
+export function interactions(map: MapId): Interaction[] {
+  if (map === 'hall-of-legends')
+    return [
+      ...exhibits.map((e) => ({
+        id: e.id,
+        label: e.type === 'trophy' ? 'Xem danh hiệu · ' + e.heading : 'Khám phá · ' + e.heading,
+        x: e.x,
+        y: e.y + (e.type === 'manager' ? 85 : 65),
+        kind: 'exhibit' as const,
+      })),
+      {
+        id: 'hall-exit',
+        x: 1800,
+        y: 3730,
+        label: 'Quay về Hang Quỷ Đỏ',
+        kind: 'portal',
+        target: 'united',
+      },
+      { id: 'hall-photo', x: 2450, y: 3630, label: 'Chụp ảnh kỷ niệm', kind: 'photo' },
+    ];
+  if (map === 'united')
+    return [
+      {
+        id: 'hall-entry',
+        x: 2048,
+        y: 1100,
+        label: 'Phòng Truyền Thống',
+        kind: 'portal',
+        target: 'hall-of-legends',
+      },
+      {
+        x: 2048,
+        y: 2750,
+        id: 'exit',
+        label: 'Quay về quảng trường',
+        kind: 'portal',
+        target: 'plaza',
+      },
+      { x: 3190, y: 1810, id: 'shop', label: 'Mở Quầy Cà Khịa', kind: 'shop' },
+      { x: 920, y: 1320, id: 'score', label: 'Thông tin trận đấu · DEMO', kind: 'score' },
+      { x: 2048, y: 1810, id: 'statue', label: 'Khám phá quả bóng vàng', kind: 'statue' },
+      { x: 1560, y: 2000, id: 'board', label: 'Bảng hoạt động trong hang', kind: 'board' },
+      {
+        x: 1040,
+        y: 720,
+        id: 'fun',
+        label: 'Vào khu giải trí',
+        kind: 'passage',
+        destination: { x: 840, y: 540 },
+      },
+      {
+        x: 840,
+        y: 640,
+        id: 'fun-back',
+        label: 'Trở lại sảnh chính',
+        kind: 'passage',
+        destination: { x: 1040, y: 910 },
+      },
+      { x: 700, y: 490, id: 'photo', label: 'Góc chụp ảnh · tạo dáng', kind: 'photo' },
+      {
+        x: 3100,
+        y: 710,
+        id: 'event-gate',
+        label: 'Vào khu sự kiện',
+        kind: 'passage',
+        destination: { x: 3260, y: 530 },
+      },
+      {
+        x: 3260,
+        y: 640,
+        id: 'event-back',
+        label: 'Trở lại sảnh chính',
+        kind: 'passage',
+        destination: { x: 3100, y: 900 },
+      },
+      { x: 3460, y: 530, id: 'event', label: 'Lịch hoạt động cộng đồng', kind: 'event' },
+      ...RED_CAVE.seats.map((p, i) => ({
+        ...p,
+        id: `seat-${i}`,
+        label: 'Ngồi / đứng dậy',
+        kind: 'seat' as const,
+      })),
+    ];
+  return map === 'plaza'
+    ? [
+        ...PORTALS,
+        ...GRAND_PLACES.map((p) => ({
+          ...grandWire(p.x, p.z),
+          id: p.id,
+          label: p.label,
+          kind: p.kind,
+        })),
+      ]
+    : [
+        { x: 1200, y: 1510, id: 'exit', label: 'Về quảng trường', kind: 'portal', target: 'plaza' },
+        { x: 1630, y: 860, id: 'shop', label: 'Quầy Cà Khịa', kind: 'shop' },
+        { x: 770, y: 850, id: 'score', label: 'Bảng tin cộng đồng', kind: 'score' },
+        { x: 1200, y: 460, id: 'event', label: 'Phòng truyền thống', kind: 'event' },
+      ];
+}
+export function spawn(map: MapId): Point {
+  return map === 'hall-of-legends'
+    ? { ...HALL.spawn }
+    : map === 'united'
+      ? { ...RED_CAVE.spawn }
+      : map === 'plaza'
+        ? { ...SPAWN }
+        : { x: 1200, y: 1370 };
+}
+export function obstacles(map: MapId): Rect[] {
+  if (map === 'hall-of-legends') return hallObstacles;
+  if (map === 'united') return RED_CAVE.obstacles.map((o) => ({ ...o }));
+  return map === 'plaza'
+    ? GRAND_SOLIDS.map((o) => ({
+        ...grandWire(o.x - o.w / 2, o.z - o.d / 2),
+        w: o.w / GRAND_SCALE,
+        h: o.d / GRAND_SCALE,
+      }))
+    : [
+        { x: 1090, y: 430, w: 220, h: 145 },
+        { x: 690, y: 735, w: 180, h: 80 },
+        { x: 1540, y: 730, w: 200, h: 90 },
+        { x: 680, y: 1040, w: 200, h: 70 },
+        { x: 1540, y: 1040, w: 200, h: 70 },
+      ];
+}
+export function walkable(map: MapId, x: number, y: number) {
+  if (map === 'plaza') {
+    const p = grandMetres({ x, y });
+    return grandWalkable(p.x, p.z);
+  }
+  const b =
+    map === 'hall-of-legends'
+      ? HALL.bounds
+      : map === 'united'
+        ? RED_CAVE.bounds
+        : { l: 580, r: 1820, t: 420, b: 1550 };
+  return (
+    x >= b.l &&
+    x <= b.r &&
+    y >= b.t &&
+    y <= b.b &&
+    !obstacles(map).some(
+      (o) => x > o.x - 13 && x < o.x + o.w + 13 && y > o.y - 8 && y < o.y + o.h + 8,
+    )
+  );
+}
+export function move(map: MapId, point: Point, dx: number, dy: number): Point {
+  let { x, y } = point;
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 8));
+  for (let i = 0; i < steps; i++) {
+    if (walkable(map, x + dx / steps, y)) x += dx / steps;
+    if (walkable(map, x, y + dy / steps)) y += dy / steps;
+  }
+  return { x, y };
+}
+export function clearPath(map: MapId, a: Point, b: Point) {
+  const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8));
+  let previousHeight = groundHeight(map, a);
+  for (let i = 1; i <= steps; i++) {
+    const point = { x: a.x + ((b.x - a.x) * i) / steps, y: a.y + ((b.y - a.y) * i) / steps };
+    const h = groundHeight(map, point);
+    if (h === undefined || previousHeight === undefined || Math.abs(h - previousHeight) > 0.25)
+      return false;
+    previousHeight = h;
+    if (!walkable(map, a.x + ((b.x - a.x) * i) / steps, a.y + ((b.y - a.y) * i) / steps))
+      return false;
+  }
+  return true;
+}
+export function near(map: MapId, p: Point) {
+  let closest: Interaction | undefined;
+  let distance = 125;
+  for (const item of interactions(map)) {
+    const d = Math.hypot(item.x - p.x, item.y - p.y);
+    if (d < distance) {
+      closest = item;
+      distance = d;
+    }
+  }
+  return closest;
+}
+export function validMap(value: unknown): value is MapId {
+  return (
+    value === 'plaza' ||
+    value === 'hall-of-legends' ||
+    TEAMS.some((t) => t.id === value) ||
+    CAVES.some((c) => c.id === value)
+  );
+}
+export function cleanText(value: unknown, max = 180): string {
+  return typeof value === 'string'
+    ? value
+        .replace(/[\u0000-\u001f<>]/g, '')
+        .trim()
+        .slice(0, max)
+    : '';
+}
+export function validProfile(value: any): Profile | null {
+  if (!value || !TEAMS.some((t) => t.id === value.team)) return null;
+  const nickname = cleanText(value.nickname, 20);
+  if (nickname.length < 2) return null;
+  return {
+    nickname,
+    team: value.team,
+    avatar: Number.isInteger(value.avatar) ? Math.max(0, Math.min(3, value.avatar)) : 0,
+  };
+}
+export const EMOJIS = ['⚽', '😂', '🔥', '❤️', '🏆', '🍅'];
+export const STICKERS = [
+  'Phong độ là nhất thời 😎',
+  'Hẹn mùa sau nhé! 😂',
+  'Vào hang có anh em! ❤️',
+  'Trận sau mình làm lại ⚽',
+];
+
+export function mapSize(map: MapId) {
+  return map === 'hall-of-legends'
+    ? { width: HALL.width, height: HALL.height }
+    : map === 'united'
+      ? { width: RED_CAVE.width, height: RED_CAVE.height }
+      : MAP_SIZE;
+}
+export function roomKey(map: MapId) {
+  return map === 'hall-of-legends'
+    ? 'cave:red-devils:hall-of-legends'
+    : map === 'united'
+      ? 'cave:red-devils'
+      : map;
+}
+export function plazaReturn(from: MapId): Point {
+  const p = PORTALS.find((p) => p.target === from);
+  return p ? { x: p.x, y: p.y + 110 } : spawn('plaza');
+}
+
+export function groundHeight(map: MapId, p: Point) {
+  if (map !== 'plaza') return 0;
+  const q = grandMetres(p);
+  return grandHeight(q.x, q.z);
+}
