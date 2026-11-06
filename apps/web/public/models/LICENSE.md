@@ -5,3 +5,10 @@ These models and embedded surface textures were authored for this repository by 
 The repository owner may use, modify, and redistribute this original kit with this project. This statement does not grant rights to official football club logos or other brand artwork, which are not included.
 
 Assets: portal-grand, cliff-sculpted, cherry-tree, lantern, market-stall, pavilion, golden-football, bridge-stone, bridge-wood, fan-table, fan-chibi.
+
+## The Blues kit
+
+The following original GLBs were made for this project using Three.js geometry and `GLTFExporter`. Regenerate them with `node scripts/models/build-chelsea.mjs`. The same script produces the stone base colour and normal map under `apps/web/public/materials`. The project may use, modify and redistribute the models and textures. The lion and player sculpture are stylised original designs.
+
+- Architecture and props: `blues-column`, `blues-lion`, `blues-sofa`, `blues-footballer`.
+- Trophy silhouettes: `blues-trophy-cup`, `blues-trophy-europe`, `blues-trophy-globe`, `blues-trophy-league`, `blues-trophy-shield`, `blues-trophy-spire`, `blues-trophy-world`.

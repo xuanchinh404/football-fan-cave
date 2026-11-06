@@ -6,11 +6,19 @@ export const RED_CAVE = {
   bounds: { l: 480, r: 3640, t: 300, b: 2870 },
   zones: [
     { id: 'hall', label: 'Sảnh trú ẩn', x: 2048, y: 1900, color: '#ffb84d', icon: '♟' },
-    { id: 'lounge', label: 'Khu xem bóng', x: 920, y: 1550, color: '#ff794e', icon: '▣' },
+    { id: 'lounge', label: 'Góc Tâm Sự Fan', x: 920, y: 1550, color: '#ff794e', icon: '▣' },
     { id: 'shop', label: 'Quầy Cà Khịa', x: 3190, y: 1810, color: '#ffc454', icon: '◖' },
     { id: 'fun', label: 'Khu giải trí', x: 1040, y: 720, color: '#d78bff', icon: '✧' },
     { id: 'event', label: 'Khu sự kiện', x: 3100, y: 710, color: '#68ceff', icon: '★' },
-    { id: 'exit', label: 'Lối ra quảng trường', x: 2048, y: 2750, color: '#e8d6a8', icon: '↗' },
+    {
+      id: 'museum',
+      label: 'Lối vào Phòng Hoài Niệm',
+      x: 2048,
+      y: 1360,
+      color: '#ffe19a',
+      icon: '♜',
+    },
+    { id: 'exit', label: 'Cổng Ra Hang', x: 2048, y: 2750, color: '#e8d6a8', icon: '↗' },
   ],
   obstacles: [
     { x: 1868, y: 1580, w: 360, h: 155 }, // golden ball plinth
@@ -24,6 +32,17 @@ export const RED_CAVE = {
     { x: 2660, y: 500, w: 190, h: 440 },
     { x: 620, y: 310, w: 430, h: 130 }, // photo booth back wall
     { x: 3000, y: 310, w: 460, h: 140 }, // event stage back wall
+    { x: 730, y: 1500, w: 200, h: 70 }, // lounge coffee table
+    { x: 600, y: 1380, w: 500, h: 35 }, // sofa back; seat interaction stays walkable
+    { x: 600, y: 1670, w: 500, h: 35 },
+    { x: 1840, y: 1070, w: 60, h: 370 }, // separate museum passage, opaque walls
+    { x: 2200, y: 1070, w: 60, h: 370 },
+    { x: 1270, y: 2250, w: 65, h: 65 }, // entry columns
+    { x: 2760, y: 2250, w: 65, h: 65 },
+    { x: 656, y: 1836, w: 48, h: 80 }, // lounge arch posts
+    { x: 1184, y: 1836, w: 48, h: 80 },
+    { x: 1840, y: 2710, w: 48, h: 80 }, // exit arch posts
+    { x: 2208, y: 2710, w: 48, h: 80 },
   ],
   seats: [
     { x: 680, y: 1450 },

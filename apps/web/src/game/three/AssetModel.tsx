@@ -46,16 +46,49 @@ export function AssetModel({
     return root;
   }, [gltf, tint, solid]);
   const mixer = useMemo(() => new THREE.AnimationMixer(instance), [instance]);
+  const extraClips = useMemo(() => {
+    const sad = gltf.animations.find((c) => c.name === 'Sit');
+    if (!sad) return [];
+    return ['Cry', 'Facepalm'].map((name) => {
+      const clip = sad.clone();
+      clip.name = name;
+      clip.tracks = clip.tracks.map((track) => {
+        if (!track.name.endsWith('.quaternion')) return track;
+        const head = track.name.startsWith('head.'),
+          arm = track.name.startsWith('right_arm.');
+        if (!head && !arm) return track;
+        const values: number[] = [];
+        for (const t of track.times) {
+          const q = new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(
+              head
+                ? 0.35 + Math.sin(t * 10) * (name === 'Cry' ? 0.08 : 0.02)
+                : name === 'Facepalm'
+                  ? -2.2
+                  : -1.1,
+              0,
+              arm ? -0.45 : 0,
+            ),
+          );
+          values.push(q.x, q.y, q.z, q.w);
+        }
+        return new THREE.QuaternionKeyframeTrack(track.name, Array.from(track.times), values);
+      });
+      return clip;
+    });
+  }, [gltf]);
   const previous = useRef<THREE.AnimationAction | null>(null);
   useEffect(() => {
     if (!animation) return;
-    const clip = gltf.animations.find((c) => c.name === animation || c.name.endsWith(animation));
+    const clip = [...gltf.animations, ...extraClips].find(
+      (c) => c.name === animation || c.name.endsWith(animation),
+    );
     if (!clip) return;
     const action = mixer.clipAction(clip);
     action.reset().fadeIn(0.18).play();
     previous.current?.fadeOut(0.18);
     previous.current = action;
-  }, [animation, mixer, gltf]);
+  }, [animation, mixer, gltf, extraClips]);
   useEffect(
     () => () => {
       mixer.stopAllAction();

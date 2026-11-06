@@ -3,7 +3,7 @@
   "height": 4000,
   "spawn": {
     "x": 1800,
-    "y": 1570
+    "y": 3470
   },
   "bounds": {
     "l": 260,
@@ -50,7 +50,7 @@
     },
     {
       "id": "G",
-      "label": "Góc chụp ảnh",
+      "label": "Huyền thoại & Góc chụp ảnh",
       "x": 2350,
       "y": 3650
     }

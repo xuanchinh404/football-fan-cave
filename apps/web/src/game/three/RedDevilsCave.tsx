@@ -1,0 +1,325 @@
+import { useFrame } from '@react-three/fiber';
+import { useRef } from 'react';
+import * as THREE from 'three';
+import { Box, Character, Label, Torch } from './Models';
+import {
+  Banner,
+  Doorway,
+  GOLD,
+  IndoorLight,
+  IndoorShell,
+  InteriorColliders,
+  Plaque,
+  Trident,
+  type V3,
+} from './IndoorKit';
+import { sceneBounds, sceneObstacles, toScene } from './worldLayout';
+import type { Quality } from './GrandHall';
+
+const sighs = [
+  'Lại hẹn mùa sau…',
+  'Thua thì về đây, có anh em.',
+  'Ngày xưa ta đã từng!',
+  'Trà nóng, tim nguội.',
+];
+function Crystal({ position, scale = 1 }: { position: V3; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      {[0, 1, 2].map((i) => (
+        <mesh
+          key={i}
+          position={[(i - 1) * 0.3, 0.5 + i * 0.1, 0]}
+          rotation={[0, i * 0.8, (i - 1) * 0.32]}
+        >
+          <octahedronGeometry args={[0.55 + i * 0.08, 0]} />
+          <meshStandardMaterial
+            color="#f92d66"
+            emissive="#f7194d"
+            emissiveIntensity={1.4}
+            metalness={0.25}
+            roughness={0.18}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+function CaveRock({ position, scale }: { position: V3; scale: V3 }) {
+  return (
+    <mesh
+      position={position}
+      scale={scale}
+      rotation={[0.1, position[2] * 1.3, 0.1]}
+      castShadow
+      receiveShadow
+      userData={{ cameraSolid: true }}
+    >
+      <dodecahedronGeometry args={[1, 0]} />
+      <meshStandardMaterial
+        color={position[2] % 3 > 0.4 ? '#67353f' : '#49303c'}
+        roughness={1}
+        flatShading
+      />
+    </mesh>
+  );
+}
+function Sofa({
+  position,
+  width = 5,
+  depth = 1.5,
+  rotation = 0,
+}: {
+  position: V3;
+  width?: number;
+  depth?: number;
+  rotation?: number;
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]} scale={[1, 1, depth / 1.5]}>
+      <Box position={[0, 0.38, 0]} size={[width, 0.76, 1.4]} color="#601d35" />
+      <Box position={[0, 1.1, -0.58]} size={[width, 1.5, 0.3]} color="#842c41" />
+      {[-1, 1].map((s) => (
+        <Box
+          key={s}
+          position={[s * (width / 2 - 0.15), 0.8, 0]}
+          size={[0.3, 0.9, 1.5]}
+          color="#aa6b40"
+        />
+      ))}
+      {[-1, 0, 1].map((i) => (
+        <Box
+          key={i}
+          position={[(i * width) / 3, 0.8, 0.05]}
+          size={[width / 3 - 0.12, 0.18, 1.05]}
+          color="#a33a4e"
+        />
+      ))}
+    </group>
+  );
+}
+function SadFan({ position, i }: { position: V3; i: number }) {
+  const head = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (head.current) head.current.rotation.x = 0.18 + Math.sin(clock.elapsedTime * 1.3 + i) * 0.07;
+  });
+  return (
+    <group position={position}>
+      <group ref={head} rotation={[0.2, 0, 0]}>
+        <Character
+          name={['Fan mùa sau', 'Quỷ Đỏ lâu năm', 'Hội chờ bình minh', 'Fan lạc quan'][i % 4]}
+          gesture="Sit"
+          direction={0}
+        />
+      </group>
+      <Label
+        text={sighs[i % 4]}
+        position={[0, 3.05, 0.1]}
+        width={3.3}
+        background="#eadac0"
+        color="#442636"
+      />
+    </group>
+  );
+}
+export function RedDevilsCave({ quality }: { quality: Quality }) {
+  const b = sceneBounds('united'),
+    solids = sceneObstacles('united');
+  const [mx, mz] = toScene('united', { x: 2048, y: 1100 });
+  return (
+    <group name="red-devils-cave">
+      <IndoorLight shadows={quality !== 'low'} />
+      <IndoorShell map="united" />
+      <InteriorColliders map="united" />
+      {/* Opaque stone envelope; no concept image is loaded into this world. */}
+      {Array.from({ length: 18 }, (_, i) => {
+        const z = b.top + 1 + (i * (b.bottom - b.top - 2)) / 17;
+        return (
+          <group key={i}>
+            {[-1, 1].map((s) => (
+              <group key={s}>
+                <CaveRock
+                  position={[s < 0 ? b.left - 0.9 : b.right + 0.9, 3.5 + (i % 3), z]}
+                  scale={[1.8, 5 + (i % 3), 1.7]}
+                />
+                {i % 2 === 0 && (
+                  <Crystal
+                    position={[s < 0 ? b.left + 0.5 : b.right - 0.5, 0.1, z]}
+                    scale={1 + (i % 3) * 0.25}
+                  />
+                )}
+              </group>
+            ))}
+          </group>
+        );
+      })}
+      {Array.from({ length: 10 }, (_, i) => (
+        <CaveRock key={i} position={[b.left + 2 + i * 4, 10.9, b.top + 3]} scale={[2.8, 2.5, 4]} />
+      ))}
+      <Plaque
+        lines={['HANG QUỶ ĐỎ', 'Hội fan MU trú ẩn sau mỗi trận thua']}
+        width={12}
+        height={1.8}
+        position={[0, 7.9, -7.4]}
+      />
+      <Banner position={[-8.2, 6.7, -16]} />
+      <Banner position={[8.2, 6.7, -16]} />
+      <Trident position={[0, 2.2, -7.1]} scale={0.7} />
+      {/* The central footprint is the shared authoritative plinth. */}
+      <Box
+        position={[solids[0].x, 0.55, solids[0].z]}
+        size={[solids[0].w, 1.1, solids[0].d]}
+        color="#6d2739"
+      />
+      <Box
+        position={[solids[0].x, 1.2, solids[0].z]}
+        size={[solids[0].w + 0.06, 0.2, solids[0].d + 0.06]}
+        color={GOLD}
+      />
+      <Plaque
+        lines={['SẢNH TRÚ ẨN', 'Tụ tập · Than thở · Động viên']}
+        width={4.1}
+        height={0.85}
+        position={[0, 1.6, -5.48]}
+      />
+      <Plaque
+        lines={[
+          'KẾT QUẢ GẦN NHẤT · MINH HỌA',
+          'MAN UNITED   0 – 3   MAN CITY',
+          'Thua một trận, còn cả hội ở đây.',
+        ]}
+        width={7.6}
+        height={1.8}
+        position={[0, 5.6, -7]}
+      />
+      <pointLight position={[0, 3.5, -6]} color="#ff6447" intensity={85} distance={15} />
+      {/* A genuine enclosed branch. Only this passage is visible from the refuge. */}
+      {[14, 15].map((i) => {
+        const o = solids[i];
+        return <Box key={i} position={[o.x, 5, o.z]} size={[o.w, 10, o.d]} color="#6b3039" />;
+      })}
+      <Box position={[0, 7.4, -11.4]} size={[4.6, 0.5, 5]} color="#422635" />
+      <Box
+        position={[solids[4].x, 5, solids[4].z]}
+        size={[solids[4].w, 10, solids[4].d]}
+        color="#38202f"
+      />
+      <Doorway
+        position={[mx, 0, -9.55]}
+        title="LỐI VÀO PHÒNG HOÀI NIỆM"
+        subtitle="Đi sâu vào hành lang · E để bước vào"
+        width={3.75}
+      />
+      <mesh position={[mx, 2.7, mz - 0.5]}>
+        <planeGeometry args={[3.7, 5.4]} />
+        <meshStandardMaterial color="#edb568" emissive="#ff9a35" emissiveIntensity={0.45} />
+      </mesh>
+      <pointLight position={[0, 3, -12]} color="#ffd798" intensity={45} distance={8} />
+      {/* Lounge: screen, real sofa volumes, a solid coffee table and seated fans. */}
+      <group name="fan-lounge">
+        <Doorway
+          position={[-13.8, 0, -3.8]}
+          title="GÓC TÂM SỰ FAN"
+          subtitle="Trà còn nóng. Anh em cứ kể."
+          width={6}
+        />
+        <Box position={[-14.5, 0.055, -7.7]} size={[10, 0.05, 8]} color="#55273b" solid={false} />
+        <Box
+          position={[solids[2].x, 2.5, solids[2].z]}
+          size={[solids[2].w, 5, solids[2].d]}
+          color="#332334"
+        />
+        <Plaque
+          lines={[
+            'FAN TV · TRẬN ĐẤU MINH HỌA',
+            'MU   0 – 3   CITY',
+            'Phân tích thì nhiều, bàn thắng thì ít.',
+          ]}
+          width={6.8}
+          height={3.1}
+          position={[solids[2].x, 3.3, -11.35]}
+          dark
+        />
+        <Sofa position={[-15.1, 0, -9.4]} width={6.2} />
+        <Sofa position={[-15.1, 0, -6.15]} width={6.2} rotation={Math.PI} />
+        <Box
+          position={[solids[11].x, 0.3, solids[11].z]}
+          size={[solids[11].w, 0.6, solids[11].d]}
+          color="#b78653"
+        />
+        {[-1, 0, 1].map((i) => (
+          <mesh key={i} position={[-15.1 + i * 0.65, 0.78, -8.05]}>
+            <cylinderGeometry args={[0.12, 0.1, 0.3, 10]} />
+            <meshStandardMaterial color="#f2d3a1" />
+          </mesh>
+        ))}
+        <SadFan position={[-16.9, 0.45, -9.05]} i={0} />
+        <SadFan position={[-14, 0.45, -9.05]} i={1} />
+        <pointLight position={[-15, 4, -8]} color="#ffc486" intensity={95} distance={14} />
+      </group>
+      <Sofa position={[solids[5].x, 0, solids[5].z]} width={solids[5].w} depth={solids[5].d} />
+      <SadFan position={[solids[5].x - 0.7, 0.65, solids[5].z + 0.3]} i={2} />
+      <Sofa position={[solids[6].x, 0, solids[6].z]} width={solids[6].w} depth={solids[6].d} />
+      <SadFan position={[solids[6].x, 0.65, solids[6].z + 0.3]} i={3} />
+      <group position={[solids[1].x, 0, solids[1].z]}>
+        <Box position={[0, 0.8, 0]} size={[solids[1].w, 1.6, solids[1].d]} color="#6c303b" />
+        <Box
+          position={[0, 1.7, 0]}
+          size={[solids[1].w + 0.1, 0.2, solids[1].d + 0.1]}
+          color={GOLD}
+        />
+        <Plaque
+          lines={['QUẦY CÀ KHỊA', 'Một chút muối, nhiều tình anh em']}
+          width={6}
+          height={1.4}
+          position={[0, 4, 0]}
+        />
+        <Torch position={[-3, 1, 0]} />
+        <Torch position={[3, 1, 0]} />
+      </group>
+      <Plaque
+        lines={['NỘI QUY TRÚ ẨN', 'Cà khịa vừa đủ. Động viên thật nhiều.']}
+        width={solids[3].w}
+        height={1.2}
+        position={[solids[3].x, 2, solids[3].z + 0.63]}
+      />
+      <Box
+        position={[solids[3].x, 0.8, solids[3].z]}
+        size={[solids[3].w, 1.6, solids[3].d]}
+        color="#4a2c36"
+      />
+      {[7, 8, 9, 10].map((i) => {
+        const o = solids[i];
+        return <CaveRock key={i} position={[o.x, 4, o.z]} scale={[o.w / 2, 5, o.d / 2]} />;
+      })}
+      {[16, 17].map((i) => {
+        const o = solids[i];
+        return (
+          <group key={i}>
+            <Box position={[o.x, 4, o.z]} size={[o.w, 8, o.d]} color="#69363c" />
+            <Torch position={[o.x, 2, o.z + 0.6]} />
+            <Crystal position={[o.x, 0.1, o.z + 0.7]} />
+          </group>
+        );
+      })}
+      <Doorway
+        position={[0, 0, 7.15]}
+        rotation={Math.PI}
+        title="CỔNG RA HANG"
+        subtitle="Trở lại Đại Sảnh Chung"
+        width={4}
+      />
+      {quality !== 'low' &&
+        [
+          [-9, -3],
+          [9, -3],
+          [-6, -18],
+          [6, -18],
+        ].map(([x, z], i) => (
+          <group key={i}>
+            <Crystal position={[x, 0, z]} scale={1.3} />
+            <Torch position={[x + 0.6, 0, z]} />
+          </group>
+        ))}
+    </group>
+  );
+}

@@ -1,9 +1,10 @@
 import {CAVES} from '../../../packages/shared/grandHall.ts';
-import 'dotenv/config';
+import './env.ts';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { verifyToken, profileForToken, adminClient, isLinked } from './auth.ts';
 import {
+  arrival,
   groundHeight,
   cleanText,
   clearPath,
@@ -11,7 +12,6 @@ import {
   near,
   spawn,
   roomKey,
-  plazaReturn,
   SPEED,
   RUN_SPEED,
   validMap,
@@ -169,15 +169,11 @@ io.on('connection', (socket) => {
       socket.emit('notice', 'Hãy đến gần cổng hang để di chuyển.');
       return;
     }
-    if(p.map==='plaza' && target!=='united') { socket.emit('notice','Nội thất hang này sắp ra mắt. Bạn có thể khám phá sân trước cổng.');return; }
+    if(p.map==='plaza' && target!=='united' && target!=='chelsea') { socket.emit('notice','Nội thất hang này sắp ra mắt. Bạn có thể khám phá sân trước cổng.');return; }
     join(
       socket.id,
       target,
-      target === 'plaza'
-        ? plazaReturn(p.map)
-        : p.map === 'hall-of-legends' && target === 'united'
-          ? { x: 2048, y: 1100 }
-          : spawn(target),
+      arrival(p.map, target),
     );
   });
   socket.on('interact', (id: unknown) => {

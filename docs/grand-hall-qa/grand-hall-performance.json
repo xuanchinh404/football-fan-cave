@@ -1,0 +1,98 @@
+{
+  "desktop-medium": {
+    "date": "2026-11-05T00:46:39.184Z",
+    "cpu": "Apple M4",
+    "platform": "darwin",
+    "arch": "arm64",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "quality": "medium",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "fps": [
+      61,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60
+    ],
+    "min": 60,
+    "median": 60,
+    "max": 61,
+    "drawCalls": 1394,
+    "triangles": 2412672,
+    "note": "Local Chromium on this Mac"
+  },
+  "mobile-emulation-low": {
+    "date": "2026-11-05T00:48:36.794Z",
+    "cpu": "Apple M4",
+    "platform": "darwin",
+    "arch": "arm64",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "quality": "low",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "fps": [
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60
+    ],
+    "min": 60,
+    "median": 60,
+    "max": 60,
+    "drawCalls": 98,
+    "triangles": 311954,
+    "note": "Chromium viewport emulation, not a physical phone"
+  },
+  "desktop-high": {
+    "date": "2026-11-05T00:48:47.070Z",
+    "cpu": "Apple M4",
+    "platform": "darwin",
+    "arch": "arm64",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "quality": "high",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "fps": [
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60
+    ],
+    "min": 60,
+    "median": 60,
+    "max": 60,
+    "drawCalls": 1465,
+    "triangles": 2675713,
+    "note": "Local Chromium on this Mac"
+  }
+}

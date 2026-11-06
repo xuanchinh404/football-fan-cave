@@ -1,3 +1,7 @@
+import { ChelseaHUD, ChelseaExhibitPanel } from './ui/ChelseaHUD';
+import { chelseaExhibits, chelseaMatchState } from '../../../packages/shared/chelsea/content';
+import { BLUES_CAVE, BLUES_MUSEUM } from '../../../packages/shared/chelsea/layout';
+import './ui/chelsea-3d.css';
 import { CAVES, GRAND_PLACES } from '../../../packages/shared/grandHall';
 import { GrandHUD, GrandPanel } from './ui/GrandHUD';
 import { exhibits, HALL } from '../../../packages/shared/museum';
@@ -43,8 +47,7 @@ import {
   STICKERS,
   TEAMS,
   SPAWN,
-  plazaReturn,
-  spawn,
+  arrival,
   validProfile,
   type ChatMessage,
   type MapId,
@@ -52,7 +55,7 @@ import {
   type Profile,
 } from '../../../packages/shared/world';
 import { GameCanvas } from './game/GameCanvas';
-import { playtestNear as near } from './game/three/worldLayout';
+import { playtestInteractions, playtestNear as near } from './game/three/worldLayout';
 import { emit, on, type WorldState } from './game/bridge';
 import { socket } from './network/client';
 import { Minimap } from './ui/Minimap';
@@ -60,6 +63,7 @@ import { Joystick } from './ui/Joystick';
 import './styles.css';
 import './ui/fantasy-hud.css';
 import './ui/grand-hud.css';
+import './ui/red-cave-3d.css';
 import { ActionBar } from './ui/ActionBar';
 import { AdvanceControl } from './ui/AdvanceControl';
 import { WorldSignposts } from './ui/WorldSignposts';
@@ -114,15 +118,18 @@ export default function App({
   const [exhibitId, setExhibitId] = useState('');
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const exhibit = exhibits.find((e) => e.id === exhibitId);
+  const bluesExhibit = chelseaExhibits.find((e) => e.id === exhibitId);
   const input = useRef<HTMLInputElement>(null),
     chatEnd = useRef<HTMLDivElement>(null),
     profileRef = useRef<Profile | null>(null),
     worldRef = useRef(world),
+    modalRef = useRef(modal),
     lastChat = useRef(0),
     lastPreview = useRef(0),
     toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
     self = useRef('demo');
   worldRef.current = world;
+  modalRef.current = modal;
   function notice(value: string) {
     setToast(value);
     clearTimeout(toastTimer.current);
@@ -140,6 +147,19 @@ export default function App({
       on('ready', () => setReady(true)),
       on<string>('notice', notice),
       on<Pick<WorldState, 'map' | 'position' | 'seated'>>('interact', (state) => interactAt(state)),
+      on('toggle-emotes', () => setEmojiOpen((v) => !v)),
+      on('open-banter', () => setModal('shop')),
+      on<string>('inspect', (id) => {
+        const w = worldRef.current,
+          item = playtestInteractions(w.map).find((p) => p.kind === 'exhibit' && p.id === id);
+        if (!item || modalRef.current) return;
+        if (Math.hypot(item.x - w.position.x, item.y - w.position.y) > 125) {
+          notice('Đến gần hiện vật rồi nhấn E hoặc bấm vào để đọc.');
+          return;
+        }
+        setExhibitId(id);
+        setModal('exhibit');
+      }),
       on('focus-chat', () => {
         setChatVisible(true);
         setTimeout(() => input.current?.focus(), 50);
@@ -218,6 +238,9 @@ export default function App({
     };
   }, []);
   useEffect(() => {
+    emit('reduced-effects', reduced);
+  }, [reduced, ready]);
+  useEffect(() => {
     emit('block', !!modal);
     const close = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setModal(null);
@@ -248,7 +271,7 @@ export default function App({
       return;
     }
     if (p.kind === 'portal') {
-      if (w.map === 'plaza' && p.target !== 'united') {
+      if (w.map === 'plaza' && p.target !== 'united' && p.target !== 'chelsea') {
         notice('Nội thất ' + p.label + ' sắp ra mắt. Bạn vẫn có thể khám phá sân trước cổng.');
         return;
       }
@@ -257,14 +280,10 @@ export default function App({
       } else {
         emit('travel', {
           map: p.target,
-          ...(p.target === 'plaza'
-            ? plazaReturn(w.map)
-            : w.map === 'hall-of-legends' && p.target === 'united'
-              ? { x: 2048, y: 1100 }
-              : spawn(p.target!)),
+          ...arrival(w.map, p.target!),
         });
         notice(
-          `Đã đến ${p.target === 'hall-of-legends' ? 'Phòng Truyền Thống' : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
+          `Đã đến ${p.target === 'chelsea-museum' ? 'Phòng Truyền Thống Chelsea' : p.target === 'hall-of-legends' ? 'Phòng Hoài Niệm' : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
         );
       }
     } else if (p.kind === 'seat') {
@@ -299,7 +318,7 @@ export default function App({
     localStorage.setItem('hang-profile', JSON.stringify(p));
     emit('start', { profile: p, id: 'demo' });
     if (socket.connected) socket.emit('join', p);
-    else if ((socket.auth as { accessToken?: string }).accessToken) socket.connect();
+    else if ((socket.auth as { accessToken?: string } | undefined)?.accessToken) socket.connect();
     setMessages([
       {
         id: 'welcome',
@@ -389,14 +408,16 @@ export default function App({
   }
   const team = TEAMS.find((t) => t.id === profile.team)!,
     area =
-      world.map === 'hall-of-legends'
-        ? 'Phòng Truyền Thống'
-        : world.map === 'plaza'
-          ? 'Đại Sảnh Chung'
-          : TEAMS.find((t) => t.id === world.map)?.name;
+      world.map === 'chelsea-museum'
+        ? 'Phòng Truyền Thống Chelsea'
+        : world.map === 'hall-of-legends'
+          ? 'Phòng Hoài Niệm'
+          : world.map === 'plaza'
+            ? 'Đại Sảnh Chung'
+            : TEAMS.find((t) => t.id === world.map)?.name;
   return (
     <div
-      className={`app-shell ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' ? 'museum-shell' : ''}`}
+      className={`app-shell ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' ? 'museum-shell' : ''}`}
     >
       <header className="topbar">
         <a
@@ -478,6 +499,9 @@ export default function App({
             notice={notice}
           />
         )}
+        {(world.map === 'chelsea' || world.map === 'chelsea-museum') && (
+          <ChelseaHUD world={world} openMap={() => setModal('map')} notice={notice} />
+        )}
         {world.map === 'hall-of-legends' && (
           <MuseumHUD
             position={world.position}
@@ -489,6 +513,27 @@ export default function App({
             photo={() => emit('screenshot')}
           />
         )}
+        {world.map === 'united' && (
+          <div className="cave-wayfinding" aria-label="Chỉ dẫn trong hang">
+            <span>HANG QUỶ ĐỎ · NƠI TRÚ ẨN CỦA FAN</span>
+            <strong>
+              {world.position.x < 1250 && world.position.y > 1250 && world.position.y < 1800
+                ? 'Góc Tâm Sự Fan · Trà nóng, có anh em.'
+                : world.position.y < 1480 && world.position.x > 1850 && world.position.x < 2250
+                  ? 'Hành lang Phòng Hoài Niệm · Tiến về ánh đèn vàng'
+                  : 'Sảnh Trú Ẩn · Thua một trận, còn cả hội ở đây.'}
+            </strong>
+            <small>← Góc tâm sự · ↑ Phòng Hoài Niệm · ↓ Cổng Ra Hang</small>
+          </div>
+        )}
+        <button
+          className="jump-control"
+          aria-label="Nhảy"
+          disabled={!playing || !!modal}
+          onClick={() => emit('jump')}
+        >
+          <span>↑</span>Nhảy<kbd>Space</kbd>
+        </button>
         <div className="world-vignette" />
         <div className="area-card panel">
           <span className="area-icon">
@@ -507,7 +552,7 @@ export default function App({
             <ChevronDown size={16} />
           </button>
         </div>
-        <div className="world-title" hidden={world.map === 'united'}>
+        <div className="world-title" hidden={world.map !== 'plaza'}>
           <span>CHUNG NHỊP ĐẬP. KHÁC MÀU ÁO.</span>
           <p>Một thế giới, ngàn đam mê.</p>
         </div>
@@ -574,13 +619,7 @@ export default function App({
         {world.near && playing && (
           <button className="interaction-prompt" onClick={interact}>
             <kbd>E</kbd>
-            <span>
-              {world.near.kind === 'portal'
-                ? world.near.target === 'plaza'
-                  ? 'Về quảng trường'
-                  : `Vào ${world.near.label}`
-                : world.near.label}
-            </span>
+            <span>{world.near.label}</span>
             <ChevronRight size={16} />
           </button>
         )}
@@ -588,7 +627,17 @@ export default function App({
           <section className="chat-panel panel">
             <div className="chat-tabs">
               {[
-                { id: 'room', label: world.map === 'united' ? 'Hang Quỷ Đỏ' : 'Khu vực' },
+                {
+                  id: 'room',
+                  label:
+                    world.map === 'chelsea'
+                      ? 'Hang The Blues'
+                      : world.map === 'chelsea-museum'
+                        ? 'Truyền Thống'
+                        : world.map === 'united'
+                          ? 'Hang Quỷ Đỏ'
+                          : 'Khu vực',
+                },
                 { id: 'nearby', label: 'Gần bạn' },
               ].map(({ id: t, label }) => (
                 <button
@@ -782,7 +831,7 @@ export default function App({
           <span>v0.2 · Three.js + R3F</span>
           <span>Được tạo bằng đam mê ⚽</span>
         </div>
-        {!ready && (
+        {(!ready || !playing) && (
           <div className="loading-world">
             <Tent size={45} />
             <p>Đang thắp đèn trong hang…</p>
@@ -857,7 +906,10 @@ export default function App({
             <button className="close" onClick={() => setModal(null)} aria-label="Đóng">
               <X size={20} />
             </button>
-            {modal === 'exhibit' && exhibit && (
+            {modal === 'exhibit' && bluesExhibit && (
+              <ChelseaExhibitPanel key={bluesExhibit.id} exhibit={bluesExhibit} />
+            )}
+            {modal === 'exhibit' && !bluesExhibit && exhibit && (
               <>
                 <div className="eyebrow">HALL OF LEGENDS · {exhibit.type.toUpperCase()}</div>
                 <div className="museum-exhibit-mark">
@@ -978,14 +1030,19 @@ export default function App({
                   heading={world.direction}
                 />
                 <div className="map-legend">
-                  {(world.map === 'hall-of-legends'
-                    ? HALL.zones.map((z) => ({ ...z, short: z.label, color: '#e6af61' }))
-                    : world.map === 'united'
-                      ? [
-                          { id: 'united', short: 'Hang Quỷ Đỏ', color: '#ff493b' },
-                          { id: 'exit', short: 'Lối ra Đại Sảnh Chung', color: '#91d5ed' },
-                        ]
-                      : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
+                  {(world.map === 'chelsea' || world.map === 'chelsea-museum'
+                    ? (world.map === 'chelsea' ? BLUES_CAVE : BLUES_MUSEUM).zones.map((z) => ({
+                        ...z,
+                        short: z.label,
+                        color: '#75b6ff',
+                      }))
+                    : world.map === 'hall-of-legends'
+                      ? HALL.zones.map((z) => ({ ...z, short: z.label, color: '#e6af61' }))
+                      : world.map === 'united'
+                        ? RED_CAVE.zones
+                            .filter((z) => !['fun', 'event'].includes(z.id))
+                            .map((z) => ({ id: z.id, short: z.label, color: z.color }))
+                        : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
                   ).map((t) => (
                     <span key={t.id}>
                       <i style={{ background: t.color }} />
@@ -1161,7 +1218,22 @@ export default function App({
                 )}
               </>
             )}
-            {modal === 'score' && (
+            {modal === 'score' && world.map === 'chelsea' && (
+              <>
+                <div className="eyebrow">{chelseaMatchState.label}</div>
+                <h2>
+                  {chelseaMatchState.home} {chelseaMatchState.score} {chelseaMatchState.away}
+                </h2>
+                <p>
+                  {chelseaMatchState.time} · {chelseaMatchState.caption}
+                </p>
+                <p>
+                  Đây là dữ liệu minh họa. Chưa kết nối API kết quả trực tiếp; người chơi luôn tự do
+                  vào và ra hang.
+                </p>
+              </>
+            )}
+            {modal === 'score' && world.map !== 'chelsea' && (
               <>
                 <div className="eyebrow">GÓC BÓNG ĐÁ · DỮ LIỆU MINH HỌA</div>
                 <h2>Hết trận, còn câu chuyện.</h2>
@@ -1194,14 +1266,32 @@ export default function App({
                 <div className="modal-symbol orange">
                   <Flame size={30} />
                 </div>
-                <div className="eyebrow">HANG QUỶ ĐỎ · SẢNH TRÚ ẨN</div>
+                <div className="eyebrow">
+                  {world.map === 'chelsea' ? 'HANG THE BLUES' : 'HANG QUỶ ĐỎ'} · SẢNH TRÚ ẨN
+                </div>
                 <h2>{modal === 'statue' ? 'Ngọn lửa chung một hội.' : 'Hôm nay trong hang.'}</h2>
                 <p>
                   {modal === 'statue'
-                    ? 'Quả bóng vàng là biểu tượng gốc của Hội Vào Hang. Mỗi màu áo đều có chỗ tại quảng trường này.'
+                    ? world.map === 'united'
+                      ? 'Thua một trận, còn cả hội ở đây. Sảnh Trú Ẩn dành cho những lúc cần một tách trà và vài người bạn hiểu cảm giác của mình.'
+                      : 'Quả bóng vàng là biểu tượng gốc của Hội Vào Hang. Mỗi màu áo đều có chỗ tại quảng trường này.'
                     : 'Hoạt động từ cấu hình MVP. Bạn có thể tự do tham gia cùng bạn bè.'}
                 </p>
-                {CAVE_EVENTS.map((e) => (
+                {(world.map === 'united'
+                  ? [
+                      {
+                        title: 'Trà nóng ở Góc Tâm Sự',
+                        detail:
+                          'Ghé lounge bên trái, ngồi cùng hội và chia sẻ câu chuyện sau trận. Cà khịa vừa đủ, động viên thật nhiều.',
+                      },
+                      {
+                        title: 'Ngày xưa ta đã từng…',
+                        detail:
+                          'Đi vòng bục trung tâm, vào hành lang phía sau để đến Phòng Hoài Niệm. Cúp, huyền thoại và những ký ức vinh quang đang chờ.',
+                      },
+                    ]
+                  : CAVE_EVENTS
+                ).map((e) => (
                   <div className="info-box" key={e.title}>
                     <strong>{e.title}</strong>
                     <br />
@@ -1255,13 +1345,23 @@ export default function App({
                   <span>Chất lượng 3D</span>
                   <select
                     aria-label="Chất lượng 3D"
-                    defaultValue={window.innerWidth < 700 ? 'low' : 'medium'}
+                    value={world.quality || (window.innerWidth < 700 ? 'low' : 'medium')}
                     onChange={(e) => emit('quality', e.target.value)}
                   >
                     <option value="low">Low · Nhẹ</option>
                     <option value="medium">Medium · Cân bằng</option>
                     <option value="high">High · Bloom & bóng đổ</option>
                   </select>
+                </div>
+                <div className="settings-row">
+                  <span>Giảm hiệu ứng</span>
+                  <button
+                    className="secondary"
+                    aria-pressed={reduced}
+                    onClick={() => setReduced((v) => !v)}
+                  >
+                    {reduced ? 'Đang bật' : 'Đang tắt'}
+                  </button>
                 </div>
                 <div className="settings-row">
                   <span>Khung trò chuyện</span>

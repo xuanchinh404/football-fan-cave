@@ -16,13 +16,22 @@ import {
   GRAND_CLIFFS,
   GRAND_PLACES,
   GRAND_SOLIDS,
+  GRAND_SCOREBOARD,
   GRAND_SURFACES,
   grandHeight,
   surfaceHeight,
   type Surface,
 } from '../../../../../packages/shared/grandHall';
 import { AssetModel } from './AssetModel';
-import { Label } from './Models';
+import { Box, Label } from './Models';
+import {
+  GoldenBall,
+  RedDevilsGateway,
+  SliceLandscape,
+  SliceRoute,
+  sliceLamp,
+  sliceCliff,
+} from './GrandHallSlice';
 import { emit, on } from '../bridge';
 
 export type Quality = 'low' | 'medium' | 'high';
@@ -75,20 +84,19 @@ function Ground() {
     const c = document.createElement('canvas');
     c.width = c.height = 512;
     const ctx = c.getContext('2d')!;
-    ctx.fillStyle = '#4b465b';
+    ctx.fillStyle = '#51475a';
     ctx.fillRect(0, 0, 512, 512);
     for (let row = 0; row < 8; row++)
       for (let col = -1; col < 8; col++) {
         const x = col * 80 + (row % 2) * 40,
           y = row * 64;
-        const n = (Math.sin(row * 45 + col * 73) + 1) / 2;
-        ctx.fillStyle = ['#a397b4', '#a6adb9', '#c0a4a2', '#c9b897', '#8e91ae'][
+        ctx.fillStyle = ['#8d7b92', '#9291a2', '#a58a87', '#a89a89', '#838397'][
           Math.abs(row * 7 + col * 3) % 5
         ];
         ctx.beginPath();
         ctx.roundRect(x + 2, y + 2, 76, 60, 5);
         ctx.fill();
-        ctx.strokeStyle = '#f1d4a54d';
+        ctx.strokeStyle = '#edd1a335';
         ctx.lineWidth = 2;
         ctx.stroke();
         for (let i = 0; i < 16; i++) {
@@ -112,20 +120,31 @@ function Ground() {
   );
   return (
     <>
-      {geometries.map((g, i) => (
-        <RigidBody key={GRAND_SURFACES[i].id} type="fixed" colliders="trimesh">
-          <mesh geometry={g} receiveShadow userData={{ cameraSolid: true }}>
-            <meshStandardMaterial
-              map={tex}
-              bumpMap={tex}
-              bumpScale={0.045}
-              roughness={0.86}
-              metalness={0.07}
-              color={i === 0 ? '#dfd8e7' : '#b1b4dc'}
-            />
-          </mesh>
-        </RigidBody>
-      ))}
+      {geometries.map((g, i) => {
+        const surface = GRAND_SURFACES[i];
+        const flat = surface.south === surface.north;
+        return (
+          <RigidBody key={surface.id} type="fixed" colliders={flat ? false : 'trimesh'}>
+            {flat && (
+              <CuboidCollider
+                position={[surface.x, surface.south - 0.16, surface.z]}
+                args={[surface.w / 2, 0.16, surface.d / 2]}
+              />
+            )}
+            <mesh geometry={g} receiveShadow userData={{ cameraSolid: true }}>
+              <meshStandardMaterial
+                visible={GRAND_SURFACES[i].id !== 'main-stairs'}
+                map={tex}
+                bumpMap={tex}
+                bumpScale={0.045}
+                roughness={0.86}
+                metalness={0.07}
+                color={i === 0 ? '#dfd8e7' : '#b1b4dc'}
+              />
+            </mesh>
+          </RigidBody>
+        );
+      })}
       {GRAND_SOLIDS.map((o) => (
         <RigidBody
           key={o.id}
@@ -160,13 +179,13 @@ function SkyAndLighting({ quality }: { quality: Quality }) {
   }, [gl, scene]);
   return (
     <>
-      <color attach="background" args={['#859bc7']} />
-      <fog attach="fog" args={['#98a9d0', 85, 225]} />
-      <hemisphereLight args={['#cadfff', '#61615b', 1.15]} />
+      <color attach="background" args={['#aaa6c4']} />
+      <fog attach="fog" args={['#a5a3c6', 54, 176]} />
+      <hemisphereLight args={['#d5dbff', '#705257', 1.24]} />
       <directionalLight
-        position={[-35, 70, 25]}
-        color="#ffe3b6"
-        intensity={2.4}
+        position={[-37, 42, 27]}
+        color="#ffdfb5"
+        intensity={2.85}
         castShadow={quality !== 'low'}
         shadow-mapSize={quality === 'high' ? [2048, 2048] : [1024, 1024]}
         shadow-camera-left={-65}
@@ -177,18 +196,28 @@ function SkyAndLighting({ quality }: { quality: Quality }) {
         shadow-bias={-0.00015}
         shadow-normalBias={0.06}
       />
-      <directionalLight position={[40, 20, -40]} color="#9abaff" intensity={0.65} />
+      <directionalLight position={[40, 20, -40]} color="#a0acff" intensity={0.95} />
       <mesh>
         <sphereGeometry args={[240, 32, 20]} />
         <shaderMaterial
           side={THREE.BackSide}
           depthWrite={false}
           uniforms={{
-            top: { value: new THREE.Color('#313366') },
-            bottom: { value: new THREE.Color('#a5d6e7') },
+            top: { value: new THREE.Color('#384175') },
+            horizon: { value: new THREE.Color('#c0afca') },
+            sun: { value: new THREE.Color('#f5bc9f') },
           }}
           vertexShader={`varying vec3 v;void main(){v=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`}
-          fragmentShader={`varying vec3 v;uniform vec3 top,bottom;void main(){float h=clamp(normalize(v).y*.9+.15,0.,1.);gl_FragColor=vec4(mix(bottom,top,h),1.);}`}
+          fragmentShader={`
+            varying vec3 v; uniform vec3 top,horizon,sun;
+            void main() {
+              vec3 dir = normalize(v);
+              float h = smoothstep(-.02,.65,dir.y);
+              float warmth = pow(max(0., dot(dir,normalize(vec3(-.6,.18,.6)))),5.);
+              gl_FragColor = vec4(mix(mix(horizon, sun, warmth*.9),top,h),1.);
+              #include <colorspace_fragment>
+            }
+          `}
         />
       </mesh>
     </>
@@ -322,19 +351,20 @@ function Landscape({ quality }: { quality: Quality }) {
         (g, i) => (g.rotation.z = Math.sin(clock.elapsedTime * 0.6 + i) * 0.009),
       );
   });
-  const cliffPositions = GRAND_CLIFFS;
   const treePositions = GRAND_TREES;
   return (
     <>
-      {cliffPositions.map((p, i) => (
-        <AssetModel
-          key={i}
-          asset="cliff-sculpted"
-          position={[p.x, p.y, p.z]}
-          scale={p.scale}
-          rotation={[0, i * 1.7, 0.03 * Math.sin(i)]}
-        />
-      ))}
+      {GRAND_CLIFFS.map((p, i) =>
+        sliceCliff(p) ? null : (
+          <AssetModel
+            key={i}
+            asset="cliff-sculpted"
+            position={[p.x, p.y, p.z]}
+            scale={p.scale}
+            rotation={[0, i * 1.7, 0.03 * Math.sin(i)]}
+          />
+        ),
+      )}
       <group ref={trees}>
         {treePositions
           .filter(
@@ -353,18 +383,13 @@ function Landscape({ quality }: { quality: Quality }) {
       {[-1, 1].map((s) => (
         <group key={s}>
           <Waterfall x={s * 22} z={-45} top={18} height={17} width={4} />
-          <Waterfall x={s * 25} z={-21.7} top={9} height={10.5} width={5} />
           <Waterfall x={s * 49} z={-18} top={8} height={9.5} width={3} />
         </group>
       ))}
-      {GRAND_SURFACES.filter((s) => s.kind === 'bridge').map((s) => (
-        <AssetModel
-          key={s.id}
-          asset={s.x < 0 ? 'bridge-stone' : 'bridge-wood'}
-          position={[s.x, 0, s.z]}
-        />
+      {GRAND_SURFACES.filter((s) => s.id === 'east-bridge').map((s) => (
+        <AssetModel key={s.id} asset="bridge-wood" position={[s.x, 0, s.z]} />
       ))}
-      {GRAND_SURFACES.filter((s) => s.kind === 'stairs').map((s) => (
+      {GRAND_SURFACES.filter((s) => s.kind === 'stairs' && s.id !== 'main-stairs').map((s) => (
         <Steps key={s.id} surface={s} />
       ))}
       <Flowers quality={quality} />
@@ -463,10 +488,10 @@ function Flowers({ quality }: { quality: Quality }) {
     </instancedMesh>
   );
 }
-function Buildings() {
+function Buildings({ quality }: { quality: Quality }) {
   return (
     <>
-      <AssetModel asset="golden-football" position={[0, 0, 3]} />
+      <GoldenBall quality={quality} />
       <Label text="ĐẠI SẢNH CHUNG" position={[0, 20, -33]} width={15} background="#523213" />
       <Label
         text="THẾ GIỚI CỦA NHỮNG NGƯỜI YÊU BÓNG ĐÁ"
@@ -474,13 +499,19 @@ function Buildings() {
         width={11}
         background="#523213"
       />
-      <Label text="KẾT QUẢ BÓNG ĐÁ · DEMO" position={[0, 5.2, -5.5]} width={8} />
-      <Label
-        text="CHƯA KẾT NỐI DỮ LIỆU TRẬN ĐẤU"
-        position={[0, 4.3, -5.5]}
-        width={7.5}
-        background="#24325b"
-      />
+      <group position={[GRAND_SCOREBOARD.x, 0, GRAND_SCOREBOARD.z]}>
+        {[-4.5, 4.5].map((x) => (
+          <Box key={x} position={[x, 2.5, 0]} size={[0.3, 5, 0.3]} color="#674536" />
+        ))}
+        <Box position={[0, 4.8, 0]} size={[9, 2.2, 0.5]} color="#674536" />
+        <Label text="KẾT QUẢ BÓNG ĐÁ · DEMO" position={[0, 5.25, 0.29]} width={8} />
+        <Label
+          text="CHƯA KẾT NỐI DỮ LIỆU TRẬN ĐẤU"
+          position={[0, 4.25, 0.29]}
+          width={7.5}
+          background="#24325b"
+        />
+      </group>
       <group position={[-32, 0, 2]}>
         <AssetModel asset="pavilion" scale={1.4} tint="#a7124d" />
         <Label text="ĐẤU TRƯỜNG CÀ KHỊA" position={[0, 7.7, 5.6]} width={12} />
@@ -695,7 +726,7 @@ function Details({ quality }: { quality: Quality }) {
     <>
       {lamps.map(([x, z], i) => {
         const y = grandHeight(x, z);
-        if (y === undefined) return null;
+        if (y === undefined || sliceLamp(x, z)) return null;
         return (
           <group key={i} position={[x, y, z]}>
             <mesh position={[0, 1.3, 0]} castShadow>
@@ -732,10 +763,20 @@ export function GrandHall({ quality = 'medium' }: { quality?: Quality }) {
       <Ground />
       <TerrainFaces />
       <Landscape quality={quality} />
-      {CAVES.map((c) => (
-        <Portal key={c.id} c={c} />
-      ))}
-      <Buildings />
+      <SliceLandscape quality={quality} />
+      <SliceRoute
+        quality={quality}
+        bridgeFallback={<AssetModel asset="bridge-stone" position={[-41, 0, -15]} />}
+        stairFallback={<Steps surface={GRAND_SURFACES.find((s) => s.id === 'main-stairs')!} />}
+      />
+      {CAVES.map((c) =>
+        c.id === 'united' ? (
+          <RedDevilsGateway key={c.id} cave={c} quality={quality} />
+        ) : (
+          <Portal key={c.id} c={c} />
+        ),
+      )}
+      <Buildings quality={quality} />
       <Minigame />
       <Details quality={quality} />
     </group>
@@ -746,7 +787,9 @@ function TerrainFaces() {
   const faces = useMemo(() => {
     const pieces: THREE.BufferGeometry[] = [];
     for (const [left, right, z, height, bottom] of [
-      [-55, 55, -22, 7, -3],
+      [-55, -38, -22, 7, -3],
+      [-38, 38, -23.2, 7, -3],
+      [38, 55, -22, 7, -3],
       [-50, -16, -47, 15, 6],
       [16, 50, -47, 15, 6],
       [-55, 55, 40, 0, -7],
@@ -788,7 +831,7 @@ function TerrainFaces() {
       ))}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.3, -15]}>
         <planeGeometry args={[110, 14]} />
-        <meshStandardMaterial color="#127baf" metalness={0.35} roughness={0.15} />
+        <meshStandardMaterial color="#16586c" metalness={0.43} roughness={0.27} />
       </mesh>
       {GRAND_SURFACES.filter((s) => s.kind === 'stairs' || s.kind === 'bridge').map((s) => (
         <RigidBody

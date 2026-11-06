@@ -1,0 +1,224 @@
+{
+  "cpu": "Apple M4",
+  "url": "http://localhost:5173/playtest",
+  "desktop": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 1.686371753351068e-8,
+      "y": -0.672036190032959,
+      "z": 27
+    },
+    "camera": {
+      "x": 1.6531299917573067e-8,
+      "y": 3.816270388698526,
+      "z": 38.71076939196727,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 1390,
+    "triangles": 2407308,
+    "geometries": 559,
+    "view": "default",
+    "fps": [
+      58,
+      58,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      61,
+      61
+    ],
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+  },
+  "approach": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 5.46526575088501,
+      "y": 0.02509413242340086,
+      "z": -4.593430995941162
+    },
+    "camera": {
+      "x": 5.465265297496891,
+      "y": 4.513841803678502,
+      "z": 7.119605378658719,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 1063,
+    "triangles": 1895354,
+    "geometries": 559,
+    "view": "default"
+  },
+  "behind-statue": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 0.05938461422920227,
+      "y": 0.022430877685546857,
+      "z": -4.59379243850708
+    },
+    "camera": {
+      "x": 0.05938461422920227,
+      "y": 3.047992458674482,
+      "z": 0.5737443216771618,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 977,
+    "triangles": 1838422,
+    "geometries": 559,
+    "view": "default"
+  },
+  "portal": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 0.06754947453737259,
+      "y": 7.025042991638184,
+      "z": -26.115554809570312
+    },
+    "camera": {
+      "x": 0.06755012313248009,
+      "y": 11.513746203603672,
+      "z": -14.402598730876647,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 791,
+    "triangles": 1723530,
+    "geometries": 559,
+    "view": "default"
+  },
+  "side": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 0.06755117326974869,
+      "y": 7.025042991638184,
+      "z": -26.115554809570312
+    },
+    "camera": {
+      "x": 10.753928261044047,
+      "y": 11.513762578270326,
+      "z": -21.3400007767466,
+      "yaw": 1.152,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 931,
+    "triangles": 1842846,
+    "geometries": 559,
+    "view": "default"
+  },
+  "overhead": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 1.993326925742167e-8,
+      "y": -0.17629941225051882,
+      "z": 27
+    },
+    "camera": {
+      "x": 0,
+      "y": 105.9447625506393,
+      "z": 64.72350312888729,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 1502,
+    "triangles": 2719100,
+    "geometries": 566,
+    "view": "atlas"
+  },
+  "reverse": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 3.725833153112035e-8,
+      "y": -0.1723987650871277,
+      "z": 27
+    },
+    "camera": {
+      "x": 3.54732136276973e-8,
+      "y": 4.31595480070539,
+      "z": 15.289230608032732,
+      "yaw": 3.141592653589793,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 614,
+    "triangles": 1529208,
+    "geometries": 566,
+    "view": "entrance"
+  },
+  "mobile": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "position": {
+      "x": 9.722955951474432e-8,
+      "y": -0.15889652490615847,
+      "z": 27
+    },
+    "camera": {
+      "x": 9.507194421317685e-8,
+      "y": 4.329373175117571,
+      "z": 38.71076939196727,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "low",
+    "drawCalls": 264,
+    "triangles": 331714,
+    "geometries": 194,
+    "view": "default",
+    "fps": [
+      46,
+      58,
+      58,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      62,
+      62
+    ],
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+  },
+  "route": {
+    "statueBlocked": true,
+    "stairsUp": true,
+    "stairsDown": true,
+    "unitedTransition": true
+  }
+}

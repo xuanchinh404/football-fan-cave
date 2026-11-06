@@ -1,3 +1,9 @@
+import {
+  BLUES_CAVE,
+  BLUES_MUSEUM,
+  CHELSEA_ORIGIN,
+  CHELSEA_SCALE,
+} from '../../../../../packages/shared/chelsea/layout';
 import { GRAND_ORIGIN, GRAND_SCALE, GRAND_BOUNDS } from '../../../../../packages/shared/grandHall';
 import {
   interactions,
@@ -6,11 +12,14 @@ import {
   type MapId,
   type Point,
 } from '../../../../../packages/shared/world';
+import { HALL } from '../../../../../packages/shared/museum';
 import { RED_CAVE } from '../../../../../packages/shared/cave';
 
-export type SceneId = 'plaza' | 'united';
+export type SceneId = 'plaza' | 'united' | 'hall-of-legends' | 'chelsea' | 'chelsea-museum';
 // Keep the existing authoritative Socket.IO room coordinates. Only the renderer uses metres.
 export const layouts = {
+  chelsea: { scale: CHELSEA_SCALE, origin: CHELSEA_ORIGIN, bounds: BLUES_CAVE.bounds },
+  'chelsea-museum': { scale: CHELSEA_SCALE, origin: CHELSEA_ORIGIN, bounds: BLUES_MUSEUM.bounds },
   plaza: {
     scale: GRAND_SCALE,
     origin: GRAND_ORIGIN,
@@ -21,6 +30,7 @@ export const layouts = {
       b: GRAND_BOUNDS.bottom / GRAND_SCALE + GRAND_ORIGIN.y,
     },
   },
+  'hall-of-legends': { scale: 0.0125, origin: { x: 1800, y: 2300 }, bounds: HALL.bounds },
   united: { scale: 0.0125, origin: { x: 2048, y: 2180 }, bounds: RED_CAVE.bounds },
 } as const;
 export function toScene(map: SceneId, p: Point): [number, number] {
@@ -40,14 +50,33 @@ export function sceneBounds(map: SceneId) {
 export function sceneObstacles(map: SceneId) {
   return obstacles(map).map((o, index) => {
     const [x, z] = toScene(map, { x: o.x + o.w / 2, y: o.y + o.h / 2 });
-    return { x, z, w: o.w * layouts[map].scale, d: o.h * layouts[map].scale, index };
+    const height =
+      map === 'chelsea' || map === 'chelsea-museum'
+        ? 'height' in o
+          ? Number(o.height)
+          : 3.8
+        : map === 'hall-of-legends'
+          ? 3.3
+          : index === 0
+            ? 1.6
+            : index === 2
+              ? 5
+              : [4, 7, 8, 9, 10, 14, 15].includes(index)
+                ? 10
+                : index >= 16
+                  ? 8
+                  : index === 11
+                    ? 0.65
+                    : 2.4;
+    return { x, z, w: o.w * layouts[map].scale, d: o.h * layouts[map].scale, index, height };
   });
 }
 export function playtestInteractions(map: MapId): Interaction[] {
-  if (map === 'plaza') return interactions(map);
+  if (map === 'plaza' || map === 'chelsea' || map === 'chelsea-museum') return interactions(map);
+  if (map === 'hall-of-legends') return interactions(map);
   if (map === 'united')
-    return interactions(map).filter((p) =>
-      ['exit', 'shop', 'score', 'statue', 'board'].includes(p.id),
+    return interactions(map).filter(
+      (p) => !['fun', 'fun-back', 'event-gate', 'event-back', 'photo', 'event'].includes(p.id),
     );
   return [];
 }

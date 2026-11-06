@@ -1,0 +1,116 @@
+.blues-cave:has(.three-canvas) {
+  --grand-panel: #0b1e40ed;
+  --grand-gold: #e4c07c;
+}
+.blues-cave:has(.three-canvas) .topbar {
+  background: linear-gradient(180deg, #112751, #07152f);
+  border-bottom-color: #c4a25a;
+}
+.blues-cave:has(.three-canvas) .area-card,
+.blues-cave:has(.three-canvas) .grand-sidebar,
+.blues-cave:has(.three-canvas) .grand-camera-tools button {
+  background: #0c2246e6;
+  border-color: #94b8ed55;
+}
+.blues-cave .cave-wayfinding {
+  color: #ecf4ff;
+  text-shadow:
+    0 2px 6px #020c24,
+    0 0 16px #020c24;
+}
+.blues-cave .cave-wayfinding small {
+  color: #b6d0ed;
+}
+.blues-guide {
+  position: absolute;
+  right: 18px;
+  bottom: 310px;
+  width: 185px;
+  border: 1px solid #c4a25a88;
+  border-radius: 12px;
+  background: #071c3fe8;
+  color: #e5c78c;
+  z-index: 4;
+  font-size: 11px;
+}
+.blues-guide summary {
+  cursor: pointer;
+  padding: 12px;
+}
+.blues-guide button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: #d7e7ff;
+  background: transparent;
+  padding: 9px 12px;
+  border: 0;
+  border-top: 1px solid #7595c82a;
+  cursor: pointer;
+}
+.blues-guide button:hover {
+  background: #2458a855;
+}
+.blues-seasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.blues-seasons button {
+  border: 1px solid #c4a25a55;
+  border-radius: 7px;
+  background: #163363;
+  color: #dceaff;
+  padding: 8px;
+  cursor: pointer;
+}
+.blues-seasons button[aria-pressed='true'] {
+  background: #d3ad5c;
+  color: #10244b;
+}
+.blues-verified {
+  display: block;
+  margin-top: 12px;
+  color: #a7bddc;
+  font-size: 10px;
+}
+@media (max-width: 700px) {
+  .blues-guide {
+    right: 10px;
+    bottom: 290px;
+    width: 140px;
+    font-size: 10px;
+  }
+  .blues-guide summary {
+    padding: 9px;
+  }
+  .blues-guide button {
+    padding: 8px;
+  }
+  .blues-cave .museum-breadcrumb {
+    left: 12px !important;
+    top: 138px !important;
+    max-width: 85vw;
+    font-size: 9px !important;
+  }
+  .blues-cave .cave-wayfinding {
+    bottom: 170px;
+    width: 72vw;
+  }
+  .blues-cave .cave-wayfinding strong {
+    font-size: 11px;
+  }
+  .blues-cave .cave-wayfinding small {
+    font-size: 8px;
+  }
+}
+.app-shell.blues-cave.red-cave:has(.three-canvas) .topbar {
+  background: linear-gradient(180deg, #112751, #07152f);
+}
+.app-shell.blues-cave.red-cave:has(.three-canvas) .area-card,
+.app-shell.blues-cave.red-cave:has(.three-canvas) .grand-sidebar,
+.app-shell.blues-cave.red-cave:has(.three-canvas) .grand-camera-tools button {
+  background: #0b2244e8;
+  border-color: #8eb9ee66;
+}

@@ -1,6 +1,6 @@
 # Hội Vào Hang — Football Fan Cave 3D
 
-Bản chơi thử web game 3D góc nhìn thứ ba: **Three.js + React Three Fiber + Rapier**, React + TypeScript + Vite, Node.js + Socket.IO. Đại Sảnh Chung có **ba tầng cao độ và chín cổng hang**; Hang Quỷ Đỏ có nội thất 3D vào/ra được, tám nội thất khác ghi rõ sắp ra mắt. Nhân vật đi tự do, camera xoay 360°, collision capsule và cầu có cao độ thật. Thế giới được dựng từ mesh 3D; không dùng ảnh toàn cảnh làm nền/sàn.
+Bản chơi thử web game 3D góc nhìn thứ ba: **Three.js + React Three Fiber + Rapier**, React + TypeScript + Vite, Node.js + Socket.IO. Đại Sảnh Chung có **ba tầng cao độ và chín cổng hang**; Hai cổng MU và Chelsea dẫn vào hang 3D riêng, mỗi hang có lối đi bộ đến một phòng truyền thống. Bảy nội thất còn lại ghi rõ sắp ra mắt. Nhân vật đi tự do, camera xoay 360°, collision capsule và cầu có cao độ thật. Thế giới được dựng từ mesh 3D; không dùng ảnh toàn cảnh làm nền/sàn.
 
 ## Chạy bản thử
 
@@ -23,7 +23,7 @@ npm run dev -w apps/web
 
 - WASD / phím mũi tên hoặc joystick: di chuyển theo camera. Giữ Shift hoặc nút Chạy để chạy.
 - Kéo chuột / vuốt trên cảnh: xoay camera; cuộn: zoom; R: đưa camera về sau nhân vật.
-- Đi qua giữa cổng Hang Quỷ Đỏ, hoặc đến gần và nhấn E / Tương tác để vào phòng. Cổng phía sau vị trí xuất hiện trong hang đưa bạn trở lại sảnh.
+- Đi qua giữa cổng Hang Quỷ Đỏ hoặc Hang The Blues. Bạn cũng có thể đến gần và nhấn E hoặc chạm Tương tác. Cổng phía sau vị trí xuất hiện trong hang đưa bạn trở lại sảnh.
 - Nút Toàn cảnh cho góc nhìn từ trên cao; Cổng chính cho góc nhìn ngược. Có Low / Medium / High trong Cài đặt.
 - Enter mở chat; Esc đóng cửa sổ. React HUD, minimap, biểu cảm và chụp cảnh được nối qua event bridge.
 
@@ -32,7 +32,7 @@ npm run dev -w apps/web
 ```text
 apps/web/src/game/GameCanvas.tsx       Canvas R3F + Physics
 apps/web/src/game/three/World3D.tsx    Input, capsule, camera, event bridge, realtime
-apps/web/src/game/three/Environments.tsx  Hai môi trường và collider
+apps/web/src/game/three/Environments.tsx  Chọn Đại Sảnh, hang MU/Chelsea và phòng truyền thống
 apps/web/src/game/three/Models.tsx    Mô hình procedural 3D
 apps/web/src/game/three/worldLayout.ts   Quy đổi tọa độ, phạm vi playtest
 apps/web/src/auth/                   Luồng Supabase hiện có
@@ -41,7 +41,7 @@ apps/server/src/index.ts             HTTP + Socket.IO hiện có
 packages/shared/                    Giao thức, bản đồ và validator hiện có
 ```
 
-Mã Phaser và asset 2D cũ được giữ làm tham chiếu; renderer mới không tải chúng. Chín cổng, sân trước, đấu trường, đền, quầy, góc ảnh, sân sút bóng và khu giao lưu được dựng 3D; không tuyên bố đã có nội thất cho tám hang chưa phát hành. Tài liệu README trước chuyển đổi nằm trong [hồ sơ 2D cũ](docs/legacy-2d-readme.md).
+Mã Phaser và asset 2D cũ được giữ làm tham chiếu; renderer mới không tải chúng. Chín cổng, sân trước, đấu trường, đền, quầy, góc ảnh, sân sút bóng và khu giao lưu được dựng 3D; không tuyên bố đã có nội thất cho bảy hang chưa phát hành. Tài liệu README trước chuyển đổi nằm trong [hồ sơ 2D cũ](docs/legacy-2d-readme.md).
 
 ## Kiểm tra
 
@@ -60,3 +60,19 @@ E2E mới kiểm tra camera xoay đủ vòng, collision, đi bộ ra/vào hang q
 ## Supabase Auth, hồ sơ và ví xu
 
 Trang chủ hiện dùng Supabase Auth (email, Google/Facebook, Anonymous Sign-in) trước khi vào game. Xem [hướng dẫn cấu hình và giới hạn đã kiểm chứng](docs/AUTH_SETUP.md), [nguồn artwork](docs/AUTH_ARTWORK.md) và `.env.example`. Khi thiếu Supabase, giao diện báo cấu hình còn thiếu; không có đăng nhập giả hoặc nạp xu demo. Migration nằm trong `supabase/migrations`. Chạy `npm run test:auth` để kiểm tra giao diện và SDK contract trên fixture cục bộ; OAuth thật cần cấu hình project đích.
+
+## Bàn giao nâng cấp Đại Sảnh 3D
+
+Xem [báo cáo kiểm chứng, ảnh desktop/toàn cảnh/mobile và các giới hạn còn lại](docs/grand-hall-verification.md). Bản đồ có ba tầng cao độ, chín cổng hang và 11 GLB nguyên bản. Mục tiêu đồ họa cinematic của concept vẫn cần tiếp tục sản xuất asset; báo cáo không coi bản kỹ thuật hiện tại là nghiệm thu mỹ thuật cuối cùng.
+
+## Hang MU và Phòng Hoài Niệm 3D
+
+Đi từ Đại Sảnh qua cổng MU; vòng qua bục Sảnh Trú Ẩn để đến hành lang kín dẫn vào Phòng Hoài Niệm. Phòng riêng có 68 cúp, gallery HLV, timeline, 11 bust huyền thoại và kiosk thông tin. E hoặc click khi đến gần hiện vật để đọc. Cổng phía nam bảo tàng về hang; cổng phía nam hang về Đại Sảnh. Space/nút Nhảy, Shift/Chạy, B biểu cảm, P chụp ảnh, K cà khịa.
+
+Xem [phân tích repo, cấu trúc scene, danh sách file và checklist kiểm tra](docs/mu-3d-implementation.md). Kiosk media hiện là placeholder; bảng tỷ số là minh họa. Nhảy dùng physics cục bộ, remote vẫn đồng bộ cao độ sàn.
+
+## Hang The Blues và Phòng Truyền Thống Chelsea
+
+Từ Đại Sảnh, lên tầng hai và đi qua cổng Chelsea. Góc Tâm Sự nằm bên trái. Hành lang lên bốn bậc thang bên phải dẫn đến Phòng Truyền Thống, với 12 nhóm cúp, gallery HLV, tượng Drogba, timeline và tư liệu các trận chung kết. Đến gần hiện vật rồi nhấn E hoặc chạm Tương tác để mở thông tin. Cổng phía nam bảo tàng đưa bạn trở về hành lang. Cổng phía nam hang đưa bạn ra đúng sân trước cổng Chelsea ở Đại Sảnh.
+
+[Báo cáo bàn giao Chelsea](docs/chelsea-3d-implementation.md) · [Ảnh kiểm thử và video](docs/visual-qa/chelsea/README.md)

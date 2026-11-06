@@ -1,4 +1,4 @@
-import {grandWalkable} from '../packages/shared/grandHall';
+import { GRAND_SCOREBOARD, grandWalkable } from '../packages/shared/grandHall';
 import { CAVES, GRAND_SURFACES, grandHeight, grandWire } from '../packages/shared/grandHall';
 import { clearPath, PORTALS } from '../packages/shared/world';
 import { test } from 'node:test';
@@ -15,7 +15,7 @@ import {
 import { obstacles, spawn, SPEED, walkable } from '../packages/shared/world';
 
 test('3D coordinates round-trip existing authoritative positions without changing room protocol', () => {
-  for (const map of ['plaza', 'united'] as const) {
+  for (const map of ['plaza', 'united', 'hall-of-legends'] as const) {
     for (const p of [spawn(map), ...playtestInteractions(map)]) {
       const [x, z] = toScene(map, p),
         back = toNetwork(map, x, z);
@@ -31,16 +31,16 @@ test('3D coordinates round-trip existing authoritative positions without changin
   }
 });
 test('rendered obstacle footprints match every unchanged authoritative obstacle', () => {
-  for (const map of ['plaza', 'united'] as const) {
+  for (const map of ['plaza', 'united', 'hall-of-legends'] as const) {
     const legacy = obstacles(map),
       meshes = sceneObstacles(map);
     assert.equal(meshes.length, legacy.length);
     meshes.forEach((o, i) => {
       const p = toNetwork(map, o.x, o.z);
-      assert(Math.abs(p.x-legacy[i].x-legacy[i].w/2)<1e-8);
-      assert(Math.abs(p.y-legacy[i].y-legacy[i].h/2)<1e-8);
-      assert(Math.abs(o.w/layouts[map].scale-legacy[i].w)<1e-8);
-      assert(Math.abs(o.d/layouts[map].scale-legacy[i].h)<1e-8);
+      assert(Math.abs(p.x - legacy[i].x - legacy[i].w / 2) < 1e-8);
+      assert(Math.abs(p.y - legacy[i].y - legacy[i].h / 2) < 1e-8);
+      assert(Math.abs(o.w / layouts[map].scale - legacy[i].w) < 1e-8);
+      assert(Math.abs(o.d / layouts[map].scale - legacy[i].h) < 1e-8);
     });
   }
 });
@@ -55,12 +55,16 @@ test('playtest only exposes implemented 3D rooms and both usable return portals'
     playtestInteractions('united')
       .filter((p) => p.kind === 'portal')
       .map((p) => p.target),
-    ['plaza'],
+    ['hall-of-legends', 'plaza'],
   );
   assert.equal(playtestNear('plaza', PORTALS.find((p) => p.id === 'united')!)?.target, 'united');
   assert.equal(playtestNear('united', { x: 2048, y: 2750 })?.target, 'plaza');
   assert.equal(playtestNear('plaza', { x: 680, y: 470 }), undefined);
-  assert.equal(playtestNear('united', { x: 2048, y: 1100 }), undefined);
+  assert.equal(playtestNear('united', { x: 2048, y: 1100 })?.target, 'hall-of-legends');
+  assert.equal(
+    playtestInteractions('hall-of-legends').find((p) => p.kind === 'portal')?.target,
+    'united',
+  );
 });
 
 test('all nine cave forecourts are reachable by continuous height-aware paths', () => {
@@ -98,4 +102,7 @@ test('all nine cave forecourts are reachable by continuous height-aware paths', 
   );
 });
 
-test('overhead result board permits walking underneath but its ground posts collide',()=>{assert(grandWalkable(0,-5.9));assert(!grandWalkable(4.5,-5.9));});
+test('overhead result board permits walking underneath but its ground posts collide', () => {
+  assert(grandWalkable(GRAND_SCOREBOARD.x, GRAND_SCOREBOARD.z));
+  assert(!grandWalkable(GRAND_SCOREBOARD.x + 4.5, GRAND_SCOREBOARD.z));
+});

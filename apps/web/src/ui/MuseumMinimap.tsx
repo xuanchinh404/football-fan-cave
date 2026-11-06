@@ -53,7 +53,7 @@ export function MuseumMinimap({
       <g
         data-player-x={Math.round(position.x)}
         data-player-y={Math.round(position.y)}
-        transform={`translate(${position.x} ${position.y}) rotate(${(heading * 180) / Math.PI + 90})`}
+        transform={`translate(${position.x} ${position.y}) rotate(${180 - (heading * 180) / Math.PI})`}
       >
         <circle r="110" fill="#fff3ae" opacity=".25" />
         <path d="M0 -90L-65 65 0 30 65 65Z" fill="#fff1ad" stroke="#ff3d55" strokeWidth="20" />

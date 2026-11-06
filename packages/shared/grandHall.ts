@@ -93,7 +93,7 @@ export const CAVES = [
     tier: 2,
     color: '#4169ff',
     symbol: 'C',
-    available: false,
+    available: true,
   },
   {
     id: 'city',
@@ -182,6 +182,18 @@ export const GRAND_TREES = [
   [-20, -51],
   [20, -51],
 ];
+export const GRAND_SLICE_TREES = [
+  { x: -10.3, z: 8.4, yaw: 0.7 },
+  { x: 10.1, z: -3.6, yaw: -0.8 },
+] as const;
+export const GRAND_SLICE_GARDENS = [
+  { x: -9.4, z: 25, yaw: 0.14 },
+  { x: 9.4, z: 25, yaw: -0.4 },
+  { x: -9.35, z: 18.1, yaw: 0.32 },
+  { x: -9.5, z: 1, yaw: -0.7 },
+  { x: 9.5, z: 1, yaw: 0.32 },
+] as const;
+export const GRAND_SCOREBOARD = { x: 16, z: -2 };
 export const GRAND_LAMPS = [
   ...Array.from({ length: 24 }, (_, i) => ({ x: i % 2 ? -9 : 9, z: 34 - Math.floor(i / 2) * 3.5 })),
   ...CAVES.flatMap((c) => [-1, 1].map((side) => ({ x: c.x + side * 6, z: c.z + 3 }))),
@@ -212,9 +224,16 @@ export const GRAND_SOLIDS: GrandSolid[] = [
       round: true,
     },
   ]),
-  { id: 'score', x: 0, z: -5.9, w: 8, d: 0.65, h: 2.2, base: 3.7 },
-  { id: 'score-left', x: -4.5, z: -5.9, w: 0.3, d: 0.3, h: 5, base: 0 },
-  { id: 'score-right', x: 4.5, z: -5.9, w: 0.3, d: 0.3, h: 5, base: 0 },
+  { id: 'score', ...GRAND_SCOREBOARD, w: 8, d: 0.65, h: 2.2, base: 3.7 },
+  ...[-1, 1].map((side) => ({
+    id: `score-post-${side}`,
+    x: GRAND_SCOREBOARD.x + side * 4.5,
+    z: GRAND_SCOREBOARD.z,
+    w: 0.3,
+    d: 0.3,
+    h: 5,
+    base: 0,
+  })),
   { id: 'arena-back', x: -32, z: -1, w: 15, d: 0.6, h: 7, base: 0 },
   { id: 'arena-west', x: -39.2, z: 3.7, w: 0.5, d: 9, h: 4, base: 0 },
   { id: 'arena-east', x: -24.8, z: 3.7, w: 0.5, d: 9, h: 4, base: 0 },
@@ -250,6 +269,26 @@ export const GRAND_SOLIDS: GrandSolid[] = [
     d: 0.8,
     h: 4,
     base: grandHeight(x, z)!,
+    round: true,
+  })),
+  ...GRAND_SLICE_TREES.map(({ x, z }, i) => ({
+    id: `promenade-cherry-${i}`,
+    x,
+    z,
+    w: 0.84,
+    d: 0.84,
+    h: 3.3,
+    base: grandHeight(x, z) ?? 0,
+    round: true,
+  })),
+  ...GRAND_SLICE_GARDENS.map(({ x, z }, i) => ({
+    id: `promenade-garden-${i}`,
+    x,
+    z,
+    w: 2.7,
+    d: 2.7,
+    h: 0.27,
+    base: grandHeight(x, z) ?? 0,
     round: true,
   })),
   ...GRAND_CLIFFS.map((p, i) => ({
@@ -337,14 +376,15 @@ export const GRAND_SOLIDS: GrandSolid[] = [
     base: c.height,
   })),
   ...CAVES.flatMap((c) => {
-    const scale = c.id === 'united' || c.tier === 3 ? 1.2 : 1;
+    const united = c.id === 'united';
+    const scale = c.tier === 3 ? 1.2 : 1;
     return [-1, 1].map((side) => ({
       id: `${c.id}-pillar-${side}`,
-      x: c.x + side * 4.35 * scale,
-      z: c.z,
-      w: 1.1 * scale,
-      d: 2.4 * scale,
-      h: 5.5 * scale,
+      x: c.x + side * (united ? 4.585 : 4.35 * scale),
+      z: united ? c.z - 0.06 : c.z,
+      w: united ? 2.53 : 1.1 * scale,
+      d: united ? 2.68 : 2.4 * scale,
+      h: united ? 4.35 : 5.5 * scale,
       base: c.height,
     }));
   }),
@@ -368,7 +408,13 @@ export function grandWalkable(x: number, z: number, radius = 0.33) {
 }
 export const GRAND_PLACES = [
   { id: 'statue', label: 'Tượng bóng vàng', x: 0, z: 7, kind: 'statue' },
-  { id: 'score', label: 'Kết quả bóng đá · Demo', x: 0, z: -4, kind: 'score' },
+  {
+    id: 'score',
+    label: 'Kết quả bóng đá · Demo',
+    x: GRAND_SCOREBOARD.x,
+    z: GRAND_SCOREBOARD.z + 1.9,
+    kind: 'score',
+  },
   { id: 'arena', label: 'Đấu Trường Cà Khịa', x: -32, z: 7, kind: 'event' },
   { id: 'prediction', label: 'Đền Dự Đoán · Miễn phí', x: 24, z: 3, kind: 'board' },
   { id: 'photo', label: 'Góc Chụp Ảnh', x: -15, z: 10, kind: 'photo' },

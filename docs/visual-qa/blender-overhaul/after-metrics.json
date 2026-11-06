@@ -1,0 +1,314 @@
+{
+  "cpu": "Apple M4",
+  "url": "http://localhost:5196/playtest",
+  "desktop": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": -0.000006944100732653169,
+      "y": 0.025093417167663556,
+      "z": 26.999996185302734
+    },
+    "camera": {
+      "x": -0.000006053335882277027,
+      "y": 4.513848894138095,
+      "z": 38.71076557727,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 1232,
+    "triangles": 2446819,
+    "geometries": 543,
+    "textures": 182,
+    "view": "default",
+    "fps": [
+      58,
+      58,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      62,
+      62
+    ],
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+  },
+  "approach": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 5.40093469619751,
+      "y": 0.022494535446166974,
+      "z": -4.603421211242676
+    },
+    "camera": {
+      "x": 5.400935248581104,
+      "y": 4.510820219003166,
+      "z": 7.1092714211763965,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 947,
+    "triangles": 2012301,
+    "geometries": 543,
+    "textures": 182,
+    "view": "default"
+  },
+  "behind-statue": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 0.08063104748725891,
+      "y": 0.021922092437744123,
+      "z": -4.608030319213867
+    },
+    "camera": {
+      "x": 0.08063104748725891,
+      "y": 3.1685129179932945,
+      "z": 1.1007351220243713,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 876,
+    "triangles": 1963937,
+    "geometries": 543,
+    "textures": 182,
+    "view": "default"
+  },
+  "portal": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 0.07701458036899567,
+      "y": 7.025100212097168,
+      "z": -26.268712997436523
+    },
+    "camera": {
+      "x": 0.07701460799172842,
+      "y": 11.51385225035935,
+      "z": -14.55572927134882,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 680,
+    "triangles": 1755797,
+    "geometries": 543,
+    "textures": 182,
+    "view": "default"
+  },
+  "side": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": 0.07701458036899567,
+      "y": 7.025100212097168,
+      "z": -26.268712997436523
+    },
+    "camera": {
+      "x": 10.764140733804641,
+      "y": 11.513855688981987,
+      "z": -21.494748110261895,
+      "yaw": 1.152,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 806,
+    "triangles": 1859547,
+    "geometries": 543,
+    "textures": 182,
+    "view": "default"
+  },
+  "stone-bridge": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": -41.115474700927734,
+      "y": 7.025024871826172,
+      "z": -24.192649841308594
+    },
+    "camera": {
+      "x": -41.115474947308556,
+      "y": 11.513749078364127,
+      "z": -12.479728582439908,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 728,
+    "triangles": 1705825,
+    "geometries": 543,
+    "textures": 182,
+    "view": "default"
+  },
+  "overhead": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": -0.000006939631475688657,
+      "y": 0.025093417167663556,
+      "z": 26.999996185302734
+    },
+    "camera": {
+      "x": 0,
+      "y": 105.94476255063928,
+      "z": 64.72350312888729,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 1332,
+    "triangles": 2719639,
+    "geometries": 550,
+    "textures": 189,
+    "view": "atlas"
+  },
+  "reverse": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": -0.000005032565240981057,
+      "y": 0.025093417167663556,
+      "z": 26.999996185302734
+    },
+    "camera": {
+      "x": -0.000005748126291742816,
+      "y": 4.513848894138095,
+      "z": 15.289226793335466,
+      "yaw": 3.141592653589793,
+      "pitch": 0.22
+    },
+    "quality": "medium",
+    "drawCalls": 531,
+    "triangles": 1570038,
+    "geometries": 550,
+    "textures": 189,
+    "view": "entrance"
+  },
+  "desktop-high": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "position": {
+      "x": -0.0000050381640903651714,
+      "y": 0.025093417167663556,
+      "z": 26.999996185302734
+    },
+    "camera": {
+      "x": -0.000005877086011637794,
+      "y": 4.513848894138095,
+      "z": 38.71076557727,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "high",
+    "drawCalls": 1309,
+    "triangles": 2759305,
+    "geometries": 551,
+    "textures": 234,
+    "view": "default",
+    "fps": [
+      46,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60
+    ],
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+  },
+  "mobile": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "position": {
+      "x": -0.00000503575756738428,
+      "y": 0.025093417167663556,
+      "z": 26.999996185302734
+    },
+    "camera": {
+      "x": -0.000005776889776960649,
+      "y": 4.513848894138095,
+      "z": 38.71076557727001,
+      "yaw": 0,
+      "pitch": 0.22
+    },
+    "quality": "low",
+    "drawCalls": 216,
+    "triangles": 439141,
+    "geometries": 181,
+    "textures": 71,
+    "view": "default",
+    "fps": [
+      35,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60,
+      60
+    ],
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+  },
+  "models": [
+    "amber-lamp-low.glb",
+    "amber-lamp.glb",
+    "azalea-bed.glb",
+    "ceremonial-stairs.glb",
+    "golden-ball-garden.glb",
+    "ornamental-cherry-low.glb",
+    "ornamental-cherry.glb",
+    "plaza-promenade.glb",
+    "red-devils-gateway.glb",
+    "slate-ledge-a.glb",
+    "slate-ledge-b.glb",
+    "slate-ledge-c.glb",
+    "terraced-cascade.glb",
+    "weathered-spire.glb",
+    "west-stone-bridge.glb"
+  ],
+  "route": {
+    "statueBlocked": true,
+    "stairsUp": true,
+    "stairsDown": true,
+    "unitedTransition": true,
+    "westBridge": true,
+    "gatewayPillar": true
+  }
+}

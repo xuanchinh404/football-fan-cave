@@ -1,6 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
+const authBase = `http://127.0.0.1:${process.env.FFC_TEST_AUTH_PORT || 3100}`;
+const shotDir = process.env.FFC_TEST_SHOTS || 'docs';
+fs.mkdirSync(shotDir, { recursive: true });
 type State = {
   map: string;
   position: { x: number; y: number; z: number };
@@ -15,18 +18,19 @@ type State = {
   caves: { id: string; tier: number; height: number }[];
   drawCalls: number;
   view: string;
+  cameraHit?: number;
 };
 async function state(page: Page): Promise<State> {
-  return JSON.parse((await page.locator('canvas').getAttribute('data-world')) || '{}');
+  return page.evaluate(() => (window as any).__world3d || {});
 }
 async function loginFixture(page: Page, name: string) {
-  const result = await fetch('http://127.0.0.1:3100/auth/v1/token?grant_type=password', {
+  const result = await fetch(`${authBase}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: name + '@test.invalid', password: 'good-password' }),
   });
   const session = await result.json();
-  await fetch('http://127.0.0.1:3100/rest/v1/profiles', {
+  await fetch(`${authBase}/rest/v1/profiles`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -108,7 +112,7 @@ async function performanceSample(page: Page, label: string) {
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
   });
-  const path = 'docs/grand-hall-performance.json';
+  const path = `${shotDir}/grand-hall-performance.json`;
   const old = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : {};
   old[label] = {
     date: new Date().toISOString(),
@@ -143,7 +147,7 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
     'bayern',
     'psg',
   ]);
-  await page.screenshot({ path: 'docs/grand-hall-default.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-default.png` });
   await performanceSample(page, 'desktop-medium');
   const initial = await state(page);
   for (let i = 0; i < 3; i++) {
@@ -185,7 +189,7 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
   await axis(page, 'z', -51.4);
   await page.keyboard.press('e');
   await expect(page.locator('.toast')).toContainText('sắp ra mắt');
-  await page.screenshot({ path: 'docs/grand-hall-bayern.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-bayern.png` });
   await axis(page, 'z', -48.5);
   await axis(page, 'x', -37.5);
   await axis(page, 'z', -24.5);
@@ -209,12 +213,12 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
   await axis(page, 'z', -24.5);
   await page.getByRole('button', { name: 'Góc nhìn từ trên cao', exact: true }).click();
   await expect.poll(async () => (await state(page)).view).toBe('atlas');
-  await page.screenshot({ path: 'docs/grand-hall-overview.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-overview.png` });
   await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
   await axis(page, 'x', 0);
   await walk(page, 'w', (s) => s.map === 'united');
   await expect(page.locator('.area-card')).toContainText('Hang Quỷ Đỏ');
-  await page.screenshot({ path: 'docs/grand-hall-mu-interior.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-mu-interior.png` });
   await axis(page, 'x', 4);
   await axis(page, 'z', -3);
   await axis(page, 'z', 0);
@@ -240,7 +244,8 @@ test('side bridge gains height, minimap tracks position, real ball minigame and 
   expect(await page.locator('.mini-map svg>g').last().getAttribute('transform')).not.toBe(
     mapBefore,
   );
-  await axis(page, 'z', -4.5);
+  // Leave clearance around the north columns of the prediction pavilion.
+  await axis(page, 'z', -6.2);
   await axis(page, 'x', 5);
   await axis(page, 'z', 18);
   await axis(page, 'x', 14);
@@ -254,6 +259,14 @@ test('side bridge gains height, minimap tracks position, real ball minigame and 
   await page.keyboard.press('e');
   await expect(page.locator('.photo-toolbar')).toBeVisible();
   await expect.poll(async () => (await state(page)).view).toBe('photo');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Tải PNG', exact: true }).click(),
+  ]);
+  const pngPath = await download.path();
+  expect(pngPath).toBeTruthy();
+  expect(fs.statSync(pngPath!).size).toBeGreaterThan(10000);
+  fs.copyFileSync(pngPath!, `${shotDir}/grand-hall-photo-mode.png`);
   await page.getByRole('button', { name: 'Thoát', exact: true }).click();
 });
 
@@ -300,7 +313,7 @@ test('mobile joystick, camera gesture, quality presets, offline and no overflow'
   }
   await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
   await page.waitForTimeout(200);
-  await page.screenshot({ path: 'docs/grand-hall-mobile.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-mobile.png` });
   await context.close();
 });
 
@@ -333,7 +346,7 @@ test('visual QA: reverse main gate, high quality and overview', async ({ page })
   await open(page, false);
   await page.getByRole('button', { name: 'Nhìn về cổng chính', exact: true }).click();
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'docs/grand-hall-entrance.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-entrance.png` });
   await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
   await page
     .locator('.grand-sidebar')
@@ -344,8 +357,171 @@ test('visual QA: reverse main gate, high quality and overview', async ({ page })
   await expect.poll(async () => (await state(page)).quality).toBe('high');
   await page.waitForTimeout(600);
   await performanceSample(page, 'desktop-high');
-  await page.screenshot({ path: 'docs/grand-hall-desktop.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-desktop.png` });
   await page.getByRole('button', { name: 'Góc nhìn từ trên cao', exact: true }).click();
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'docs/grand-hall-overview.png' });
+  await page.screenshot({ path: `${shotDir}/grand-hall-overview.png` });
+});
+
+test('MU 3D: refuge, separate museum, physical exhibits, history and full return flow online', async ({
+  page,
+}) => {
+  test.setTimeout(180000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page);
+  await toAvenue(page);
+  await walk(page, 'w', (s) => s.map === 'united');
+  await expect(page.getByRole('img', { name: 'Bản đồ Hang Quỷ Đỏ' })).toBeVisible();
+  await expect.poll(async () => (await state(page)).grounded).toBe(true);
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: 'docs/mu-3d-refuge.png' });
+  // Walk into the plinth, rather than injecting coordinates or bypassing collision.
+  await walk(page, 'w', (s) => s.position.z < -4.9);
+  await hold(page, 'w', 500);
+  expect((await state(page)).position.z).toBeGreaterThan(-5.3);
+  expect((await state(page)).collisions).toBeGreaterThan(0);
+  await axis(page, 'x', -10);
+  await axis(page, 'z', -6.3);
+  await expect(page.locator('.cave-wayfinding')).toContainText('Góc Tâm Sự Fan');
+  await page.screenshot({ path: 'docs/mu-3d-lounge.png' });
+  // Circle the plinth and enter the opaque passage in the back of the refuge.
+  await axis(page, 'x', -8);
+  await axis(page, 'z', -2.5);
+  await axis(page, 'x', 5);
+  await axis(page, 'z', -8);
+  await axis(page, 'x', 0);
+  await walk(page, 'w', (s) => s.map === 'hall-of-legends');
+  await expect(page.locator('.museum-breadcrumb')).toContainText('Phòng Hoài Niệm');
+  await expect(page.getByRole('img', { name: 'Bản đồ bảo tàng bảy khu vực' })).toBeVisible();
+  await expect.poll(async () => (await state(page)).grounded).toBe(true);
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: 'docs/mu-3d-museum.png' });
+  const standing = (await state(page)).position;
+  await page.keyboard.press('Space');
+  await expect
+    .poll(async () => (await state(page)).position.y, { intervals: [30] })
+    .toBeGreaterThan(0.25);
+  await expect.poll(async () => (await state(page)).grounded).toBe(true);
+  expect(Math.abs((await state(page)).position.x - standing.x)).toBeLessThan(0.15);
+  // Bust gallery is on the rear wall, reached through the real aisle.
+  await axis(page, 'x', 2.25);
+  await axis(page, 'z', 17.05);
+  await page.keyboard.press('e');
+  await expect(page.getByRole('heading', { name: 'Eric Cantona', exact: true })).toBeVisible();
+  const beforeModal = await state(page);
+  await hold(page, 'w', 200);
+  expect((await state(page)).position.z).toBeCloseTo(beforeModal.position.z, 1);
+  await page.keyboard.press('Escape');
+  await axis(page, 'x', 15);
+  await axis(page, 'z', 15.25);
+  await page.keyboard.press('e');
+  await expect(
+    page.getByRole('heading', { name: 'Thư viện ảnh · Khoảnh khắc huyền thoại' }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  // Take the western aisle to the European Cup and manager wall.
+  await axis(page, 'z', 16.8);
+  await axis(page, 'x', -18.6);
+  await axis(page, 'z', -17.8);
+  await axis(page, 'x', 0);
+  await page.keyboard.press('e');
+  await expect(page.getByRole('heading', { name: /European Cup.*1998\/99/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await hold(page, 'w', 500);
+  expect((await state(page)).position.z).toBeGreaterThan(-18.7);
+  await axis(page, 'x', 7);
+  await axis(page, 'z', -20);
+  await axis(page, 'x', 11.5);
+  await axis(page, 'z', -20.5);
+  await page.keyboard.press('e');
+  await expect(page.getByRole('heading', { name: 'Michael Carrick', exact: true })).toBeVisible();
+  await expect(page.locator('.museum-exhibit')).toContainText('hiện tại');
+  await page.screenshot({ path: 'docs/mu-3d-manager.png' });
+  await page.keyboard.press('Escape');
+  // Orbit a complete circle while remaining at the same world position.
+  const beforeOrbit = await state(page);
+  for (let i = 0; i < 3; i++) {
+    await page.mouse.move(1050, 400);
+    await page.mouse.down();
+    await page.mouse.move(650, 400, { steps: 16 });
+    await page.mouse.up();
+  }
+  expect((await state(page)).camera.yaw - beforeOrbit.camera.yaw).toBeGreaterThan(Math.PI * 2);
+  expect((await state(page)).position.x).toBeCloseTo(beforeOrbit.position.x, 1);
+  await page.getByRole('button', { name: 'Nhìn về cổng chính', exact: true }).click();
+  await expect.poll(async () => (await state(page)).cameraHit).toBeLessThan(3);
+  await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
+  await axis(page, 'z', -19.5);
+  await axis(page, 'x', 19.4);
+  await axis(page, 'z', -16.4);
+  await axis(page, 'x', 17.5);
+  await page.keyboard.press('e');
+  await expect(page.getByRole('heading', { name: /1902–1931/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await axis(page, 'x', 19.4);
+  await axis(page, 'z', -19.5);
+  await axis(page, 'x', -18.6);
+  await axis(page, 'z', 16.8);
+  await axis(page, 'x', 0);
+  await walk(page, 's', (s) => s.map === 'united');
+  await expect(page.locator('.area-card')).toContainText('Hang Quỷ Đỏ');
+  // Returning from the museum faces down the passage, toward the refuge.
+  await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
+  await axis(page, 'z', -8);
+  await axis(page, 'x', 5);
+  await axis(page, 'z', 0);
+  await axis(page, 'x', 0);
+  await walk(page, 's', (s) => s.map === 'plaza');
+  await expect(page.locator('.area-card')).toContainText('Đại Sảnh Chung');
+  expect(errors).toEqual([]);
+});
+
+test('MU 3D mobile: offline entry, joystick, orbit, jump and room-specific minimaps', async ({
+  browser,
+}) => {
+  test.setTimeout(100000);
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page, false);
+  await toAvenue(page);
+  await walk(page, 'w', (s) => s.map === 'united');
+  await expect(page.getByRole('img', { name: 'Bản đồ Hang Quỷ Đỏ' })).toBeVisible();
+  await page.screenshot({ path: 'docs/mu-3d-cave-mobile.png' });
+  await axis(page, 'x', 5);
+  await axis(page, 'z', -8);
+  await axis(page, 'x', 0);
+  await walk(page, 'w', (s) => s.map === 'hall-of-legends');
+  await expect(page.getByRole('img', { name: 'Bản đồ bảo tàng bảy khu vực' })).toBeVisible();
+  const initial = await state(page),
+    stick = (await page.locator('.joystick').boundingBox())!;
+  await page.mouse.move(stick.x + stick.width * 0.82, stick.y + stick.height / 2);
+  await page.mouse.down();
+  await expect
+    .poll(async () => (await state(page)).position.x)
+    .toBeGreaterThan(initial.position.x + 0.8);
+  await page.mouse.up();
+  await expect.poll(async () => (await state(page)).moving).toBe(false);
+  const stopped = await state(page);
+  await page.mouse.move(300, 400);
+  await page.mouse.down();
+  await page.mouse.move(100, 400, { steps: 15 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state(page)).camera.yaw).toBeGreaterThan(1);
+  expect((await state(page)).position.x).toBeCloseTo(stopped.position.x, 1);
+  await page.getByRole('button', { name: 'Nhảy', exact: true }).click();
+  await expect
+    .poll(async () => (await state(page)).position.y, { intervals: [30] })
+    .toBeGreaterThan(0.25);
+  await expect.poll(async () => (await state(page)).grounded).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await page.screenshot({ path: 'docs/mu-3d-museum-mobile.png' });
+  expect(errors).toEqual([]);
+  await context.close();
 });

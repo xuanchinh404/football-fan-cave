@@ -1,0 +1,23 @@
+{
+  "verifiedAt": "2026-11-05T00:48:47.070Z",
+  "scope": "Grand Hall, controls, collisions, MU entrance and return; excludes expanded museum scenarios prefixed MU 3D",
+  "e2eCommand": "npm run test:e2e -- --grep-invert 'MU 3D'",
+  "e2e": {
+    "passed": 5,
+    "failed": 0,
+    "duration": "2.4m"
+  },
+  "unitTests": {
+    "passed": 25,
+    "failed": 0
+  },
+  "assets": {
+    "validated": 11,
+    "invalid": 0
+  },
+  "productionBuild": "web and server passed",
+  "authTests": "13/13 on fixture in the earlier Auth verification run",
+  "knownLimitation": "Expanded museum full-suite scenario failed an obstacle route in the preceding run; not part of these five Grand Hall tests.",
+  "visualAcceptance": "Technical 3D playtest; not cinematic concept acceptance",
+  "performance": "grand-hall-performance.json"
+}

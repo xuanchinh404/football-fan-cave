@@ -1,3 +1,5 @@
+import { legends } from './legends';
+export { legends } from './legends';
 import leagueData from './leagueTitles.json' with { type: 'json' };
 import otherData from './otherTrophies.json' with { type: 'json' };
 import managerData from './managers.json' with { type: 'json' };
@@ -56,6 +58,22 @@ export const exhibits = [
     detail: h.description,
     type: 'history',
   })),
+  ...legends.map((l) => ({
+    ...l,
+    heading: l.name,
+    detail: `${l.years} · Số áo ${l.number}\n${l.bio}`,
+    type: 'legend',
+  })),
+  {
+    id: 'photo-library',
+    x: 3000,
+    y: 3450,
+    heading: 'Thư viện ảnh · Khoảnh khắc huyền thoại',
+    detail:
+      'Kiosk thư viện đang được chuẩn bị.\n1968 · Wembley: chiếc cúp châu Âu đầu tiên.\n1999 · Barcelona: hai phút bù giờ thay đổi lịch sử.\n2008 · Moscow: đêm mưa và chiến thắng trên chấm luân lưu.\nChưa có video hoặc ảnh tư liệu được cấp phép trong bản thử này.',
+    source: layout.sources.honours,
+    type: 'library',
+  },
   ...matches.map((m) => ({ ...m, heading: m.title, detail: m.description, type: 'match' })),
   {
     id: 'ferguson-statue',
@@ -69,6 +87,11 @@ export const exhibits = [
   },
 ];
 export const hallObstacles = [
+  { x: 1672, y: 3690, w: 48, h: 80 },
+  { x: 1880, y: 3690, w: 48, h: 80 }, // exit arch posts
+  ...legends.map((l) => ({ x: l.x - 49, y: l.y - 42, w: 98, h: 42 })),
+  { x: 2930, y: 3360, w: 140, h: 90 }, // library kiosk
+  ...[400, 3050].flatMap((x) => [1450, 2900].map((y) => ({ x: x - 35, y: y - 35, w: 70, h: 70 }))), // columns
   ...trophies.map((t) => ({ x: t.x - 49, y: t.y - 42, w: 98, h: 42 })),
   ...managers.map((m) => ({ x: m.x - 54, y: m.y - 85, w: 108, h: 85 })),
   ...historyTimeline.map((h) => ({ x: h.x - 115, y: h.y - 100, w: 230, h: 100 })),

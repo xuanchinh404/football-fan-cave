@@ -1,3 +1,5 @@
+import { BLUES_CAVE, BLUES_MUSEUM, bluesWire, bluesGround } from './chelsea/layout';
+import { chelseaExhibits } from './chelsea/content';
 import {
   CAVES,
   GRAND_PLACES,
@@ -13,7 +15,7 @@ import {
 import { HALL, exhibits, hallObstacles } from './museum/index';
 import { RED_CAVE } from './cave';
 export type TeamId = 'united' | 'arsenal' | 'liverpool' | 'chelsea' | 'city' | 'common';
-export type MapId = 'plaza' | 'hall-of-legends' | TeamId | CaveId;
+export type MapId = 'plaza' | 'hall-of-legends' | 'chelsea-museum' | TeamId | CaveId;
 export type Point = { x: number; y: number };
 export type Profile = { nickname: string; team: TeamId; avatar: number };
 export type Player = Profile &
@@ -96,7 +98,7 @@ export const TEAMS: {
 export const MAP_SIZE = { width: 6000, height: 5000 };
 export const SPAWN = grandWire(0, 27);
 export const SPEED = 220;
-export const RUN_SPEED=330;
+export const RUN_SPEED = 330;
 export type Interaction = Point & {
   id: string;
   label: string;
@@ -127,13 +129,59 @@ export const PORTALS: Interaction[] = CAVES.map((c) => ({
 }));
 export type Rect = { x: number; y: number; w: number; h: number };
 export function interactions(map: MapId): Interaction[] {
+  if (map === 'chelsea-museum')
+    return [
+      ...chelseaExhibits.map((e) => ({
+        id: e.id,
+        label: 'Khám phá · ' + e.heading,
+        ...bluesWire(e.x, e.z + (e.id === 'blues-drogba-statue' ? 2.4 : 1.65)),
+        kind: 'exhibit' as const,
+      })),
+      {
+        id: 'blues-museum-exit',
+        ...bluesWire(0, 19.5),
+        label: 'Quay về Hang The Blues',
+        kind: 'portal',
+        target: 'chelsea',
+      },
+    ];
+  if (map === 'chelsea')
+    return [
+      {
+        id: 'blues-museum-entry',
+        ...bluesWire(10, -21),
+        label: 'Vào Phòng Truyền Thống Chelsea',
+        kind: 'portal',
+        target: 'chelsea-museum',
+      },
+      {
+        id: 'blues-exit',
+        ...bluesWire(0, 15),
+        label: 'Cổng Ra Hang · Đại Sảnh Chung',
+        kind: 'portal',
+        target: 'plaza',
+      },
+      { id: 'blues-score', ...bluesWire(0, -3.5), label: 'Kết quả minh họa · DEMO', kind: 'score' },
+      {
+        id: 'blues-board',
+        ...bluesWire(12, 4.7),
+        label: 'Hôm nay trong Hang The Blues',
+        kind: 'board',
+      },
+      ...BLUES_CAVE.seats.map((p, i) => ({
+        ...p,
+        id: 'blues-seat-' + i,
+        label: 'Ngồi / đứng dậy',
+        kind: 'seat' as const,
+      })),
+    ];
   if (map === 'hall-of-legends')
     return [
       ...exhibits.map((e) => ({
         id: e.id,
         label: e.type === 'trophy' ? 'Xem danh hiệu · ' + e.heading : 'Khám phá · ' + e.heading,
         x: e.x,
-        y: e.y + (e.type === 'manager' ? 85 : 65),
+        y: e.y + (e.type === 'legend' ? -100 : e.type === 'manager' ? 85 : 65),
         kind: 'exhibit' as const,
       })),
       {
@@ -152,7 +200,7 @@ export function interactions(map: MapId): Interaction[] {
         id: 'hall-entry',
         x: 2048,
         y: 1100,
-        label: 'Phòng Truyền Thống',
+        label: 'Lối vào Phòng Hoài Niệm',
         kind: 'portal',
         target: 'hall-of-legends',
       },
@@ -160,13 +208,19 @@ export function interactions(map: MapId): Interaction[] {
         x: 2048,
         y: 2750,
         id: 'exit',
-        label: 'Quay về quảng trường',
+        label: 'Cổng Ra Hang · Đại Sảnh Chung',
         kind: 'portal',
         target: 'plaza',
       },
       { x: 3190, y: 1810, id: 'shop', label: 'Mở Quầy Cà Khịa', kind: 'shop' },
       { x: 920, y: 1320, id: 'score', label: 'Thông tin trận đấu · DEMO', kind: 'score' },
-      { x: 2048, y: 1810, id: 'statue', label: 'Khám phá quả bóng vàng', kind: 'statue' },
+      {
+        x: 2048,
+        y: 1810,
+        id: 'statue',
+        label: 'Sảnh Trú Ẩn · Câu chuyện của hang',
+        kind: 'statue',
+      },
       { x: 1560, y: 2000, id: 'board', label: 'Bảng hoạt động trong hang', kind: 'board' },
       {
         x: 1040,
@@ -227,6 +281,8 @@ export function interactions(map: MapId): Interaction[] {
       ];
 }
 export function spawn(map: MapId): Point {
+  if (map === 'chelsea') return { ...BLUES_CAVE.spawn };
+  if (map === 'chelsea-museum') return { ...BLUES_MUSEUM.spawn };
   return map === 'hall-of-legends'
     ? { ...HALL.spawn }
     : map === 'united'
@@ -236,6 +292,8 @@ export function spawn(map: MapId): Point {
         : { x: 1200, y: 1370 };
 }
 export function obstacles(map: MapId): Rect[] {
+  if (map === 'chelsea') return BLUES_CAVE.obstacles;
+  if (map === 'chelsea-museum') return BLUES_MUSEUM.obstacles;
   if (map === 'hall-of-legends') return hallObstacles;
   if (map === 'united') return RED_CAVE.obstacles.map((o) => ({ ...o }));
   return map === 'plaza'
@@ -258,11 +316,15 @@ export function walkable(map: MapId, x: number, y: number) {
     return grandWalkable(p.x, p.z);
   }
   const b =
-    map === 'hall-of-legends'
-      ? HALL.bounds
-      : map === 'united'
-        ? RED_CAVE.bounds
-        : { l: 580, r: 1820, t: 420, b: 1550 };
+    map === 'chelsea'
+      ? BLUES_CAVE.bounds
+      : map === 'chelsea-museum'
+        ? BLUES_MUSEUM.bounds
+        : map === 'hall-of-legends'
+          ? HALL.bounds
+          : map === 'united'
+            ? RED_CAVE.bounds
+            : { l: 580, r: 1820, t: 420, b: 1550 };
   return (
     x >= b.l &&
     x <= b.r &&
@@ -312,6 +374,7 @@ export function validMap(value: unknown): value is MapId {
   return (
     value === 'plaza' ||
     value === 'hall-of-legends' ||
+    value === 'chelsea-museum' ||
     TEAMS.some((t) => t.id === value) ||
     CAVES.some((c) => c.id === value)
   );
@@ -350,6 +413,8 @@ export function mapSize(map: MapId) {
       : MAP_SIZE;
 }
 export function roomKey(map: MapId) {
+  if (map === 'chelsea') return 'cave:chelsea';
+  if (map === 'chelsea-museum') return 'museum:chelsea';
   return map === 'hall-of-legends'
     ? 'cave:red-devils:hall-of-legends'
     : map === 'united'
@@ -362,7 +427,16 @@ export function plazaReturn(from: MapId): Point {
 }
 
 export function groundHeight(map: MapId, p: Point) {
+  if (map === 'chelsea') return bluesGround(p);
   if (map !== 'plaza') return 0;
   const q = grandMetres(p);
   return grandHeight(q.x, q.z);
+}
+
+/** Shared arrival positions keep offline and authoritative transitions identical. */
+export function arrival(from: MapId, target: MapId): Point {
+  if (target === 'plaza') return plazaReturn(from);
+  if (from === 'hall-of-legends' && target === 'united') return { x: 2048, y: 1100 };
+  if (from === 'chelsea-museum' && target === 'chelsea') return { ...BLUES_CAVE.returnFromMuseum };
+  return spawn(target);
 }

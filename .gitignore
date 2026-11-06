@@ -6,5 +6,7 @@ apps/web/dist/
 playwright-report/
 test-results/
 .DS_Store
+__pycache__/
+*.pyc
 
 apps/web/dist-grand-test/

@@ -34,29 +34,31 @@ export function CaveMinimap({
       {RED_CAVE.obstacles.map((o, i) => (
         <rect key={i} x={o.x} y={o.y} width={o.w} height={o.h} rx="30" fill="#302032" />
       ))}
-      {RED_CAVE.zones.map((z) => (
-        <g key={z.id}>
-          <circle cx={z.x} cy={z.y} r="83" fill={z.color} stroke="#ffead5" strokeWidth="10" />
-          <text x={z.x} y={z.y + 27} fontSize="90" fill="#49222b" textAnchor="middle">
-            {z.icon}
-          </text>
-          <text
-            x={z.x}
-            y={z.y - 140}
-            fontSize={large ? 60 : 95}
-            fill="#ffe8d7"
-            stroke="#2f1c2c"
-            strokeWidth="12"
-            paintOrder="stroke"
-            textAnchor="middle"
-          >
-            {z.label}
-          </text>
-        </g>
-      ))}
+      {RED_CAVE.zones
+        .filter((z) => !['fun', 'event'].includes(z.id))
+        .map((z) => (
+          <g key={z.id}>
+            <circle cx={z.x} cy={z.y} r="83" fill={z.color} stroke="#ffead5" strokeWidth="10" />
+            <text x={z.x} y={z.y + 27} fontSize="90" fill="#49222b" textAnchor="middle">
+              {z.icon}
+            </text>
+            <text
+              x={z.x}
+              y={z.y - 140}
+              fontSize={large ? 60 : 95}
+              fill="#ffe8d7"
+              stroke="#2f1c2c"
+              strokeWidth="12"
+              paintOrder="stroke"
+              textAnchor="middle"
+            >
+              {z.label}
+            </text>
+          </g>
+        ))}
       <circle cx={position.x} cy={position.y} r="150" fill="#fff3c9" opacity=".2" />
       <g
-        transform={`translate(${position.x} ${position.y}) rotate(${(heading * 180) / Math.PI + 90})`}
+        transform={`translate(${position.x} ${position.y}) rotate(${180 - (heading * 180) / Math.PI})`}
         data-player-x={Math.round(position.x)}
         data-player-y={Math.round(position.y)}
       >

@@ -1,0 +1,331 @@
+{
+  "blender": "5.2.3 LTS",
+  "assets": {
+    "red-devils-gateway": {
+      "fingerprint": "1e491287351b4a8b8085bcc6301c3e973a9e9c3a2f14cc81706792ab5acc56d4",
+      "sha256": "faf9c5f2312d1c3af0036a2116aae66251c30429f6bf5f17583aa4dce182719a",
+      "bytes": 648928,
+      "triangles": 7576,
+      "primitives": 10,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1747625,
+      "bounds": [
+        [
+          -5.85,
+          0,
+          -1.405
+        ],
+        [
+          5.85,
+          9.6,
+          1.838
+        ]
+      ],
+      "previewSha256": "01660c34e2ee929245a5700e94b43d891f85154aecbb319f35eec28249736205"
+    },
+    "ceremonial-stairs": {
+      "fingerprint": "d2649c62d958ce30c9958072d292850e20012a8e0802be9416880eed40c4c5e2",
+      "sha256": "26c8e77cee8fca0125ce130a46a4a2e2e7565875ec0be7c42831192707ca7c9f",
+      "bytes": 700712,
+      "triangles": 15604,
+      "primitives": 5,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1048575,
+      "bounds": [
+        [
+          -5.33,
+          -0.134,
+          -7.21
+        ],
+        [
+          5.33,
+          8.43,
+          7.21
+        ]
+      ],
+      "previewSha256": "8cdd1b3dd6806e3b4fbf32a169d8e87c81fa505c1fe6dc4835d65d1a90f4e664"
+    },
+    "west-stone-bridge": {
+      "fingerprint": "6abfd55f3253bec9bbe9c6813887f481a41501d346a260e908629804b50675c2",
+      "sha256": "5c2710d75548b9fd233435278cc2ddcaedfa70027523cc05a485065dc28ff55e",
+      "bytes": 448052,
+      "triangles": 7168,
+      "primitives": 6,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1048575,
+      "bounds": [
+        [
+          -3.43,
+          -5.333,
+          -7.23
+        ],
+        [
+          3.43,
+          8.38,
+          7.23
+        ]
+      ],
+      "previewSha256": "515c66460563ac562ea9e9c3add9677a893ba3dd014c47640eca5e468e88abde"
+    },
+    "amber-lamp": {
+      "fingerprint": "d802877c60c9f9857a07164a2a21b699f3900bda1cb616b62db98d7c0387da56",
+      "sha256": "ecd786fe057f2c913f53d28a09e5528ae32fff5df21e25ae1c76c72d6256db35",
+      "bytes": 22656,
+      "triangles": 640,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.31,
+          0,
+          -0.268
+        ],
+        [
+          0.31,
+          3.5,
+          0.268
+        ]
+      ],
+      "previewSha256": "f6ccd36cc51f643e14c8a38c76c98aacb989fa52e39ed1dfec3d2090abcb646d"
+    },
+    "amber-lamp-low": {
+      "fingerprint": "eb387c072032ff16ee9eba5c7203b0d3e96f307516cae03108f6fb8772bf372b",
+      "sha256": "f77360f4babeeadeb7ad929805fe56af1a52ae182b63706f9a91589d22991106",
+      "bytes": 10380,
+      "triangles": 156,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.31,
+          0,
+          -0.268
+        ],
+        [
+          0.31,
+          3.53,
+          0.268
+        ]
+      ]
+    },
+    "slate-ledge-a": {
+      "fingerprint": "befc85456e2d6dc0fc9f10a7217b44d24bbcef327149d7506bb25f70bd4f56e9",
+      "sha256": "da73bf0dca99e67f0cbde686154234fb257c7ba7a3c8541aee0cae563c81f6fc",
+      "bytes": 534440,
+      "triangles": 6502,
+      "primitives": 5,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1398100,
+      "bounds": [
+        [
+          -5.385,
+          -1.248,
+          -2.614
+        ],
+        [
+          5.452,
+          7.069,
+          2.061
+        ]
+      ],
+      "previewSha256": "4ff2f292dde9af538cd53d1158ee36ddcca96252c5a50d2f662fbd4aa09b42d0"
+    },
+    "slate-ledge-b": {
+      "fingerprint": "7eedc404871bf00d00f4b31fc98edfca172277b7ca0f45cb2c6d6bbb176c6c87",
+      "sha256": "420bd812905f6bb1051b5a5383cb6352d2dfbd9d4e49f66dac6b82c5d940b488",
+      "bytes": 530228,
+      "triangles": 6336,
+      "primitives": 5,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1398100,
+      "bounds": [
+        [
+          -5.423,
+          -1.261,
+          -2.676
+        ],
+        [
+          5.439,
+          7.052,
+          2.188
+        ]
+      ]
+    },
+    "slate-ledge-c": {
+      "fingerprint": "4c818026857024e2a31b93bd4dc8d207dde46ca92b317d0fdb0ea6e384d1246e",
+      "sha256": "137c9baff5576b225349d0f14ea57078dd39001a18ba78d684e43da1d9efeb4c",
+      "bytes": 527776,
+      "triangles": 6232,
+      "primitives": 5,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1398100,
+      "bounds": [
+        [
+          -5.416,
+          -1.24,
+          -2.727
+        ],
+        [
+          5.45,
+          7.051,
+          2.376
+        ]
+      ]
+    },
+    "terraced-cascade": {
+      "fingerprint": "8efa280a594007a5b42fe73768021cda4fef70c4cc399e361e4a8e58ec437a8b",
+      "sha256": "afdc7169b4b851c482e020733c4b480d0a489c17b52e321d28314f92e139aa24",
+      "bytes": 327916,
+      "triangles": 6672,
+      "primitives": 5,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 699050,
+      "bounds": [
+        [
+          -4.492,
+          -1.378,
+          -2.223
+        ],
+        [
+          4.73,
+          7.024,
+          6.058
+        ]
+      ],
+      "previewSha256": "5424d7013e332d82462e26f0196fe42e80ba0efd3540170db4895f4337949817"
+    },
+    "weathered-spire": {
+      "fingerprint": "acc0b83cbab83899e8daf30cf6ab49bb6473d86485f37ffc77810fb25d00f074",
+      "sha256": "33fcee8887a469d1699eb714bd264b0cc00ba8eeb64bf31feaa93e3f16fc8058",
+      "bytes": 415288,
+      "triangles": 2523,
+      "primitives": 4,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1398100,
+      "bounds": [
+        [
+          -4.032,
+          -0.572,
+          -2.95
+        ],
+        [
+          4.199,
+          17.521,
+          1.977
+        ]
+      ],
+      "previewSha256": "cd3741b43ab98ea7d8a03287cf3e015adac6556bc58df0dd89e3a4b0c4f512d4"
+    },
+    "azalea-bed": {
+      "fingerprint": "923faef04e7efe725216fef46d0a6287951d6f4a5b7efce2d546326d89fa8065",
+      "sha256": "e9925a57681ab381ee66b0e9c8ae4ee5d3b7c1bfbb553629ad1d34175518bc59",
+      "bytes": 457136,
+      "triangles": 9408,
+      "primitives": 7,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 699050,
+      "bounds": [
+        [
+          -1.38,
+          0,
+          -0.85
+        ],
+        [
+          1.38,
+          0.705,
+          0.85
+        ]
+      ],
+      "previewSha256": "b35a117d3c96658d6259569eedea46eae5fe9f54e24c36639e60d1b84bdd27e0"
+    },
+    "ornamental-cherry": {
+      "fingerprint": "1b0d5f8b78506785ac425aaf184b2eafab15c513d1921e08a34bb7893ff15eb2",
+      "sha256": "e124e7449447386659f7ff8e993aa3e2c19ff345f6772b3f0659fae4fbaf5343",
+      "bytes": 643468,
+      "triangles": 17194,
+      "primitives": 6,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 699050,
+      "bounds": [
+        [
+          -3.361,
+          -0.13,
+          -2.769
+        ],
+        [
+          3.419,
+          5.882,
+          3.23
+        ]
+      ],
+      "previewSha256": "65ecf4cfa28533aeb69aebc079a7240d2416af53ba330a0a0b7159dfee798dfc"
+    },
+    "ornamental-cherry-low": {
+      "fingerprint": "8dce62167fb6231d8cc325ad1d40e71a08a92debde3c32159242b29b591658ad",
+      "sha256": "b8037aafbeadfc5447a2d517771c8fd6917c37f23cd5890dcae374c617d95e2c",
+      "bytes": 117012,
+      "triangles": 3982,
+      "primitives": 6,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -3.324,
+          -0.13,
+          -2.618
+        ],
+        [
+          2.979,
+          5.916,
+          2.831
+        ]
+      ]
+    },
+    "golden-ball-garden": {
+      "fingerprint": "b8ccdf84b1c93f3ff177591c8ab2917ca582f3c60697ec162193f91046e3f7d4",
+      "sha256": "dedd2279992d3d805f63209173150f872d4b1a10a3e79ebbf775b4c539021d9a",
+      "bytes": 828636,
+      "triangles": 22744,
+      "primitives": 13,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1048575,
+      "bounds": [
+        [
+          -3.27,
+          0.012,
+          -3.27
+        ],
+        [
+          3.27,
+          4.844,
+          3.27
+        ]
+      ],
+      "previewSha256": "1a395d0e0a7b5cebae63db4bd017b7e7da76f62d0dcf53d26e67d9e2c81b1b4a"
+    },
+    "plaza-promenade": {
+      "fingerprint": "1aa79800ff0a7faa634c14d80b417a6bfe2f9af388ad5e99980bdb0a4c9283c5",
+      "sha256": "9698a21c794ec72c080463def671bb29da22144089a3c038bec8f2f6ecaf22e1",
+      "bytes": 926152,
+      "triangles": 15388,
+      "primitives": 5,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 2097150,
+      "bounds": [
+        [
+          -6.055,
+          0.003,
+          -18.993
+        ],
+        [
+          6.055,
+          0.039,
+          18.993
+        ]
+      ],
+      "previewSha256": "e1e833ebf6d5822a62fb0b3fd81690aa3e113fca3716cb0f838e9fafd0a9f9f0"
+    }
+  }
+}

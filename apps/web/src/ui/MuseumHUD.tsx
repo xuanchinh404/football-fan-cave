@@ -19,7 +19,7 @@ export function MuseumHUD({
   return (
     <>
       <div className="museum-breadcrumb">
-        ⌂ Hang Quỷ Đỏ <span>›</span> Phòng Truyền Thống
+        ⌂ Hang Quỷ Đỏ <span>›</span> Phòng Hoài Niệm
       </div>
       <div className="museum-location">
         <span>HALL OF LEGENDS</span>

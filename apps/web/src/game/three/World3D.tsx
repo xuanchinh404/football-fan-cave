@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   CapsuleCollider,
+  CuboidCollider,
   RigidBody,
   useBeforePhysicsStep,
   useRapier,
@@ -24,7 +25,15 @@ import {
 import { emit, on, type RemoteEvent, type StartEvent } from '../bridge';
 import { Character, Label } from './Models';
 import { Environment } from './Environments';
-import { layouts, playtestNear, toNetwork, toScene, type SceneId } from './worldLayout';
+import {
+  layouts,
+  sceneBounds,
+  playtestInteractions,
+  playtestNear,
+  toNetwork,
+  toScene,
+  type SceneId,
+} from './worldLayout';
 
 type Controls = {
   keys: Set<string>;
@@ -35,6 +44,7 @@ type Controls = {
   pitch: number;
   distance: number;
   running: boolean;
+  jump: boolean;
   view: 'default' | 'atlas' | 'entrance' | 'photo';
 };
 type Runtime = {
@@ -49,7 +59,10 @@ type Runtime = {
   grounded: boolean;
   frames: number;
   transitionAt: number;
+  portal?: string;
+  cameraHit?: number;
   seated?: boolean;
+  effectsOff?: boolean;
 };
 const isTyping = () =>
   /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '') ||
@@ -95,6 +108,7 @@ export function World3D() {
       pitch: 0.22,
       distance: 12,
       running: false,
+      jump: false,
       view: 'default',
     },
     collisions: 0,
@@ -105,18 +119,23 @@ export function World3D() {
   const pendingPosition = useRef<Point | null>(null);
   const [revision, setRevision] = useState(0);
   const [quality, setQuality] = useState<Quality>(window.innerWidth < 700 ? 'low' : 'medium');
+  const [effectsOff, setEffectsOff] = useState(false);
   const [gesture, setGesture] = useState<string | undefined>();
   useEffect(() => {
     let bubbleTimer: ReturnType<typeof setTimeout>;
     const r = runtime.current;
     function travel(e: { map: SceneId; x?: number; y?: number }) {
-      if (e.map !== 'plaza' && e.map !== 'united') {
-        emit('notice', 'Bản chơi thử 3D hiện mở Đại Sảnh Chung và Hang Quỷ Đỏ.');
+      if (!(e.map in layouts)) {
+        emit('notice', 'Bản chơi thử 3D hiện mở Đại Sảnh Chung cùng nội thất MU và Chelsea.');
         return;
       }
       const p = e.x === undefined ? spawn(e.map) : { x: e.x, y: e.y! };
       const [x, z] = toScene(e.map, p);
-      const returning = r.map === 'united' && e.map === 'plaza';
+      const returning =
+        (r.map === 'united' && e.map === 'plaza') ||
+        (r.map === 'hall-of-legends' && e.map === 'united') ||
+        (r.map === 'chelsea' && e.map === 'plaza') ||
+        (r.map === 'chelsea-museum' && e.map === 'chelsea');
       pendingPosition.current = p;
       r.feet.set(x, groundHeight(e.map, p) || 0, z);
       r.map = e.map;
@@ -125,8 +144,15 @@ export function World3D() {
       r.controls.yaw = returning ? Math.PI : 0;
       r.controls.pitch = 0.22;
       r.controls.view = 'default';
-      r.transitionAt = performance.now();
+      // Chelsea arrivals are outside the trigger. Only legacy MU arrivals can
+      // overlap the portal they came from and need a short transition cooldown.
+      r.transitionAt =
+        e.map === 'united' || e.map === 'hall-of-legends' ? performance.now() : -Infinity;
       r.moving = false;
+      r.grounded = false;
+      r.seated = false;
+      r.portal = undefined;
+      r.controls.jump = false;
       setMap(e.map);
       setRevision((v) => v + 1);
       setRemotes([]);
@@ -137,7 +163,12 @@ export function World3D() {
     function interact() {
       if (!r.controls.enabled || r.controls.blocked || isTyping()) return;
       const position = toNetwork(r.map, r.feet.x, r.feet.z);
-      emit('movement', { ...position, height: r.feet.y, direction: r.direction, moving: r.moving });
+      emit('movement', {
+        ...position,
+        height: groundHeight(r.map, position) || 0,
+        direction: r.direction,
+        moving: r.moving,
+      });
       emit('interact', { map: r.map, position });
     }
     function keydown(e: KeyboardEvent) {
@@ -159,6 +190,13 @@ export function World3D() {
         e.preventDefault();
         r.controls.keys.add(e.code);
       }
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        r.controls.jump = true;
+      }
+      if (e.code === 'KeyB' && !e.repeat) emit('toggle-emotes');
+      if (e.code === 'KeyP' && !e.repeat) emit('screenshot');
+      if (e.code === 'KeyK' && !e.repeat) emit('open-banter');
       if (e.code === 'KeyE' && !e.repeat) interact();
       if (e.code === 'Enter' && !e.repeat) {
         e.preventDefault();
@@ -178,6 +216,7 @@ export function World3D() {
       r.controls.joystick = { x: 0, y: 0 };
       drag = null;
       r.controls.running = false;
+      r.controls.jump = false;
     }
     let drag: { id: number; x: number; y: number } | null = null;
     const canvas = gl.domElement;
@@ -278,6 +317,9 @@ export function World3D() {
       on<{ seated: boolean }>('seated', (v) => {
         r.seated = v.seated;
       }),
+      on('jump', () => {
+        if (!r.controls.blocked && r.controls.enabled && !isTyping()) r.controls.jump = true;
+      }),
       on<boolean>('run', (v) => {
         r.controls.running = v;
       }),
@@ -290,7 +332,12 @@ export function World3D() {
         setGesture(v);
         setTimeout(() => setGesture(undefined), 2600);
       }),
+      on<boolean>('reduced-effects', (value) => {
+        r.effectsOff = value;
+        setEffectsOff(value);
+      }),
       on<string>('effect', (kind) => {
+        if (r.effectsOff) return;
         setBubble(kind === 'tomato' ? '🍅 🍅 🍅' : '⚽ ✨ 🎉');
         clearTimeout(bubbleTimer);
         bubbleTimer = setTimeout(() => setBubble(''), 4000);
@@ -358,7 +405,7 @@ export function World3D() {
     if (r.controls.enabled && now - lastSync.current > 75) {
       emit('movement', {
         ...toNetwork(r.map, r.feet.x, r.feet.z),
-        height: r.feet.y,
+        height: groundHeight(r.map, toNetwork(r.map, r.feet.x, r.feet.z)) || 0,
         direction: r.direction,
         moving: r.moving,
       });
@@ -369,7 +416,8 @@ export function World3D() {
       portal = playtestNear(r.map, p);
     if (
       portal?.kind === 'portal' &&
-      (r.map !== 'plaza' || portal.target === 'united') &&
+      r.portal === portal.id &&
+      (r.map !== 'plaza' || portal.target === 'united' || portal.target === 'chelsea') &&
       r.controls.enabled &&
       !r.controls.blocked &&
       r.moving &&
@@ -378,7 +426,12 @@ export function World3D() {
       const [px, pz] = toScene(r.map, portal);
       if (Math.abs(r.feet.x - px) < 1.3 && Math.abs(r.feet.z - pz) < 0.55) {
         r.transitionAt = now;
-        emit('movement', { ...p, height: r.feet.y, direction: r.direction, moving: true });
+        emit('movement', {
+          ...p,
+          height: groundHeight(r.map, p) || 0,
+          direction: r.direction,
+          moving: true,
+        });
         emit('interact', { map: r.map, position: p });
       }
     }
@@ -396,11 +449,15 @@ export function World3D() {
         pitch: r.controls.pitch,
       },
       moving: r.moving,
+      trigger: r.portal,
+      cameraHit: r.cameraHit,
       grounded: r.grounded,
+      seated: r.seated,
       collisions: r.collisions,
       frames: r.frames,
       drawCalls: gl.info.render.calls,
       geometries: gl.info.memory.geometries,
+      textures: gl.info.memory.textures,
       triangles: gl.info.render.triangles,
       remotes: remotes.length,
       fps: frameTime.current.fps,
@@ -408,6 +465,7 @@ export function World3D() {
       caves:
         r.map === 'plaza' ? CAVES.map((c) => ({ id: c.id, tier: c.tier, height: c.height })) : [],
       characterModel: 'fan-chibi.glb',
+      profile: { nickname: r.profile.nickname, team: r.profile.team, avatar: r.profile.avatar },
       view: r.controls.view,
     };
     if (now - lastState.current < 20)
@@ -416,9 +474,11 @@ export function World3D() {
   });
   return (
     <>
+      <PortalTriggers key={`portals-${map}`} map={map} runtime={runtime} />
       <Environment key={map} map={map} quality={quality} />
       <AvatarController
         key={`${map}-${revision}`}
+        map={map}
         runtime={runtime}
         pending={pendingPosition}
         profile={profile}
@@ -428,7 +488,7 @@ export function World3D() {
       {remotes.map((p) => (
         <RemoteCharacter key={p.id} player={p} map={map} bubble={remoteBubbles[p.id]} />
       ))}
-      {quality !== 'low' && <Dust map={map} />}
+      {quality !== 'low' && !effectsOff && <Dust map={map} />}
       {quality === 'high' && (
         <EffectComposer multisampling={0}>
           <Bloom luminanceThreshold={1.4} intensity={0.35} mipmapBlur />
@@ -438,12 +498,14 @@ export function World3D() {
   );
 }
 function AvatarController({
+  map,
   runtime,
   pending,
   profile,
   bubble,
   gesture,
 }: {
+  map: SceneId;
   runtime: React.RefObject<Runtime>;
   pending: React.RefObject<Point | null>;
   profile: Profile;
@@ -451,7 +513,8 @@ function AvatarController({
   gesture?: string;
 }) {
   const body = useRef<RapierRigidBody>(null);
-  const { world } = useRapier();
+  const avatar = useRef<THREE.Group>(null);
+  const { world, rapier } = useRapier();
   const { camera, scene } = useThree();
   const [animation, setAnimation] = useState({ moving: false, direction: Math.PI });
   const controller = useMemo(() => {
@@ -469,7 +532,7 @@ function AvatarController({
   const initial = useRef(runtime.current.feet.clone()).current;
   useBeforePhysicsStep(() => {
     const rb = body.current;
-    if (!rb) return;
+    if (!rb || runtime.current.map !== map) return;
     const r = runtime.current,
       c = r.controls,
       dt = 1 / 60;
@@ -480,6 +543,9 @@ function AvatarController({
       rb.setTranslation({ x, y: h + 1.06, z }, true);
       rb.setNextKinematicTranslation({ x, y: h + 1.06, z });
       r.feet.set(x, h, z);
+      initial.set(x, h, z);
+      // Keep the capsule on the new floor while Rapier registers the new scene.
+      spawnSteps.current = 0;
       velocity.current = 0;
       return;
     }
@@ -514,13 +580,19 @@ function AvatarController({
       c.running || c.keys.has('ShiftLeft') || c.keys.has('ShiftRight') ? RUN_SPEED : SPEED;
     const dx = (ix * Math.cos(c.yaw) + iz * Math.sin(c.yaw)) * speed * layouts[r.map].scale * dt;
     const dz = (-ix * Math.sin(c.yaw) + iz * Math.cos(c.yaw)) * speed * layouts[r.map].scale * dt;
+    if (c.jump && r.grounded && !c.blocked && c.enabled && !isTyping()) {
+      velocity.current = 5.5;
+      r.seated = false;
+      emit('stand');
+    }
+    c.jump = false;
     velocity.current = Math.max(velocity.current - 22 * dt, -20);
     controller.computeColliderMovement(
       rb.collider(0),
       { x: dx, y: velocity.current * dt, z: dz },
+      rapier.QueryFilterFlags.EXCLUDE_SENSORS,
       undefined,
-      undefined,
-      (collider) => collider.parent()?.handle !== rb.handle,
+      (collider) => !collider.isSensor() && collider.parent()?.handle !== rb.handle,
     );
     const movement = controller.computedMovement(),
       p = rb.translation();
@@ -551,7 +623,7 @@ function AvatarController({
     lastAnimation = useRef(0),
     cameraReady = useRef(false);
   useFrame((_, delta) => {
-    if (!body.current) return;
+    if (!body.current || runtime.current.map !== map) return;
     const r = runtime.current,
       p = body.current.translation();
     r.feet.set(p.x, p.y - 1.02, p.z);
@@ -561,9 +633,9 @@ function AvatarController({
     }
     target.set(p.x, p.y + 0.85, p.z);
     const atlas = r.controls.view === 'atlas';
-    if (atlas) target.set(0, 5, -9);
-    const dist = atlas ? 125 : r.controls.distance;
-    const pitch = atlas ? 0.94 : r.controls.pitch;
+    if (atlas) target.set(0, r.map === 'plaza' ? 5 : 0, r.map === 'plaza' ? -9 : -3);
+    const dist = atlas ? (r.map === 'plaza' ? 125 : 32) : r.controls.distance;
+    const pitch = atlas ? (r.map === 'plaza' ? 0.94 : 0.28) : r.controls.pitch;
     desired
       .set(
         Math.sin(r.controls.yaw) * dist * Math.cos(pitch),
@@ -571,6 +643,12 @@ function AvatarController({
         Math.cos(r.controls.yaw) * dist * Math.cos(pitch),
       )
       .add(target);
+    if (atlas && r.map !== 'plaza') {
+      const b = sceneBounds(r.map);
+      desired.x = THREE.MathUtils.clamp(desired.x, b.left + 0.5, b.right - 0.5);
+      desired.z = THREE.MathUtils.clamp(desired.z, b.top + 0.5, b.bottom - 0.5);
+      desired.y = Math.min(10.5, desired.y);
+    }
     if (performance.now() - lastScan.current > 1000 || !solids.current.length) {
       solids.current = [];
       scene.traverse((o) => {
@@ -583,6 +661,7 @@ function AvatarController({
     const hit = atlas
       ? undefined
       : ray.intersectObjects(solids.current, false).find((h) => h.distance > 0.15);
+    r.cameraHit = hit?.distance;
     if (hit)
       desired.copy(target).addScaledVector(ray.ray.direction, Math.max(0.4, hit.distance - 0.25));
     const factor =
@@ -591,6 +670,8 @@ function AvatarController({
         : 1 - Math.exp(-12 * Math.min(delta, 0.1));
     camera.position.lerp(desired, factor);
     camera.lookAt(target);
+    if (avatar.current)
+      avatar.current.visible = camera.position.distanceToSquared(target) >= 1.25 ** 2;
     cameraReady.current = true;
     lastView.current = r.controls.view;
   });
@@ -604,7 +685,7 @@ function AvatarController({
       name="player-capsule"
     >
       <CapsuleCollider args={[0.7, 0.32]} />
-      <group position={[0, -1.02, 0]}>
+      <group ref={avatar} position={[0, -1.02, 0]}>
         <Character
           color={TEAMS.find((t) => t.id === profile.team)?.color}
           name={`${profile.nickname} · BẠN`}
@@ -693,5 +774,40 @@ function Dust({ map }: { map: SceneId }) {
         depthWrite={false}
       />
     </points>
+  );
+}
+
+/** Sensor-only trigger volumes never obstruct the character controller or camera ray. */
+function PortalTriggers({ map, runtime }: { map: SceneId; runtime: React.RefObject<Runtime> }) {
+  const { rapier } = useRapier();
+  return (
+    <RigidBody type="fixed" colliders={false}>
+      {playtestInteractions(map)
+        .filter(
+          (p) =>
+            p.kind === 'portal' &&
+            (map !== 'plaza' || p.target === 'united' || p.target === 'chelsea'),
+        )
+        .map((p) => {
+          const [x, z] = toScene(map, p),
+            h = groundHeight(map, p) || 0;
+          return (
+            <CuboidCollider
+              key={p.id}
+              args={[1.3, 2, 0.55]}
+              position={[x, h + 2, z]}
+              sensor
+              activeCollisionTypes={rapier.ActiveCollisionTypes.ALL}
+              onIntersectionEnter={(e) => {
+                if (e.rigidBodyObject?.name === 'player-capsule') runtime.current.portal = p.id;
+              }}
+              onIntersectionExit={(e) => {
+                if (e.rigidBodyObject?.name === 'player-capsule' && runtime.current.portal === p.id)
+                  runtime.current.portal = undefined;
+              }}
+            />
+          );
+        })}
+    </RigidBody>
   );
 }

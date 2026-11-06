@@ -74,7 +74,7 @@ test('all exhibits and seven zones are reachable from spawn, with a distinct nea
       queue.some((p) => Math.hypot(p.x - z.x, p.y - z.y) < 130),
       `unreachable zone ${z.id}`,
     );
-  assert.equal(exhibits.length, 112);
+  assert.equal(exhibits.length, 124);
   assert.equal(roomKey(map), 'cave:red-devils:hall-of-legends');
   for (const t of trophies) assert(!walkable(map, t.x, t.y - 20), `missing collision ${t.id}`);
 });

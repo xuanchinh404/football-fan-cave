@@ -10,13 +10,16 @@
     "dev": "concurrently -k -n WEB,SERVER -c cyan,magenta \"npm run dev -w apps/web\" \"npm run dev -w apps/server\"",
     "build": "npm run build -w apps/web && npm run build -w apps/server",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "playwright test tests/e2e/world3d.spec.ts",
+    "test:e2e": "playwright test tests/e2e/world3d.spec.ts tests/e2e/chelsea.spec.ts",
+    "test:playtest-offline": "playwright test --config playwright.offline.config.ts",
     "start": "npm run start -w apps/server",
     "format": "prettier --write --ignore-unknown apps packages tests docs assets *.ts *.json *.yml *.md",
     "validate:museum": "tsx scripts/validate-museum.ts",
     "test:e2e:legacy": "playwright test tests/e2e/game.spec.ts tests/e2e/red-cave.spec.ts tests/e2e/museum.spec.ts",
     "test:auth": "tsx scripts/test-auth.ts",
-    "validate:assets": "node scripts/validate-assets.mjs"
+    "validate:assets": "node scripts/validate-assets.mjs",
+    "blender:assets": "node scripts/blender-overhaul.mjs assets",
+    "blender:verify": "node scripts/blender-overhaul.mjs verify"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.15",

@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "units": "metres",
+  "axis": "Blender Z-up, -Y front. GLB Y-up, +Z front.",
+  "output": "apps/web/public/models/blender",
+  "previews": "docs/asset-previews/blender-overhaul",
+  "assets": [
+    { "id": "red-devils-gateway", "generator": "architecture:gateway", "triangles": 13000, "maxKiB": 2300 },
+    { "id": "ceremonial-stairs", "generator": "architecture:stairs", "triangles": 19500, "maxKiB": 1800 },
+    { "id": "west-stone-bridge", "generator": "architecture:bridge", "triangles": 8500, "maxKiB": 1500 },
+    { "id": "amber-lamp", "generator": "architecture:street_lamp", "triangles": 1200, "maxKiB": 120 },
+    { "id": "amber-lamp-low", "generator": "architecture:street_lamp", "args": { "lod": true }, "triangles": 300, "maxKiB": 80, "preview": false },
+    { "id": "slate-ledge-a", "generator": "landscape:cliff", "args": { "seed": 19 }, "triangles": 8000, "maxKiB": 1600 },
+    { "id": "slate-ledge-b", "generator": "landscape:cliff", "args": { "seed": 67 }, "triangles": 8000, "maxKiB": 1600, "preview": false },
+    { "id": "slate-ledge-c", "generator": "landscape:cliff", "args": { "seed": 103 }, "triangles": 8000, "maxKiB": 1600, "preview": false },
+    { "id": "terraced-cascade", "generator": "landscape:waterfall", "triangles": 12000, "maxKiB": 1600 },
+    { "id": "weathered-spire", "generator": "landscape:spire", "triangles": 4000, "maxKiB": 850 },
+    { "id": "azalea-bed", "generator": "landscape:flower_bed", "triangles": 13500, "maxKiB": 850 },
+    { "id": "ornamental-cherry", "generator": "landscape:cherry", "triangles": 22000, "maxKiB": 1400 },
+    { "id": "ornamental-cherry-low", "generator": "landscape:cherry", "args": { "lod": true }, "triangles": 5500, "maxKiB": 320, "preview": false },
+    { "id": "golden-ball-garden", "generator": "plaza:statue", "triangles": 23000, "maxKiB": 2100 },
+    { "id": "plaza-promenade", "generator": "plaza:promenade", "triangles": 38000, "maxKiB": 2500 }
+  ]
+}
