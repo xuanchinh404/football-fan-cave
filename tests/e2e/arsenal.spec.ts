@@ -49,6 +49,8 @@ test('Arsenal online: walk through fortress, stairs, exhibits, and both return g
   await expect(page.getByRole('img', { name: 'Bản đồ Hang Arsenal' })).toBeVisible();
   await expect(page.locator('.area-card')).toContainText('Hang Pháo Thủ');
   await expect.poll(async () => (await state(page)).fps).toBeGreaterThan(20);
+  // Wait for the asynchronous masonry GLB and the room lighting to settle.
+  await page.waitForTimeout(1100);
   await capture(page, 'refuge');
   for (const [label, delta] of [
     ['left', 145],
@@ -122,12 +124,13 @@ test('Arsenal online: walk through fortress, stairs, exhibits, and both return g
   const yaw = (await state(page)).camera.yaw;
   for (let i = 0; i < 3; i++) await rotate(page, -400);
   expect((await state(page)).camera.yaw - yaw).toBeGreaterThan(Math.PI * 2);
-  await page.getByRole('button', { name: 'Nhìn về cổng chính', exact: true }).click();
-  await capture(page, 'reverse');
   await resetCamera(page);
   await axis(page, 'x', 20.6);
   await axis(page, 'z', 18.25);
   await axis(page, 'x', 0);
+  await page.getByRole('button', { name: 'Nhìn về cổng chính', exact: true }).click();
+  await capture(page, 'reverse');
+  await resetCamera(page);
   await walk(page, 's', (s) => s.map === 'arsenal');
   await expect(page.locator('.chat-content')).toContainText('Gặp lại ở sảnh Pháo Thủ');
   await resetCamera(page);

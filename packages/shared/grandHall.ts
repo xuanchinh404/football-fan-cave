@@ -61,15 +61,15 @@ export const CAVES = [
   },
   {
     id: 'liverpool',
-    name: 'Hang The Kop',
-    short: 'Hang The Kop',
+    name: 'Hang Liverpool',
+    short: 'Hang Liverpool',
     x: -15,
     z: -30.5,
     height: 7,
     tier: 2,
     color: '#ff3159',
     symbol: 'L',
-    available: false,
+    available: true,
   },
   {
     id: 'united',

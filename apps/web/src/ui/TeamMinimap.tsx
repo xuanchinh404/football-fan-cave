@@ -1,9 +1,11 @@
+import { KOP_CAVE, KOP_MUSEUM } from '../../../../packages/shared/liverpool/layout';
 import { ARSENAL_CAVE, ARSENAL_MUSEUM } from '../../../../packages/shared/arsenal/layout';
 import { BLUES_CAVE, BLUES_MUSEUM } from '../../../../packages/shared/chelsea/layout';
 import type { Point } from '../../../../packages/shared/world';
 export function TeamMinimap({
   position,
   arsenal = false,
+  liverpool = false,
   museum = false,
   large = false,
   onClick,
@@ -11,18 +13,25 @@ export function TeamMinimap({
 }: {
   position: Point;
   arsenal?: boolean;
+  liverpool?: boolean;
   museum?: boolean;
   large?: boolean;
   onClick?: () => void;
   heading?: number;
 }) {
-  const data = arsenal
+  const club = liverpool ? 'Liverpool' : arsenal ? 'Arsenal' : 'Chelsea';
+  const warm = arsenal || liverpool;
+  const data = liverpool
       ? museum
-        ? ARSENAL_MUSEUM
-        : ARSENAL_CAVE
-      : museum
-        ? BLUES_MUSEUM
-        : BLUES_CAVE,
+        ? KOP_MUSEUM
+        : KOP_CAVE
+      : arsenal
+        ? museum
+          ? ARSENAL_MUSEUM
+          : ARSENAL_CAVE
+        : museum
+          ? BLUES_MUSEUM
+          : BLUES_CAVE,
     b = data.bounds;
   const svg = (
     <svg
@@ -30,8 +39,8 @@ export function TeamMinimap({
       role="img"
       aria-label={
         museum
-          ? 'Bản đồ Phòng Truyền Thống ' + (arsenal ? 'Arsenal' : 'Chelsea')
-          : 'Bản đồ ' + (arsenal ? 'Hang Arsenal' : 'Hang The Blues')
+          ? 'Bản đồ Phòng Truyền Thống ' + club
+          : 'Bản đồ ' + (warm ? 'Hang ' + club : 'Hang The Blues')
       }
     >
       <rect
@@ -39,14 +48,14 @@ export function TeamMinimap({
         y={b.t - 35}
         width={b.r - b.l + 70}
         height={b.b - b.t + 70}
-        fill={arsenal ? '#240f1b' : '#071830'}
+        fill={warm ? '#240f1b' : '#071830'}
       />
       <rect
         x={b.l}
         y={b.t}
         width={b.r - b.l}
         height={b.b - b.t}
-        fill={arsenal ? '#793548' : '#214779'}
+        fill={warm ? '#793548' : '#214779'}
         stroke="#dcb76b"
         strokeWidth="12"
       />
@@ -57,8 +66,8 @@ export function TeamMinimap({
           y={o.y}
           width={o.w}
           height={o.h}
-          fill={arsenal ? '#2a1421' : '#07162e'}
-          stroke={arsenal ? '#b57c70' : '#6594d0'}
+          fill={warm ? '#2a1421' : '#07162e'}
+          stroke={warm ? '#b57c70' : '#6594d0'}
           strokeWidth="3"
         />
       ))}
@@ -90,11 +99,7 @@ export function TeamMinimap({
   return large ? (
     <div className="map-large">{svg}</div>
   ) : (
-    <button
-      className="mini-map"
-      onClick={onClick}
-      aria-label={arsenal ? 'Mở bản đồ Arsenal' : 'Mở bản đồ Chelsea'}
-    >
+    <button className="mini-map" onClick={onClick} aria-label={'Mở bản đồ ' + club}>
       {svg}
       <span className="north">N</span>
     </button>

@@ -6,3 +6,7 @@ redistribute them with this project. The kit includes original motifs and convey
 rights to official football club branding.
 
 Run `npm run blender:assets` from the repository root to regenerate the kit.
+
+The `gunners-*` GLBs and their original cannon emblem were generated for the
+project by `tools/blender/arsenal.py`. The trophy silhouettes and exhibition
+shirt are stylised, original interpretations.

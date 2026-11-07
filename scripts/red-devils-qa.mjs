@@ -19,7 +19,7 @@ try {
   });
   page.on('response', (response) => {
     const path = new URL(response.url()).pathname;
-    if (response.ok() && path.includes('/models/red-devils/') && path.endsWith('.glb'))
+    if (response.ok() && path.includes('/assets/3d/red-devils/') && path.endsWith('.glb'))
       models.add(path.split('/').at(-1));
   });
   await page.route('**/api/config', (route) => route.fulfill({ json: {} }));
@@ -81,6 +81,8 @@ try {
   await shot('01-tong-the');
   await reset();
   await axis('z', -3.2);
+  await page.mouse.move(900, 440);
+  await page.mouse.wheel(0, -470);
   await shot('02-nhan-vat-trung-tam');
 
   await axis('x', -12.15);
@@ -98,7 +100,7 @@ try {
   await axis('x', 0.12);
   await axis('z', -10.8, false);
   await page.mouse.move(900, 440);
-  await page.mouse.wheel(0, -810);
+  await page.mouse.wheel(0, -1450);
   await shot('05-hanh-lang-hoai-niem');
   await move('w', () => window.__world3d?.map === 'hall-of-legends');
   await waitMap('hall-of-legends');

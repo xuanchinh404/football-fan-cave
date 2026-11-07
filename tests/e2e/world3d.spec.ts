@@ -8,6 +8,10 @@ type State = {
   map: string;
   position: { x: number; y: number; z: number };
   camera: { x: number; y: number; z: number; yaw: number; pitch: number };
+  direction: number;
+  movementDirection: number | null;
+  movementVelocity: { x: number; z: number };
+  input: { keys: string[]; joystick: { x: number; y: number }; basisYaw: number | null };
   triangles: number;
   grounded: boolean;
   moving: boolean;
@@ -22,6 +26,44 @@ type State = {
 };
 async function state(page: Page): Promise<State> {
   return page.evaluate(() => (window as any).__world3d || {});
+}
+function angleDelta(to: number, from: number) {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
+}
+function behindError(s: State) {
+  return Math.abs(angleDelta(s.direction - Math.PI, s.camera.yaw));
+}
+function motionSample(s: State, elapsedMs: number) {
+  return {
+    elapsedMs: Math.round(elapsedMs),
+    input: s.input,
+    cameraYaw: s.camera.yaw,
+    characterFacing: s.direction,
+    movementDirection: s.movementDirection,
+    movementVelocity: s.movementVelocity,
+    position: s.position,
+  };
+}
+async function attachMotion(samples: ReturnType<typeof motionSample>[]) {
+  const path = test.info().outputPath('input-camera-motion.json');
+  fs.writeFileSync(path, JSON.stringify(samples, null, 2));
+  await test.info().attach('input-camera-motion.json', {
+    path,
+    contentType: 'application/json',
+  });
+}
+async function orbitQuarterTurn(page: Page) {
+  await page.mouse.move(1000, 400);
+  await page.mouse.down();
+  await page.mouse.move(738, 400, { steps: 12 });
+  await page.mouse.up();
+}
+function cameraArm(s: State) {
+  return Math.hypot(
+    s.camera.x - s.position.x,
+    s.camera.y - s.position.y - 1.4,
+    s.camera.z - s.position.z,
+  );
 }
 async function loginFixture(page: Page, name: string) {
   const result = await fetch(`${authBase}/auth/v1/token?grant_type=password`, {
@@ -135,6 +177,264 @@ async function performanceSample(page: Page, label: string) {
   fs.writeFileSync(path, JSON.stringify(old, null, 2));
 }
 
+const heldMovement = [
+  { keys: ['a'], x: -1, z: 0, startZ: 35, duration: 5000 },
+  { keys: ['d'], x: 1, z: 0, startZ: 35, duration: 5000 },
+  { keys: ['s'], x: 0, z: 1, startZ: 10, duration: 5000 },
+  { keys: ['w', 'a'], x: -Math.SQRT1_2, z: -Math.SQRT1_2, startZ: 34, duration: 1500 },
+  { keys: ['w', 'd'], x: Math.SQRT1_2, z: -Math.SQRT1_2, startZ: 34, duration: 1500 },
+];
+
+for (const { keys, x, z, startZ, duration } of heldMovement) {
+  test(`third-person holds ${keys.join('+').toUpperCase()} for ${duration / 1000}s with a straight path`, async ({
+    page,
+  }) => {
+    await open(page, false);
+    await axis(page, 'z', startZ);
+    const initial = await state(page);
+    const samples = [motionSample(initial, 0)];
+    try {
+      for (const key of keys) await page.keyboard.down(key);
+      const started = performance.now();
+      for (let elapsed = 250; elapsed <= duration; elapsed += 250) {
+        await page.waitForTimeout(Math.max(0, started + elapsed - performance.now()));
+        samples.push(motionSample(await state(page), performance.now() - started));
+      }
+    } finally {
+      for (const key of [...keys].reverse()) await page.keyboard.up(key);
+      await attachMotion(samples);
+    }
+
+    for (const sample of samples.slice(1)) {
+      const v = sample.movementVelocity;
+      expect(v.x * x + v.z * z).toBeGreaterThan(4.8);
+      expect(Math.abs(v.x * z - v.z * x)).toBeLessThan(0.15);
+      expect(Math.abs(angleDelta(sample.cameraYaw, initial.camera.yaw))).toBeLessThan(0.01);
+      expect(Math.abs(angleDelta(sample.characterFacing, Math.PI))).toBeLessThan(0.01);
+    }
+    const last = samples.at(-1)!.position;
+    const dx = last.x - initial.position.x;
+    const dz = last.z - initial.position.z;
+    expect(dx * x + dz * z).toBeGreaterThan((4.5 * duration) / 1000);
+    expect(Math.abs(dx * z - dz * x)).toBeLessThan(0.25);
+  });
+}
+
+test('third-person W holds its steering during orbit, then recenters and clears obstacles', async ({
+  page,
+}) => {
+  await open(page, false);
+  await axis(page, 'z', 33);
+  const beforeDrag = await state(page);
+  const started = performance.now();
+  const samples = [motionSample(beforeDrag, 0)];
+  const sample = async () => {
+    const s = await state(page);
+    samples.push(motionSample(s, performance.now() - started));
+    return s;
+  };
+  await page.keyboard.down('w');
+  try {
+    await expect
+      .poll(async () => (await state(page)).position.z)
+      .toBeLessThan(beforeDrag.position.z - 0.2);
+    await expect.poll(async () => behindError(await state(page))).toBeLessThan(0.1);
+    await page.mouse.move(1000, 400);
+    await page.mouse.down();
+    await page.mouse.move(800, 400, { steps: 12 });
+    const manual = (await sample()).camera.yaw;
+    await page.waitForTimeout(1050);
+    expect((await sample()).camera.yaw).toBeCloseTo(manual, 3);
+    await page.mouse.up();
+    await page.waitForTimeout(650);
+    expect((await sample()).camera.yaw).toBeCloseTo(manual, 3);
+    await expect
+      .poll(async () => behindError(await state(page)), { timeout: 2200 })
+      .toBeLessThan(0.15);
+    const after = await sample();
+    expect(Math.abs(after.position.x - beforeDrag.position.x)).toBeLessThan(0.25);
+    for (const point of samples.slice(1)) {
+      expect(point.movementVelocity.z).toBeLessThan(-4.8);
+      expect(Math.abs(point.movementVelocity.x)).toBeLessThan(0.15);
+    }
+  } finally {
+    await page.mouse.up();
+    await page.keyboard.up('w');
+    await attachMotion(samples);
+  }
+
+  await axis(page, 'x', 0);
+  await axis(page, 'z', 7.2);
+  await page.getByRole('button', { name: 'Nhìn về cổng chính', exact: true }).click();
+  await expect.poll(async () => (await state(page)).cameraHit).toBeLessThan(1.6);
+  const squeezed = await state(page);
+  expect(cameraArm(squeezed)).toBeLessThan(1.6);
+  await walk(page, 'w', (s) => s.position.z > 13);
+  await expect.poll(async () => cameraArm(await state(page))).toBeGreaterThan(5);
+  expect((await state(page)).cameraHit).toBeUndefined();
+
+  const settings = page.getByRole('button', { name: 'Cài đặt', exact: true }).first();
+  await settings.click();
+  const auto = page.getByRole('button', { name: 'Camera tự xoay' });
+  await expect(auto).toHaveAttribute('aria-pressed', 'true');
+  await auto.click();
+  await page.getByRole('slider', { name: 'Độ nhạy xoay chuột' }).press('End');
+  await page.getByLabel('Khoảng cách camera').selectOption('near');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
+  await expect.poll(async () => cameraArm(await state(page))).toBeCloseTo(4.2, 1);
+  await hold(page, 'd', 650);
+  expect((await state(page)).camera.yaw).toBeCloseTo(0, 3);
+  await page.mouse.move(1000, 400);
+  await page.mouse.down();
+  await page.mouse.move(900, 400, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state(page)).camera.yaw).toBeCloseTo(1.2, 2);
+
+  await page.reload();
+  await expect.poll(async () => (await state(page)).grounded, { timeout: 30000 }).toBe(true);
+  await expect.poll(async () => cameraArm(await state(page))).toBeCloseTo(4.2, 1);
+  await settings.click();
+  await expect(auto).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('slider', { name: 'Độ nhạy xoay chuột' })).toHaveValue('2');
+  await expect(page.getByLabel('Khoảng cách camera')).toHaveValue('near');
+});
+
+test('third-person samples a 90° orbit on the next move and can recenter with R or the HUD', async ({
+  page,
+}) => {
+  await open(page, false);
+  await axis(page, 'z', 35);
+  const initial = await state(page);
+  const samples = [motionSample(initial, 0)];
+  const started = performance.now();
+  try {
+    await orbitQuarterTurn(page);
+    await expect.poll(async () => (await state(page)).camera.yaw).toBeCloseTo(Math.PI / 2, 2);
+    const before = await state(page);
+    samples.push(motionSample(before, performance.now() - started));
+    expect(Math.abs(angleDelta(before.direction, initial.direction))).toBeLessThan(0.01);
+    for (const [key, x, z] of [
+      ['w', -1, 0],
+      ['s', 1, 0],
+      ['a', 0, 1],
+      ['d', 0, -1],
+    ] as const) {
+      await page.keyboard.down(key);
+      try {
+        await expect.poll(async () => (await state(page)).moving).toBe(true);
+        const s = await state(page);
+        samples.push(motionSample(s, performance.now() - started));
+        expect(s.input.basisYaw).toBeCloseTo(Math.PI / 2, 2);
+        expect(s.movementVelocity.x * x + s.movementVelocity.z * z).toBeGreaterThan(4.8);
+        expect(Math.abs(s.movementVelocity.x * z - s.movementVelocity.z * x)).toBeLessThan(0.15);
+        expect(behindError(s)).toBeLessThan(0.01);
+      } finally {
+        await page.keyboard.up(key);
+      }
+      await expect.poll(async () => (await state(page)).moving).toBe(false);
+    }
+
+    for (const reset of [
+      () => page.keyboard.press('r'),
+      () => page.getByRole('button', { name: 'Căn camera sau nhân vật' }).click(),
+    ]) {
+      await orbitQuarterTurn(page);
+      await expect.poll(async () => behindError(await state(page))).toBeGreaterThan(1.5);
+      await reset();
+      await expect
+        .poll(async () => behindError(await state(page)), { intervals: [20] })
+        .toBeLessThan(1.2);
+      expect(behindError(await state(page))).toBeGreaterThan(0.1);
+      await expect.poll(async () => behindError(await state(page))).toBeLessThan(0.02);
+    }
+
+    await page.getByRole('button', { name: 'Cài đặt', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Camera tự xoay' }).click();
+    await page.keyboard.press('Escape');
+    await page.keyboard.down('w');
+    try {
+      await expect.poll(async () => (await state(page)).moving).toBe(true);
+      await orbitQuarterTurn(page);
+      const s = await state(page);
+      samples.push(motionSample(s, performance.now() - started));
+      expect(s.input.basisYaw).toBeCloseTo(Math.PI / 2, 2);
+      expect(s.movementVelocity.x).toBeLessThan(-4.8);
+      expect(Math.abs(s.movementVelocity.z)).toBeLessThan(0.15);
+      await expect.poll(async () => (await state(page)).camera.yaw).toBeCloseTo(Math.PI, 2);
+      await page.keyboard.down('s');
+      try {
+        await expect.poll(async () => (await state(page)).moving).toBe(false);
+        await page.keyboard.up('w');
+        await expect.poll(async () => (await state(page)).movementVelocity.x).toBeGreaterThan(4.8);
+        const reversed = await state(page);
+        samples.push(motionSample(reversed, performance.now() - started));
+        expect(reversed.input.basisYaw).toBeCloseTo(Math.PI / 2, 2);
+        expect(Math.abs(reversed.movementVelocity.z)).toBeLessThan(0.15);
+      } finally {
+        await page.keyboard.up('s');
+      }
+    } finally {
+      await page.keyboard.up('w');
+    }
+  } finally {
+    await attachMotion(samples);
+  }
+});
+
+test('third-person mobile joystick traces a full circle in one steering frame', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const samples: ReturnType<typeof motionSample>[] = [];
+  try {
+    const page = await context.newPage();
+    await open(page, false);
+    const touch = await context.newCDPSession(page);
+    const stick = (await page.getByLabel('Joystick di chuyển').boundingBox())!;
+    const point = (angle: number) => ({
+      x: stick.x + stick.width / 2 + 25 * Math.cos(angle),
+      y: stick.y + stick.height / 2 + 25 * Math.sin(angle),
+    });
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(0)] });
+    await expect.poll(async () => (await state(page)).moving).toBe(true);
+    const initial = await state(page);
+    const started = performance.now();
+    samples.push(motionSample(initial, 0));
+    for (let i = 1; i <= 32; i++) {
+      const angle = (i * 2 * Math.PI) / 32;
+      await touch.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [point(angle)],
+      });
+      await page.waitForTimeout(85);
+      const s = await state(page);
+      samples.push(motionSample(s, performance.now() - started));
+      expect(s.movementDirection).not.toBeNull();
+      expect(
+        Math.abs(angleDelta(s.movementDirection!, Math.atan2(Math.cos(angle), Math.sin(angle)))),
+      ).toBeLessThan(0.12);
+      expect(s.input.basisYaw).toBeCloseTo(initial.camera.yaw, 3);
+      expect(s.camera.yaw).toBeCloseTo(initial.camera.yaw, 3);
+      expect(behindError(s)).toBeLessThan(0.01);
+    }
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    const end = await state(page);
+    expect(
+      Math.hypot(end.position.x - initial.position.x, end.position.z - initial.position.z),
+    ).toBeLessThan(1.8);
+    await expect.poll(async () => (await state(page)).input.basisYaw).toBeNull();
+    expect((await state(page)).camera.yaw).toBeCloseTo(initial.camera.yaw, 3);
+  } finally {
+    await attachMotion(samples);
+    await context.close();
+  }
+});
+
 test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and MU return', async ({
   page,
 }) => {
@@ -220,6 +520,7 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
   await expect(page.locator('.area-card')).toContainText('Hang Quỷ Đỏ');
   await page.screenshot({ path: `${shotDir}/grand-hall-mu-interior.png` });
   await axis(page, 'x', 4);
+  await expect.poll(async () => behindError(await state(page))).toBeLessThan(0.1);
   await axis(page, 'z', -3);
   await axis(page, 'z', 0);
   await axis(page, 'x', 0);
@@ -227,6 +528,7 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
   await expect.poll(async () => (await state(page)).position.y).toBeGreaterThan(6.9);
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
   expect((await state(page)).position.z).toBeCloseTo(-28.35, 0);
+  expect(behindError(await state(page))).toBeLessThan(0.1);
   expect(errors).toEqual([]);
 });
 
@@ -292,9 +594,10 @@ test('mobile joystick, camera gesture, quality presets, offline and no overflow'
   const after = await state(page);
   await page.mouse.move(300, 400);
   await page.mouse.down();
+  const beforeOrbit = (await state(page)).camera.yaw;
   await page.mouse.move(80, 400, { steps: 15 });
   await page.mouse.up();
-  await expect.poll(async () => (await state(page)).camera.yaw).toBeGreaterThan(1);
+  await expect.poll(async () => (await state(page)).camera.yaw - beforeOrbit).toBeGreaterThan(1);
   expect(Math.abs((await state(page)).position.x - after.position.x)).toBeLessThan(0.2);
   await page.getByRole('button', { name: 'Mở menu', exact: true }).click();
   await page
@@ -511,9 +814,10 @@ test('MU 3D mobile: offline entry, joystick, orbit, jump and room-specific minim
   const stopped = await state(page);
   await page.mouse.move(300, 400);
   await page.mouse.down();
+  const beforeOrbit = (await state(page)).camera.yaw;
   await page.mouse.move(100, 400, { steps: 15 });
   await page.mouse.up();
-  await expect.poll(async () => (await state(page)).camera.yaw).toBeGreaterThan(1);
+  await expect.poll(async () => (await state(page)).camera.yaw - beforeOrbit).toBeGreaterThan(1);
   expect((await state(page)).position.x).toBeCloseTo(stopped.position.x, 1);
   await page.getByRole('button', { name: 'Nhảy', exact: true }).click();
   await expect

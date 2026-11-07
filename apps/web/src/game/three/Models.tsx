@@ -181,12 +181,16 @@ export function Character({
   direction = Math.PI,
   running = false,
   gesture,
+  jumping = false,
+  seated = false,
 }: {
   color?: string;
   name: string;
   moving?: boolean;
   direction?: number;
   running?: boolean;
+  jumping?: boolean;
+  seated?: boolean;
   gesture?: string;
 }) {
   const root = useRef<THREE.Group>(null);
@@ -202,11 +206,22 @@ export function Character({
     <group>
       <group ref={root}>
         <PlayerAvatar3D
+          motion={
+            seated
+              ? 'SitIdle'
+              : jumping
+                ? 'Jump'
+                : moving
+                  ? running
+                    ? 'Run'
+                    : 'Walk'
+                  : gesture || 'Idle'
+          }
           fallback={
             <AssetModel
               asset="fan-chibi"
               tint={color}
-              animation={gesture || (moving ? (running ? 'Run' : 'Walk') : 'Idle')}
+              animation={seated ? 'Sit' : gesture || (moving ? (running ? 'Run' : 'Walk') : 'Idle')}
               scale={0.86}
               solid={false}
             />

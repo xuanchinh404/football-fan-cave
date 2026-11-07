@@ -1,4 +1,10 @@
 import {
+  KOP_CAVE,
+  KOP_MUSEUM,
+  LIVERPOOL_ORIGIN,
+  LIVERPOOL_SCALE,
+} from '../../../../../packages/shared/liverpool/layout';
+import {
   ARSENAL_CAVE,
   ARSENAL_MUSEUM,
   ARSENAL_ORIGIN,
@@ -28,9 +34,17 @@ export type SceneId =
   | 'chelsea'
   | 'chelsea-museum'
   | 'arsenal'
-  | 'arsenal-museum';
+  | 'arsenal-museum'
+  | 'liverpool'
+  | 'liverpool-museum';
 // Keep the existing authoritative Socket.IO room coordinates. Only the renderer uses metres.
 export const layouts = {
+  liverpool: { scale: LIVERPOOL_SCALE, origin: LIVERPOOL_ORIGIN, bounds: KOP_CAVE.bounds },
+  'liverpool-museum': {
+    scale: LIVERPOOL_SCALE,
+    origin: LIVERPOOL_ORIGIN,
+    bounds: KOP_MUSEUM.bounds,
+  },
   arsenal: { scale: ARSENAL_SCALE, origin: ARSENAL_ORIGIN, bounds: ARSENAL_CAVE.bounds },
   'arsenal-museum': { scale: ARSENAL_SCALE, origin: ARSENAL_ORIGIN, bounds: ARSENAL_MUSEUM.bounds },
 
@@ -67,10 +81,8 @@ export function sceneObstacles(map: SceneId) {
   return obstacles(map).map((o, index) => {
     const [x, z] = toScene(map, { x: o.x + o.w / 2, y: o.y + o.h / 2 });
     const height =
-      map === 'chelsea' || map === 'chelsea-museum' || map === 'arsenal' || map === 'arsenal-museum'
-        ? 'height' in o
-          ? Number(o.height)
-          : 3.8
+      'height' in o
+        ? Number(o.height)
         : map === 'hall-of-legends'
           ? 3.3
           : index === 0
@@ -90,6 +102,8 @@ export function sceneObstacles(map: SceneId) {
 export function playtestInteractions(map: MapId): Interaction[] {
   if (
     map === 'plaza' ||
+    map === 'liverpool' ||
+    map === 'liverpool-museum' ||
     map === 'chelsea' ||
     map === 'chelsea-museum' ||
     map === 'arsenal' ||

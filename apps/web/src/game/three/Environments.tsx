@@ -1,4 +1,6 @@
 import { lazy } from 'react';
+const LiverpoolCaveScene = lazy(() => import('./liverpool/LiverpoolCaveScene'));
+const LiverpoolMuseumScene = lazy(() => import('./liverpool/LiverpoolMuseumScene'));
 const ArsenalCave = lazy(() => import('./ArsenalCave').then((m) => ({ default: m.ArsenalCave })));
 const ArsenalMuseum = lazy(() =>
   import('./ArsenalMuseum').then((m) => ({ default: m.ArsenalMuseum })),
@@ -17,6 +19,8 @@ const RedDevilsMuseum = lazy(() =>
 import type { SceneId } from './worldLayout';
 
 export function Environment({ map, quality = 'medium' }: { map: SceneId; quality?: Quality }) {
+  if (map === 'liverpool') return <LiverpoolCaveScene quality={quality} />;
+  if (map === 'liverpool-museum') return <LiverpoolMuseumScene quality={quality} />;
   if (map === 'arsenal') return <ArsenalCave quality={quality} />;
   if (map === 'arsenal-museum') return <ArsenalMuseum quality={quality} />;
   if (map === 'chelsea') return <ChelseaCave quality={quality} />;

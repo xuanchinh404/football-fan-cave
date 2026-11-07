@@ -7,12 +7,12 @@ Trong zsh, nhập token ẩn qua dấu nhắc, rồi chạy mẫu chibi áo đ�
 ```zsh
 read -rs 'HF_TOKEN?Hugging Face token: '
 export HF_TOKEN
-python3 scripts/generate-3d-asset.py images/download.png characters/chibi-red-7 \
+python3 scripts/generate-3d-asset.py images/download.png red-devils/chibi-red-7 \
   --resolution 512 --texture-size 1024 --decimation-target 100000
 unset HF_TOKEN
 ```
 
-Kết quả mẫu được lưu tại `public/assets/3d/characters/chibi-red-7.glb`. Với cổng hang, tượng hoặc đồ trang trí, thay đường dẫn ảnh và dùng tên như `props/cave-gate`, `statues/club-legend` hoặc `props/scarf-display`. Script nhận PNG, JPG và JPEG, tạo thư mục con theo tên asset và từ chối ghi đè file có sẵn.
+Kết quả mẫu được lưu tại `public/assets/3d/red-devils/chibi-red-7.glb`. Với cổng hang, tượng hoặc đồ trang trí, thay đường dẫn ảnh và dùng tên như `props/cave-gate`, `statues/club-legend` hoặc `props/scarf-display`. Script nhận PNG, JPG và JPEG, tạo thư mục con theo tên asset và từ chối ghi đè file có sẵn.
 
 ## Cấu hình và kiểm tra
 
@@ -31,14 +31,14 @@ Script đọc schema và cấu hình trực tiếp ở mỗi lần chạy để 
 python3 scripts/generate-3d-asset.py --check-api
 
 # Kiểm tra GLB sau khi tạo hoặc dùng một file có sẵn
-python3 scripts/generate-3d-asset.py --inspect public/assets/3d/characters/chibi-red-7.glb
+python3 scripts/generate-3d-asset.py --inspect public/assets/3d/red-devils/chibi-red-7.glb
 ```
 
 Script kiểm tra container GLB 2.0, phạm vi buffer và accessor, mesh tam giác, UV và ảnh texture PBR nhúng. Kết quả in số mesh, tam giác, material, texture, skin và animation. Kiểm tra hình dáng, màu sắc và độ đúng của ảnh tham chiếu bằng cách mở mô hình trong trình xem 3D.
 
 ## Dùng trong game
 
-Game nạp `public/assets/3d/characters/chibi-red-7.glb` bằng `GLTFLoader` tại tủ trưng bày Cristiano Ronaldo trong Phòng Hoài Niệm. Vite đưa file được import với hậu tố `?url` vào bản build. Component căn model theo đáy bounding box, giới hạn kích thước theo tủ và dùng bust cũ khi model đang tải hoặc gặp lỗi. Để dùng một GLB mới cho tủ này, cập nhật đường dẫn import trong `apps/web/src/game/three/RedDevilsMuseum.tsx`.
+Game nạp `public/assets/3d/red-devils/chibi-red-7.glb` bằng `GLTFLoader` tại tủ trưng bày Cristiano Ronaldo trong Phòng Hoài Niệm. Vite đưa file được import với hậu tố `?url` vào bản build. Component căn model theo đáy bounding box, giới hạn kích thước theo tủ và dùng bust cũ khi model đang tải hoặc gặp lỗi. Để dùng một GLB mới cho tủ này, cập nhật đường dẫn import trong `apps/web/src/game/three/RedDevilsMuseum.tsx`.
 
 Mẫu có 0 skin và 0 animation. Game dùng nó như mô hình trưng bày tĩnh. Khi chuẩn bị asset cho avatar, kiểm tra skin, joints và các clip chuyển động trong trình dựng 3D trước khi thay model người chơi. Với cổng hoặc vật trang trí, đặt GLB ở lớp hiển thị và dùng collider Rapier đơn giản riêng khi vật thể cần cản đường. Tủ mẫu dùng collision sẵn có của bản đồ.
 

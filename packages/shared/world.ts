@@ -1,3 +1,5 @@
+import { KOP_CAVE, KOP_MUSEUM, liverpoolGround, liverpoolWire } from './liverpool/layout';
+import { liverpoolExhibits } from './liverpool/content';
 import { ARSENAL_CAVE, ARSENAL_MUSEUM, arsenalGround, gunnersWire } from './arsenal/layout';
 import { arsenalExhibits } from './arsenal/content';
 import { BLUES_CAVE, BLUES_MUSEUM, bluesWire, bluesGround } from './chelsea/layout';
@@ -22,6 +24,7 @@ export type MapId =
   | 'hall-of-legends'
   | 'chelsea-museum'
   | 'arsenal-museum'
+  | 'liverpool-museum'
   | TeamId
   | CaveId;
 export type Point = { x: number; y: number };
@@ -32,6 +35,8 @@ export type Player = Profile &
     map: MapId;
     direction: number;
     moving: boolean;
+    motion?: 'Run' | 'Jump';
+    airOffset?: number;
     height?: number;
     seated?: boolean;
   };
@@ -72,7 +77,7 @@ export const TEAMS: {
   },
   {
     id: 'liverpool',
-    name: 'Hang The Kop',
+    name: 'Hang Liverpool',
     short: 'The Kop',
     color: '#ff457b',
     icon: '♜',
@@ -139,6 +144,46 @@ export const isOpenCave = (map: MapId | undefined) =>
   CAVES.some((cave) => cave.id === map && cave.available);
 export type Rect = { x: number; y: number; w: number; h: number };
 export function interactions(map: MapId): Interaction[] {
+  if (map === 'liverpool-museum')
+    return [
+      ...liverpoolExhibits.map((e) => ({
+        ...liverpoolWire(e.approach.x, e.approach.z),
+        id: e.id,
+        label: 'Khám phá · ' + e.heading,
+        kind: 'exhibit' as const,
+      })),
+      {
+        ...KOP_MUSEUM.exit,
+        id: 'kop-museum-exit',
+        label: 'Về Hang Liverpool',
+        kind: 'portal',
+        target: 'liverpool',
+      },
+    ];
+  if (map === 'liverpool')
+    return [
+      {
+        ...KOP_CAVE.entry,
+        id: 'kop-museum-entry',
+        label: 'Vào Phòng Truyền Thống Liverpool',
+        kind: 'portal',
+        target: 'liverpool-museum',
+      },
+      {
+        ...KOP_CAVE.exit,
+        id: 'kop-exit',
+        label: 'Cổng Ra Hang · Đại Sảnh Chung',
+        kind: 'portal',
+        target: 'plaza',
+      },
+      { ...KOP_CAVE.score, id: 'kop-score', label: 'Bảng trận đấu · DEMO', kind: 'score' },
+      ...KOP_CAVE.seats.map((p, i) => ({
+        ...p,
+        id: 'kop-seat-' + i,
+        label: 'Ngồi / đứng dậy',
+        kind: 'seat' as const,
+      })),
+    ];
   if (map === 'arsenal-museum')
     return [
       ...arsenalExhibits.map((e) => ({
@@ -332,6 +377,8 @@ export function interactions(map: MapId): Interaction[] {
       ];
 }
 export function spawn(map: MapId): Point {
+  if (map === 'liverpool') return KOP_CAVE.spawn;
+  if (map === 'liverpool-museum') return KOP_MUSEUM.spawn;
   if (map === 'arsenal') return { ...ARSENAL_CAVE.spawn };
   if (map === 'arsenal-museum') return { ...ARSENAL_MUSEUM.spawn };
   if (map === 'chelsea') return { ...BLUES_CAVE.spawn };
@@ -345,6 +392,8 @@ export function spawn(map: MapId): Point {
         : { x: 1200, y: 1370 };
 }
 export function obstacles(map: MapId): Rect[] {
+  if (map === 'liverpool') return KOP_CAVE.obstacles;
+  if (map === 'liverpool-museum') return KOP_MUSEUM.obstacles;
   if (map === 'arsenal') return ARSENAL_CAVE.obstacles;
   if (map === 'arsenal-museum') return ARSENAL_MUSEUM.obstacles;
   if (map === 'chelsea') return BLUES_CAVE.obstacles;
@@ -371,19 +420,23 @@ export function walkable(map: MapId, x: number, y: number) {
     return grandWalkable(p.x, p.z);
   }
   const b =
-    map === 'arsenal'
-      ? ARSENAL_CAVE.bounds
-      : map === 'arsenal-museum'
-        ? ARSENAL_MUSEUM.bounds
-        : map === 'chelsea'
-          ? BLUES_CAVE.bounds
-          : map === 'chelsea-museum'
-            ? BLUES_MUSEUM.bounds
-            : map === 'hall-of-legends'
-              ? HALL.bounds
-              : map === 'united'
-                ? RED_CAVE.bounds
-                : { l: 580, r: 1820, t: 420, b: 1550 };
+    map === 'liverpool'
+      ? KOP_CAVE.bounds
+      : map === 'liverpool-museum'
+        ? KOP_MUSEUM.bounds
+        : map === 'arsenal'
+          ? ARSENAL_CAVE.bounds
+          : map === 'arsenal-museum'
+            ? ARSENAL_MUSEUM.bounds
+            : map === 'chelsea'
+              ? BLUES_CAVE.bounds
+              : map === 'chelsea-museum'
+                ? BLUES_MUSEUM.bounds
+                : map === 'hall-of-legends'
+                  ? HALL.bounds
+                  : map === 'united'
+                    ? RED_CAVE.bounds
+                    : { l: 580, r: 1820, t: 420, b: 1550 };
   return (
     x >= b.l &&
     x <= b.r &&
@@ -435,6 +488,7 @@ export function validMap(value: unknown): value is MapId {
     value === 'hall-of-legends' ||
     value === 'chelsea-museum' ||
     value === 'arsenal-museum' ||
+    value === 'liverpool-museum' ||
     TEAMS.some((t) => t.id === value) ||
     CAVES.some((c) => c.id === value)
   );
@@ -473,6 +527,8 @@ export function mapSize(map: MapId) {
       : MAP_SIZE;
 }
 export function roomKey(map: MapId) {
+  if (map === 'liverpool') return 'cave:liverpool';
+  if (map === 'liverpool-museum') return 'museum:liverpool';
   if (map === 'arsenal') return 'cave:arsenal';
   if (map === 'arsenal-museum') return 'museum:arsenal';
   if (map === 'chelsea') return 'cave:chelsea';
@@ -489,6 +545,7 @@ export function plazaReturn(from: MapId): Point {
 }
 
 export function groundHeight(map: MapId, p: Point) {
+  if (map === 'liverpool') return liverpoolGround(p);
   if (map === 'chelsea') return bluesGround(p);
   if (map === 'arsenal') return arsenalGround(p);
   if (map !== 'plaza') return 0;
@@ -499,6 +556,8 @@ export function groundHeight(map: MapId, p: Point) {
 /** Shared arrival positions keep offline and authoritative transitions identical. */
 export function arrival(from: MapId, target: MapId): Point {
   if (target === 'plaza') return plazaReturn(from);
+  if (from === 'liverpool-museum' && target === 'liverpool')
+    return { ...KOP_CAVE.returnFromMuseum };
   if (from === 'hall-of-legends' && target === 'united') return { x: 2048, y: 1100 };
   if (from === 'arsenal-museum' && target === 'arsenal')
     return { ...ARSENAL_CAVE.returnFromMuseum };

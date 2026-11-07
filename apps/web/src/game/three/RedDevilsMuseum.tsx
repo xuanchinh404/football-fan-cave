@@ -3,7 +3,7 @@ import { Suspense, useMemo, type ReactNode } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { Box3, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import chibiUrl from '../../../../../public/assets/3d/characters/chibi-red-7.glb?url';
+import chibiUrl from '../../../../../public/assets/3d/red-devils/chibi-red-7.glb?url';
 import { AssetBoundary } from './BlenderAsset';
 import {
   trophies,

@@ -27,6 +27,7 @@ import {
 import { emit, on, type RemoteEvent, type StartEvent } from '../bridge';
 import { Character, Label } from './Models';
 import { Environment } from './Environments';
+import { cameraDistances, readCameraSettings, type CameraSettings } from './cameraSettings';
 import {
   layouts,
   sceneBounds,
@@ -42,7 +43,13 @@ type Controls = {
   joystick: Point;
   blocked: boolean;
   enabled: boolean;
-  yaw: number;
+  cameraYaw: number;
+  movementBasisYaw: number | null;
+  forwardIntent: boolean;
+  recenterYaw: number | null;
+  dragging: boolean;
+  recenterIn: number;
+  cameraSettings: CameraSettings;
   pitch: number;
   distance: number;
   running: boolean;
@@ -53,7 +60,8 @@ type Runtime = {
   map: SceneId;
   profile: Profile;
   self: string;
-  direction: number;
+  characterFacing: number;
+  movementVelocity: THREE.Vector3;
   moving: boolean;
   feet: THREE.Vector3;
   controls: Controls;
@@ -69,6 +77,81 @@ type Runtime = {
 const isTyping = () =>
   /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '') ||
   (document.activeElement as HTMLElement)?.isContentEditable;
+
+const defaultPitch = 0.25;
+const recenterDelay = 1;
+const cameraCastRotation = { x: 0, y: 0, z: 0, w: 1 };
+
+function setOrbitHeading(controls: Controls, yaw: number) {
+  controls.cameraYaw = yaw;
+  controls.recenterYaw = null;
+  controls.recenterIn = 0;
+}
+
+const movementKeys = [
+  'KeyW',
+  'KeyA',
+  'KeyS',
+  'KeyD',
+  'ArrowUp',
+  'ArrowLeft',
+  'ArrowDown',
+  'ArrowRight',
+];
+
+function updateMovementBasis(c: Controls) {
+  // Only a new keyboard/joystick gesture may sample camera yaw. Opposing keys
+  // can cancel velocity without releasing the steering frame.
+  if (c.joystick.x || c.joystick.y || movementKeys.some((key) => c.keys.has(key))) {
+    c.movementBasisYaw ??= c.cameraYaw;
+  } else {
+    c.movementBasisYaw = null;
+  }
+}
+
+function isRunning(controls: Controls) {
+  return controls.running || controls.keys.has('ShiftLeft') || controls.keys.has('ShiftRight');
+}
+
+function movementInput({ keys, joystick }: Controls): Point {
+  return {
+    x:
+      +(keys.has('KeyD') || keys.has('ArrowRight')) -
+      +(keys.has('KeyA') || keys.has('ArrowLeft')) +
+      joystick.x,
+    y:
+      +(keys.has('KeyS') || keys.has('ArrowDown')) -
+      +(keys.has('KeyW') || keys.has('ArrowUp')) +
+      joystick.y,
+  };
+}
+
+function updateCameraRotation(c: Controls, facing: number, moving: boolean, delta: number) {
+  if (!c.enabled || c.blocked || c.dragging || c.view !== 'default') return;
+  const forward = c.cameraSettings.autoRotate && c.forwardIntent && moving;
+  if (c.recenterYaw === null) {
+    if (c.recenterIn > 0)
+      c.recenterIn = forward ? Math.max(0, c.recenterIn - delta) : recenterDelay;
+    if (!forward || c.recenterIn > 0) return;
+  }
+  const difference = (c.recenterYaw ?? facing - Math.PI) - c.cameraYaw;
+  const turn = Math.atan2(Math.sin(difference), Math.cos(difference));
+  const response = isRunning(c) ? 4.8 : 4.2;
+  c.cameraYaw += turn * (1 - Math.exp(-response * delta));
+  if (c.recenterYaw !== null) {
+    c.pitch = THREE.MathUtils.damp(c.pitch, defaultPitch, response, delta);
+    if (Math.abs(turn) < 0.002 && Math.abs(c.pitch - defaultPitch) < 0.002) c.recenterYaw = null;
+  }
+}
+
+const emoteClips: Record<string, string> = {
+  '😂': 'Laugh',
+  '🔥': 'Cheer',
+  '❤️': 'Wave',
+  '🏆': 'Celebrate',
+  '🍅': 'Sad',
+  '⚽': 'Wave',
+};
 
 export function World3D() {
   const { gl, camera, scene } = useThree();
@@ -88,11 +171,13 @@ export function World3D() {
   const [remotes, setRemotes] = useState<Player[]>([]);
   const [bubble, setBubble] = useState('');
   const [remoteBubbles, setRemoteBubbles] = useState<Record<string, string>>({});
+  const [cameraSettings] = useState(readCameraSettings);
   const runtime = useRef<Runtime>({
     map: 'plaza',
     profile,
     self: 'demo',
-    direction: Math.PI,
+    characterFacing: Math.PI,
+    movementVelocity: new THREE.Vector3(),
     moving: false,
     feet: new THREE.Vector3(
       ...([toScene('plaza', spawn('plaza'))[0], 0, toScene('plaza', spawn('plaza'))[1]] as [
@@ -106,9 +191,15 @@ export function World3D() {
       joystick: { x: 0, y: 0 },
       blocked: false,
       enabled: false,
-      yaw: 0,
-      pitch: 0.22,
-      distance: 12,
+      cameraYaw: 0,
+      movementBasisYaw: null,
+      forwardIntent: false,
+      recenterYaw: null,
+      dragging: false,
+      recenterIn: 0,
+      cameraSettings,
+      pitch: defaultPitch,
+      distance: cameraDistances[cameraSettings.distance],
       running: false,
       jump: false,
       view: 'default',
@@ -122,15 +213,31 @@ export function World3D() {
   const [revision, setRevision] = useState(0);
   const [quality, setQuality] = useState<Quality>(window.innerWidth < 700 ? 'low' : 'medium');
   const [effectsOff, setEffectsOff] = useState(false);
-  const [gesture, setGesture] = useState<string | undefined>();
+  const [gestures, setGestures] = useState<Record<string, string>>({});
   useEffect(() => {
     let bubbleTimer: ReturnType<typeof setTimeout>;
+    const gestureTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    function gesture(id: string, clip: string) {
+      clearTimeout(gestureTimers.get(id));
+      setGestures((previous) => ({ ...previous, [id]: clip }));
+      gestureTimers.set(
+        id,
+        setTimeout(() => {
+          gestureTimers.delete(id);
+          setGestures((previous) => {
+            const next = { ...previous };
+            delete next[id];
+            return next;
+          });
+        }, 2100),
+      );
+    }
     const r = runtime.current;
     function travel(e: { map: SceneId; x?: number; y?: number }) {
       if (!(e.map in layouts)) {
         emit(
           'notice',
-          'Bản chơi thử 3D hiện mở Đại Sảnh Chung cùng nội thất MU, Chelsea và Arsenal.',
+          'Bản chơi thử 3D hiện mở Đại Sảnh Chung cùng nội thất MU, Chelsea, Arsenal và Liverpool.',
         );
         return;
       }
@@ -141,15 +248,18 @@ export function World3D() {
         (r.map === 'hall-of-legends' && e.map === 'united') ||
         (r.map === 'chelsea' && e.map === 'plaza') ||
         (r.map === 'chelsea-museum' && e.map === 'chelsea') ||
+        (r.map === 'liverpool' && e.map === 'plaza') ||
+        (r.map === 'liverpool-museum' && e.map === 'liverpool') ||
         (r.map === 'arsenal' && e.map === 'plaza') ||
         (r.map === 'arsenal-museum' && e.map === 'arsenal');
       pendingPosition.current = p;
       r.feet.set(x, groundHeight(e.map, p) || 0, z);
       r.map = e.map;
-      r.controls.keys.clear();
-      r.controls.joystick = { x: 0, y: 0 };
-      r.controls.yaw = returning ? Math.PI : 0;
-      r.controls.pitch = 0.22;
+      blur();
+      setOrbitHeading(r.controls, returning ? Math.PI : 0);
+      r.characterFacing = returning ? 0 : Math.PI;
+      r.movementVelocity.set(0, 0, 0);
+      r.controls.pitch = defaultPitch;
       r.controls.view = 'default';
       // Chelsea arrivals are outside the trigger. Only legacy MU arrivals can
       // overlap the portal they came from and need a short transition cooldown.
@@ -159,10 +269,12 @@ export function World3D() {
       r.grounded = false;
       r.seated = false;
       r.portal = undefined;
-      r.controls.jump = false;
       setMap(e.map);
       setRevision((v) => v + 1);
       setRemotes([]);
+      gestureTimers.forEach(clearTimeout);
+      gestureTimers.clear();
+      setGestures({});
       setBubble('');
       emit('map-changed', e.map);
       publish(60);
@@ -173,29 +285,17 @@ export function World3D() {
       emit('movement', {
         ...position,
         height: groundHeight(r.map, position) || 0,
-        direction: r.direction,
+        direction: r.characterFacing,
         moving: r.moving,
       });
       emit('interact', { map: r.map, position, seated: r.seated });
     }
     function keydown(e: KeyboardEvent) {
       if (isTyping() || r.controls.blocked || !r.controls.enabled) return;
-      if (
-        [
-          'KeyW',
-          'KeyA',
-          'KeyS',
-          'KeyD',
-          'ArrowUp',
-          'ArrowLeft',
-          'ArrowDown',
-          'ArrowRight',
-          'ShiftLeft',
-          'ShiftRight',
-        ].includes(e.code)
-      ) {
+      if (movementKeys.includes(e.code) || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
         e.preventDefault();
         r.controls.keys.add(e.code);
+        updateMovementBasis(r.controls);
       }
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
@@ -209,26 +309,40 @@ export function World3D() {
         e.preventDefault();
         emit('focus-chat');
       }
-      if (e.code === 'KeyR') {
-        r.controls.yaw = r.direction - Math.PI;
-        r.controls.pitch = 0.22;
-        r.controls.view = 'default';
-      }
+      if (e.code === 'KeyR' && !e.repeat) recenterCamera();
     }
     function keyup(e: KeyboardEvent) {
-      r.controls.keys.delete(e.code);
+      if (r.controls.keys.delete(e.code)) updateMovementBasis(r.controls);
+    }
+    function recenterCamera() {
+      const c = r.controls;
+      if (!c.enabled || c.blocked || c.dragging) return;
+      c.view = 'default';
+      c.recenterYaw = r.characterFacing - Math.PI;
+      c.recenterIn = 0;
     }
     function blur() {
       r.controls.keys.clear();
       r.controls.joystick = { x: 0, y: 0 };
-      drag = null;
+      r.controls.movementBasisYaw = null;
+      r.controls.forwardIntent = false;
+      if (drag) {
+        const { id } = drag;
+        stopDrag();
+        if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
+      }
       r.controls.running = false;
       r.controls.jump = false;
     }
     let drag: { id: number; x: number; y: number } | null = null;
     const canvas = gl.domElement;
+    function stopDrag() {
+      drag = null;
+      r.controls.dragging = false;
+    }
     function down(e: PointerEvent) {
       if (
+        drag ||
         r.controls.blocked ||
         !r.controls.enabled ||
         (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2)
@@ -236,21 +350,25 @@ export function World3D() {
         return;
       canvas.focus();
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      r.controls.dragging = true;
+      r.controls.recenterYaw = null;
       canvas.setPointerCapture(e.pointerId);
     }
     function move(e: PointerEvent) {
       if (!drag || drag.id !== e.pointerId || r.controls.blocked) return;
-      r.controls.yaw -= (e.clientX - drag.x) * 0.006;
-      r.controls.pitch = THREE.MathUtils.clamp(
-        r.controls.pitch + (e.clientY - drag.y) * 0.005,
-        0.07,
-        1.1,
-      );
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      if (!dx && !dy) return;
+      const c = r.controls;
+      const { sensitivity } = c.cameraSettings;
+      c.cameraYaw -= dx * 0.006 * sensitivity;
+      c.pitch = THREE.MathUtils.clamp(c.pitch + dy * 0.005 * sensitivity, 0.07, 1.1);
+      c.recenterIn = recenterDelay;
       drag.x = e.clientX;
       drag.y = e.clientY;
     }
     function up(e: PointerEvent) {
-      if (drag?.id === e.pointerId) drag = null;
+      if (drag?.id === e.pointerId) stopDrag();
     }
     function wheel(e: WheelEvent) {
       e.preventDefault();
@@ -284,6 +402,7 @@ export function World3D() {
       }),
       on<Point>('joystick', (p) => {
         r.controls.joystick = p;
+        updateMovementBasis(r.controls);
       }),
       on<{ map: SceneId; x?: number; y?: number }>('travel', travel),
       on<Point>('correct', (p) => {
@@ -321,8 +440,10 @@ export function World3D() {
       on<boolean>('sit', (v) => {
         r.seated = v;
       }),
-      on<{ seated: boolean }>('seated', (v) => {
+      on<{ seated: boolean; direction?: number }>('seated', (v) => {
         r.seated = v.seated;
+        if (r.map === 'liverpool' && v.seated && v.direction !== undefined)
+          r.characterFacing = v.direction;
       }),
       on('jump', () => {
         if (!r.controls.blocked && r.controls.enabled && !isTyping()) r.controls.jump = true;
@@ -332,12 +453,20 @@ export function World3D() {
       }),
       on<Controls['view']>('camera-view', (v) => {
         r.controls.view = v;
-        r.controls.yaw = v === 'entrance' || v === 'photo' ? Math.PI : 0;
-        if (v === 'default') r.controls.pitch = 0.22;
+        setOrbitHeading(r.controls, v === 'entrance' || v === 'photo' ? Math.PI : 0);
+        if (v === 'default') r.controls.pitch = defaultPitch;
       }),
-      on<string>('gesture', (v) => {
-        setGesture(v);
-        setTimeout(() => setGesture(undefined), 2600);
+      on('camera-recenter', recenterCamera),
+      on<CameraSettings>('camera-settings', (settings) => {
+        const c = r.controls;
+        if (settings.distance !== c.cameraSettings.distance)
+          c.distance = cameraDistances[settings.distance];
+        c.cameraSettings = settings;
+      }),
+      on<string>('gesture', (clip) => gesture('local', clip)),
+      on<{ id: string; value: string }>('avatar-emote', ({ id, value }) => {
+        const clip = emoteClips[value];
+        if (clip) gesture(id === r.self || id === 'demo' ? 'local' : id, clip);
       }),
       on<boolean>('reduced-effects', (value) => {
         r.effectsOff = value;
@@ -361,6 +490,7 @@ export function World3D() {
     emit('ready');
     return () => {
       off.forEach((f) => f());
+      gestureTimers.forEach(clearTimeout);
       clearTimeout(bubbleTimer);
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('keyup', keyup);
@@ -382,10 +512,10 @@ export function World3D() {
     emit('state', {
       map: r.map,
       position,
-      direction: r.direction,
+      direction: r.characterFacing,
       near: playtestNear(r.map, position),
       fps,
-      seated: r.seated,
+      seated: !!r.seated,
       height: r.feet.y,
       tier: r.feet.y > 12 ? 3 : r.feet.y > 5 ? 2 : 1,
       quality,
@@ -410,11 +540,15 @@ export function World3D() {
       lastState.current = now;
     }
     if (r.controls.enabled && now - lastSync.current > 75) {
+      const position = toNetwork(r.map, r.feet.x, r.feet.z);
+      const height = groundHeight(r.map, position) ?? 0;
       emit('movement', {
-        ...toNetwork(r.map, r.feet.x, r.feet.z),
-        height: groundHeight(r.map, toNetwork(r.map, r.feet.x, r.feet.z)) || 0,
-        direction: r.direction,
+        ...position,
+        height,
+        direction: r.characterFacing,
         moving: r.moving,
+        motion: !r.grounded ? 'Jump' : r.moving && isRunning(r.controls) ? 'Run' : undefined,
+        airOffset: r.grounded ? undefined : r.feet.y - height,
       });
       lastSync.current = now;
     }
@@ -436,7 +570,7 @@ export function World3D() {
         emit('movement', {
           ...p,
           height: groundHeight(r.map, p) || 0,
-          direction: r.direction,
+          direction: r.characterFacing,
           moving: true,
         });
         emit('interact', { map: r.map, position: p });
@@ -452,14 +586,22 @@ export function World3D() {
         x: camera.position.x,
         y: camera.position.y,
         z: camera.position.z,
-        yaw: r.controls.yaw,
+        yaw: r.controls.cameraYaw,
         pitch: r.controls.pitch,
+      },
+      direction: r.characterFacing,
+      movementDirection: r.moving ? Math.atan2(r.movementVelocity.x, r.movementVelocity.z) : null,
+      movementVelocity: { x: r.movementVelocity.x, z: r.movementVelocity.z },
+      input: {
+        keys: Array.from(r.controls.keys),
+        joystick: r.controls.joystick,
+        basisYaw: r.controls.movementBasisYaw,
       },
       moving: r.moving,
       trigger: r.portal,
       cameraHit: r.cameraHit,
       grounded: r.grounded,
-      seated: r.seated,
+      seated: !!r.seated,
       collisions: r.collisions,
       frames: r.frames,
       drawCalls: gl.info.render.calls,
@@ -467,6 +609,19 @@ export function World3D() {
       textures: gl.info.memory.textures,
       triangles: gl.info.render.triangles,
       remotes: remotes.length,
+      remoteAnimations: remotes.map((p) => ({
+        nickname: p.nickname,
+        clip: p.seated
+          ? 'SitIdle'
+          : p.motion === 'Jump'
+            ? 'Jump'
+            : p.moving
+              ? p.motion === 'Run'
+                ? 'Run'
+                : 'Walk'
+              : gestures[p.id] || 'Idle',
+        airOffset: p.airOffset ?? 0,
+      })),
       fps: frameTime.current.fps,
       quality,
       caves:
@@ -490,10 +645,16 @@ export function World3D() {
         pending={pendingPosition}
         profile={profile}
         bubble={bubble}
-        gesture={gesture || (runtime.current.seated ? 'Sit' : undefined)}
+        gesture={gestures.local}
       />
       {remotes.map((p) => (
-        <RemoteCharacter key={p.id} player={p} map={map} bubble={remoteBubbles[p.id]} />
+        <RemoteCharacter
+          key={p.id}
+          player={p}
+          map={map}
+          bubble={remoteBubbles[p.id]}
+          gesture={gestures[p.id]}
+        />
       ))}
       {quality !== 'low' && !effectsOff && <Dust map={map} />}
       {quality === 'high' && (
@@ -523,7 +684,13 @@ function AvatarController({
   const avatar = useRef<THREE.Group>(null);
   const { world, rapier } = useRapier();
   const { camera, scene } = useThree();
-  const [animation, setAnimation] = useState({ moving: false, direction: Math.PI });
+  const [animation, setAnimation] = useState({
+    moving: false,
+    direction: runtime.current.characterFacing,
+    jumping: false,
+    seated: false,
+    running: false,
+  });
   const controller = useMemo(() => {
     const c = world.createCharacterController(0.025);
     c.setSlideEnabled(true);
@@ -550,6 +717,9 @@ function AvatarController({
       rb.setTranslation({ x, y: h + 1.06, z }, true);
       rb.setNextKinematicTranslation({ x, y: h + 1.06, z });
       r.feet.set(x, h, z);
+      r.moving = false;
+      r.movementVelocity.set(0, 0, 0);
+      c.forwardIntent = false;
       initial.set(x, h, z);
       // Keep the capsule on the new floor while Rapier registers the new scene.
       spawnSteps.current = 0;
@@ -566,27 +736,28 @@ function AvatarController({
     }
     let ix = 0,
       iz = 0;
-    if (c.enabled && !c.blocked && !isTyping()) {
-      ix =
-        +(c.keys.has('KeyD') || c.keys.has('ArrowRight')) -
-        +(c.keys.has('KeyA') || c.keys.has('ArrowLeft')) +
-        c.joystick.x;
-      iz =
-        +(c.keys.has('KeyS') || c.keys.has('ArrowDown')) -
-        +(c.keys.has('KeyW') || c.keys.has('ArrowUp')) +
-        c.joystick.y;
+    if (c.enabled && !c.blocked && c.movementBasisYaw !== null && !isTyping()) {
+      const input = movementInput(c);
+      ix = input.x;
+      iz = input.y;
     }
-    if ((ix || iz) && r.seated) {
+    const hasMoveIntent = !!(ix || iz);
+    if (hasMoveIntent && r.seated) {
       r.seated = false;
       emit('stand');
     }
     const length = Math.max(1, Math.hypot(ix, iz));
     ix /= length;
     iz /= length;
-    const speed =
-      c.running || c.keys.has('ShiftLeft') || c.keys.has('ShiftRight') ? RUN_SPEED : SPEED;
-    const dx = (ix * Math.cos(c.yaw) + iz * Math.sin(c.yaw)) * speed * layouts[r.map].scale * dt;
-    const dz = (-ix * Math.sin(c.yaw) + iz * Math.cos(c.yaw)) * speed * layouts[r.map].scale * dt;
+    const speed = isRunning(c) ? RUN_SPEED : SPEED;
+    const basis = c.movementBasisYaw ?? 0;
+    const sin = Math.sin(basis);
+    const cos = Math.cos(basis);
+    c.forwardIntent = iz < -0.1;
+    if (hasMoveIntent) r.characterFacing = Math.atan2(-sin, -cos);
+    const step = speed * layouts[r.map].scale * dt;
+    const dx = (ix * cos + iz * sin) * step;
+    const dz = (-ix * sin + iz * cos) * step;
     if (c.jump && r.grounded && !c.blocked && c.enabled && !isTyping()) {
       velocity.current = 5.5;
       r.seated = false;
@@ -615,72 +786,118 @@ function AvatarController({
     if (desired > 0.01 && Math.hypot(movement.x - dx, movement.z - dz) > desired * 0.3)
       r.collisions++;
     r.moving = moved;
-    if (Math.hypot(ix, iz) > 0.1) r.direction = Math.atan2(dx, dz);
+    r.movementVelocity.set(movement.x / dt, 0, movement.z / dt);
     if (p.y < -5 && performance.now() - blockedAt.current > 1000) {
       pending.current = spawn(r.map);
       blockedAt.current = performance.now();
     }
   });
   const target = useMemo(() => new THREE.Vector3(), []),
+    followCenter = useMemo(() => new THREE.Vector3(), []),
     desired = useMemo(() => new THREE.Vector3(), []),
-    ray = useMemo(() => new THREE.Raycaster(), []);
+    ray = useMemo(() => new THREE.Raycaster(), []),
+    cameraProbe = useMemo(() => new rapier.Ball(0.24), [rapier]);
+  const arm = useRef(0);
   const lastView = useRef('');
   const solids = useRef<THREE.Object3D[]>([]),
     lastScan = useRef(0),
     lastAnimation = useRef(0),
     cameraReady = useRef(false);
   useFrame((_, delta) => {
-    if (!body.current || runtime.current.map !== map) return;
+    const rb = body.current;
+    if (!rb || runtime.current.map !== map) return;
     const r = runtime.current,
-      p = body.current.translation();
+      c = r.controls,
+      p = rb.translation();
     r.feet.set(p.x, p.y - 1.02, p.z);
     if (performance.now() - lastAnimation.current > 50) {
-      setAnimation({ moving: r.moving, direction: r.direction });
+      setAnimation({
+        moving: r.moving,
+        direction: r.characterFacing,
+        jumping: !r.grounded,
+        seated: !!r.seated,
+        running: isRunning(r.controls),
+      });
       lastAnimation.current = performance.now();
     }
-    target.set(p.x, p.y + 0.85, p.z);
-    const atlas = r.controls.view === 'atlas';
+    updateCameraRotation(c, r.characterFacing, r.moving, delta);
+    // Sample the interpolated avatar, then keep the lag small enough to follow a sprint.
+    if (avatar.current) {
+      avatar.current.getWorldPosition(target);
+      target.y += r.seated ? 1.05 : 1.4;
+    } else {
+      target.set(p.x, p.y + 0.38, p.z);
+    }
+    const atlas = c.view === 'atlas';
     if (atlas) target.set(0, r.map === 'plaza' ? 5 : 0, r.map === 'plaza' ? -9 : -3);
-    const dist = atlas ? (r.map === 'plaza' ? 125 : 32) : r.controls.distance;
-    const pitch = atlas ? (r.map === 'plaza' ? 0.94 : 0.28) : r.controls.pitch;
+    const snap = !cameraReady.current || lastView.current !== c.view;
+    if (snap) followCenter.copy(target);
+    else {
+      followCenter.lerp(target, 1 - Math.exp(-18 * delta));
+      followCenter.sub(target).clampLength(0, 0.45).add(target);
+    }
+    const dist = atlas ? (r.map === 'plaza' ? 125 : 32) : c.distance;
+    const pitch = atlas ? (r.map === 'plaza' ? 0.94 : 0.28) : c.pitch;
+    const horizontal = dist * Math.cos(pitch);
     desired
       .set(
-        Math.sin(r.controls.yaw) * dist * Math.cos(pitch),
+        Math.sin(c.cameraYaw) * horizontal,
         Math.sin(pitch) * dist,
-        Math.cos(r.controls.yaw) * dist * Math.cos(pitch),
+        Math.cos(c.cameraYaw) * horizontal,
       )
-      .add(target);
+      .add(followCenter);
     if (atlas && r.map !== 'plaza') {
       const b = sceneBounds(r.map);
       desired.x = THREE.MathUtils.clamp(desired.x, b.left + 0.5, b.right - 0.5);
       desired.z = THREE.MathUtils.clamp(desired.z, b.top + 0.5, b.bottom - 0.5);
       desired.y = Math.min(10.5, desired.y);
     }
-    if (performance.now() - lastScan.current > 1000 || !solids.current.length) {
-      solids.current = [];
-      scene.traverse((o) => {
-        if (o.userData.cameraSolid && (o as THREE.Mesh).isMesh) solids.current.push(o);
-      });
-      lastScan.current = performance.now();
+    if (atlas) {
+      r.cameraHit = undefined;
+      camera.position.copy(desired);
+    } else {
+      // Sweep the actual sightline, including follow lag, before placing the camera.
+      const requested = desired.sub(target).length();
+      ray.set(target, desired.normalize());
+      ray.far = snap ? requested : Math.max(requested, arm.current);
+      const physicsHit = world.castShape(
+        target,
+        cameraCastRotation,
+        ray.ray.direction,
+        cameraProbe,
+        0.02,
+        ray.far,
+        false,
+        rapier.QueryFilterFlags.ONLY_FIXED | rapier.QueryFilterFlags.EXCLUDE_SENSORS,
+        undefined,
+        undefined,
+        rb,
+      );
+      // Some visible cliff and architecture meshes extend beyond their physics proxies.
+      if (!lastScan.current || performance.now() - lastScan.current > 1000) {
+        solids.current = [];
+        scene.traverse((o) => {
+          if (o.userData.cameraSolid && (o as THREE.Mesh).isMesh) solids.current.push(o);
+        });
+        lastScan.current = performance.now();
+      }
+      const visualHit = ray.intersectObjects(solids.current, false)[0];
+      const limit = Math.min(
+        physicsHit?.time_of_impact ?? Infinity,
+        visualHit ? visualHit.distance - 0.24 : Infinity,
+      );
+      r.cameraHit = Number.isFinite(limit) ? limit : undefined;
+      const safeArm = Math.max(0.06, limit);
+      const goal = Math.min(requested, safeArm);
+      arm.current = snap
+        ? goal
+        : Math.min(safeArm, THREE.MathUtils.damp(arm.current, goal, 6, delta));
+      camera.position.copy(target).addScaledVector(ray.ray.direction, arm.current);
     }
-    ray.set(target, desired.clone().sub(target).normalize());
-    ray.far = dist;
-    const hit = atlas
-      ? undefined
-      : ray.intersectObjects(solids.current, false).find((h) => h.distance > 0.15);
-    r.cameraHit = hit?.distance;
-    if (hit)
-      desired.copy(target).addScaledVector(ray.ray.direction, Math.max(0.4, hit.distance - 0.25));
-    const factor =
-      hit || !cameraReady.current || lastView.current !== r.controls.view
-        ? 1
-        : 1 - Math.exp(-12 * Math.min(delta, 0.1));
-    camera.position.lerp(desired, factor);
     camera.lookAt(target);
-    if (avatar.current)
-      avatar.current.visible = camera.position.distanceToSquared(target) >= 1.25 ** 2;
+    if (avatar.current) avatar.current.visible = atlas || arm.current >= 0.75;
     cameraReady.current = true;
-    lastView.current = r.controls.view;
+    lastView.current = c.view;
   });
   return (
     <RigidBody
@@ -693,16 +910,22 @@ function AvatarController({
     >
       <CapsuleCollider args={[0.7, 0.32]} />
       <group ref={avatar} position={[0, -1.02, 0]}>
-        <Character
-          color={TEAMS.find((t) => t.id === profile.team)?.color}
-          name={`${profile.nickname} · BẠN`}
-          moving={animation.moving}
-          direction={animation.direction}
-          running={
-            runtime.current.controls.running || runtime.current.controls.keys.has('ShiftLeft')
+        <group
+          position={
+            map === 'liverpool' && animation.seated ? seatOffset(animation.direction) : undefined
           }
-          gesture={gesture || (runtime.current.seated ? 'Sit' : undefined)}
-        />
+        >
+          <Character
+            color={TEAMS.find((t) => t.id === profile.team)?.color}
+            name={`${profile.nickname} · BẠN`}
+            moving={animation.moving}
+            direction={animation.direction}
+            running={animation.running}
+            jumping={animation.jumping}
+            seated={animation.seated}
+            gesture={gesture}
+          />
+        </group>
         {bubble && <Billboard text={bubble} />}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
           <ringGeometry args={[0.43, 0.48, 24]} />
@@ -711,6 +934,9 @@ function AvatarController({
       </group>
     </RigidBody>
   );
+}
+function seatOffset(direction: number): [number, number, number] {
+  return [-Math.sin(direction) * 0.55, 0.19, -Math.cos(direction) * 0.55];
 }
 function Billboard({ text }: { text: string }) {
   const ref = useRef<THREE.Group>(null);
@@ -725,29 +951,36 @@ function RemoteCharacter({
   player,
   map,
   bubble,
+  gesture,
 }: {
   player: Player;
   map: SceneId;
   bubble?: string;
+  gesture?: string;
 }) {
   const ref = useRef<THREE.Group>(null),
     [x, z] = toScene(map, player);
+  const y = (player.height ?? 0) + (player.airOffset ?? 0) + 0.04;
   useFrame((_, dt) => {
-    ref.current?.position.lerp(
-      new THREE.Vector3(x, (player.height || 0) + 0.04, z),
-      Math.min(1, dt * 12),
-    );
+    ref.current?.position.lerp(new THREE.Vector3(x, y, z), Math.min(1, dt * 12));
   });
   // The legacy direction is now interpreted consistently as atan2(x, z) by 3D clients.
   return (
-    <group ref={ref} position={[x, (player.height || 0) + 0.04, z]}>
-      <Character
-        color={TEAMS.find((t) => t.id === player.team)?.color}
-        name={player.nickname}
-        moving={player.moving}
-        direction={player.direction}
-        gesture={player.seated ? 'Sit' : undefined}
-      />
+    <group ref={ref} position={[x, y, z]}>
+      <group
+        position={map === 'liverpool' && player.seated ? seatOffset(player.direction) : undefined}
+      >
+        <Character
+          color={TEAMS.find((t) => t.id === player.team)?.color}
+          name={player.nickname}
+          moving={player.moving}
+          direction={player.direction}
+          running={player.motion === 'Run'}
+          jumping={player.motion === 'Jump'}
+          seated={player.seated}
+          gesture={gesture}
+        />
+      </group>
       {bubble && <Billboard text={bubble} />}
     </group>
   );

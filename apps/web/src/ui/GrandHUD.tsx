@@ -12,6 +12,7 @@ import {
   Compass,
   Mountain,
   LogIn,
+  RotateCcw,
 } from 'lucide-react';
 import { CAVES } from '../../../../packages/shared/grandHall';
 import { emit, on, type WorldState } from '../game/bridge';
@@ -119,6 +120,17 @@ export function GrandHUD({
         >
           <LogIn size={15} />
           <span>Cổng chính</span>
+        </button>
+        <button
+          title="Căn camera sau nhân vật (R)"
+          aria-label="Căn camera sau nhân vật"
+          onClick={() => {
+            setView('default');
+            setPhoto(false);
+            emit('camera-recenter');
+          }}
+        >
+          <RotateCcw size={15} />
         </button>
       </div>
       <div className="grand-altitude">

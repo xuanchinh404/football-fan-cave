@@ -66,9 +66,9 @@ for (const [i, region] of regions.entries()) {
   }
   const glb =
     method === 'trellis'
-      ? `public/assets/3d/united/${id}.glb`
+      ? `public/assets/3d/red-devils/${id}-trellis.glb`
       : method === 'blender'
-        ? `apps/web/public/models/red-devils/${id}.glb`
+        ? `public/assets/3d/red-devils/${id}.glb`
         : null;
   assets.push({
     id,
@@ -84,7 +84,7 @@ for (const [i, region] of regions.entries()) {
     imageStatus: approved ? 'trellis_candidate' : image ? 'reference_only' : 'not_isolated',
     glb,
     method,
-    fallbackGlb: method === 'trellis' ? `apps/web/public/models/red-devils/${id}.glb` : null,
+    fallbackGlb: method === 'trellis' ? `public/assets/3d/red-devils/${id}.glb` : null,
     lastTrellisStatus:
       previous.get(id)?.lastTrellisStatus ??
       (previous.get(id)?.status === 'trellis_failed' ? 'trellis_failed' : null),
@@ -173,7 +173,7 @@ for (const asset of assets) {
       [
         'scripts/generate-3d-asset.py',
         asset.image,
-        `united/${asset.id}`,
+        `red-devils/${asset.id}-trellis`,
         '--resolution',
         '512',
         '--texture-size',
@@ -200,7 +200,7 @@ await writeFile(
       height,
       boundingBoxFormat: '[left, top, right, bottom] in source pixels',
       segmentation: 'Reference-specific visual detection and antialiased polygon mattes',
-      supplementalGlbs: ['apps/web/public/models/red-devils/plinth.glb'],
+      supplementalGlbs: ['public/assets/3d/red-devils/plinth.glb'],
       assets,
     },
     null,

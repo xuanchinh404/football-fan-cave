@@ -1,3 +1,11 @@
+import { clearPath } from '../../../packages/shared/world';
+import {
+  LIVERPOOL_VERIFIED_AT,
+  liverpoolDemo,
+  liverpoolExhibits,
+} from '../../../packages/shared/liverpool/content';
+import { KOP_CAVE, KOP_MUSEUM, kopSeatFacing } from '../../../packages/shared/liverpool/layout';
+import { LiverpoolHUD } from './ui/LiverpoolHUD';
 import { ArsenalHUD } from './ui/ArsenalHUD';
 import { MuseumExhibitPanel } from './ui/MuseumExhibitPanel';
 import {
@@ -64,6 +72,7 @@ import {
   type Profile,
 } from '../../../packages/shared/world';
 import { GameCanvas } from './game/GameCanvas';
+import { readCameraSettings, saveCameraSettings } from './game/three/cameraSettings';
 import { playtestInteractions, playtestNear as near } from './game/three/worldLayout';
 import { emit, on, type WorldState } from './game/bridge';
 import { socket } from './network/client';
@@ -125,8 +134,10 @@ export default function App({
     ),
     [copied, setCopied] = useState(false);
   const [exhibitId, setExhibitId] = useState('');
+  const [cameraSettings, setCameraSettings] = useState(readCameraSettings);
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const exhibit = exhibits.find((e) => e.id === exhibitId);
+  const kopExhibit = liverpoolExhibits.find((e) => e.id === exhibitId);
   const gunnersExhibit = arsenalExhibits.find((e) => e.id === exhibitId);
   const bluesExhibit = chelseaExhibits.find((e) => e.id === exhibitId);
   const input = useRef<HTMLInputElement>(null),
@@ -199,8 +210,10 @@ export default function App({
       setMessages((v) => [...v.slice(-79), m]);
       emit('bubble', { id: m.playerId, text: m.text });
     };
-    const emoji = ({ id, value }: { id: string; value: string }) =>
+    const emoji = ({ id, value }: { id: string; value: string }) => {
       emit('bubble', { id, text: value });
+      if (id !== self.current) emit('avatar-emote', { id, value });
+    };
     socket
       .on('connect_error', (e) => notice(e.message))
       .on('connect', connect)
@@ -248,6 +261,10 @@ export default function App({
     emit('reduced-effects', reduced);
   }, [reduced, ready]);
   useEffect(() => {
+    saveCameraSettings(cameraSettings);
+    emit('camera-settings', cameraSettings);
+  }, [cameraSettings, ready]);
+  useEffect(() => {
     emit('block', !!modal);
     const close = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setModal(null);
@@ -290,10 +307,20 @@ export default function App({
           ...arrival(w.map, p.target!),
         });
         notice(
-          `Đã đến ${p.target === 'arsenal-museum' ? 'Phòng Truyền Thống Arsenal' : p.target === 'chelsea-museum' ? 'Phòng Truyền Thống Chelsea' : p.target === 'hall-of-legends' ? 'Phòng Hoài Niệm' : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
+          `Đã đến ${p.target === 'liverpool-museum' ? 'Phòng Truyền Thống Liverpool' : p.target === 'arsenal-museum' ? 'Phòng Truyền Thống Arsenal' : p.target === 'chelsea-museum' ? 'Phòng Truyền Thống Chelsea' : p.target === 'hall-of-legends' ? 'Phòng Hoài Niệm' : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
         );
       }
     } else if (p.kind === 'seat') {
+      if (w.map === 'liverpool') {
+        if (socket.connected) socket.emit('interact', p.id);
+        else {
+          if (!w.seated && !clearPath(w.map, w.position, p)) return;
+          if (!w.seated) emit('correct', p);
+          emit('seated', { seated: !w.seated, direction: kopSeatFacing(p) });
+        }
+        notice('Nhấn E hoặc di chuyển để đứng dậy.');
+        return;
+      }
       emit('sit', !w.seated);
       if (socket.connected) socket.emit('interact', p.id);
       else emit('toggle-seat');
@@ -372,15 +399,7 @@ export default function App({
     setEmojiOpen(false);
   }
   function emoji(value: string) {
-    emit(
-      'gesture',
-      (
-        { '😂': 'Laugh', '🔥': 'Cheer', '❤️': 'Wave', '🏆': 'Celebrate', '🍅': 'Sad' } as Record<
-          string,
-          string
-        >
-      )[value] || 'Wave',
-    );
+    emit('avatar-emote', { id: self.current, value });
     if (!playing) {
       setModal('join');
       return;
@@ -413,23 +432,32 @@ export default function App({
       notice(`Đường dẫn mời bạn: ${window.location.origin}`);
     }
   }
+  const liverpoolRoom = world.map === 'liverpool' || world.map === 'liverpool-museum';
   const arsenalRoom = world.map === 'arsenal' || world.map === 'arsenal-museum';
   const demoMatch =
-    world.map === 'arsenal' ? arsenalDemo : world.map === 'chelsea' ? chelseaMatchState : undefined;
+    world.map === 'liverpool'
+      ? liverpoolDemo
+      : world.map === 'arsenal'
+        ? arsenalDemo
+        : world.map === 'chelsea'
+          ? chelseaMatchState
+          : undefined;
   const team = TEAMS.find((t) => t.id === profile.team)!,
     area =
-      world.map === 'arsenal-museum'
-        ? 'Phòng Truyền Thống Arsenal'
-        : world.map === 'chelsea-museum'
-          ? 'Phòng Truyền Thống Chelsea'
-          : world.map === 'hall-of-legends'
-            ? 'Phòng Hoài Niệm'
-            : world.map === 'plaza'
-              ? 'Đại Sảnh Chung'
-              : TEAMS.find((t) => t.id === world.map)?.name;
+      world.map === 'liverpool-museum'
+        ? 'Phòng Truyền Thống Liverpool'
+        : world.map === 'arsenal-museum'
+          ? 'Phòng Truyền Thống Arsenal'
+          : world.map === 'chelsea-museum'
+            ? 'Phòng Truyền Thống Chelsea'
+            : world.map === 'hall-of-legends'
+              ? 'Phòng Hoài Niệm'
+              : world.map === 'plaza'
+                ? 'Đại Sảnh Chung'
+                : TEAMS.find((t) => t.id === world.map)?.name;
   return (
     <div
-      className={`app-shell ${arsenalRoom ? 'red-cave gunners-cave' : ''} ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' || world.map === 'arsenal-museum' ? 'museum-shell' : ''}`}
+      className={`app-shell ${arsenalRoom || liverpoolRoom ? 'red-cave gunners-cave' : ''} ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' || world.map === 'arsenal-museum' || world.map === 'liverpool-museum' ? 'museum-shell' : ''}`}
     >
       <header className="topbar">
         <a
@@ -511,6 +539,7 @@ export default function App({
             notice={notice}
           />
         )}
+        {liverpoolRoom && <LiverpoolHUD world={world} openMap={() => setModal('map')} />}
         {arsenalRoom && (
           <ArsenalHUD world={world} openMap={() => setModal('map')} notice={notice} />
         )}
@@ -644,17 +673,21 @@ export default function App({
               {[
                 {
                   id: 'room',
-                  label: arsenalRoom
-                    ? world.map === 'arsenal'
-                      ? 'Hang Arsenal'
+                  label: liverpoolRoom
+                    ? world.map === 'liverpool'
+                      ? 'Hang Liverpool'
                       : 'Truyền Thống'
-                    : world.map === 'chelsea'
-                      ? 'Hang The Blues'
-                      : world.map === 'chelsea-museum'
-                        ? 'Truyền Thống'
-                        : world.map === 'united'
-                          ? 'Hang Quỷ Đỏ'
-                          : 'Khu vực',
+                    : arsenalRoom
+                      ? world.map === 'arsenal'
+                        ? 'Hang Arsenal'
+                        : 'Truyền Thống'
+                      : world.map === 'chelsea'
+                        ? 'Hang The Blues'
+                        : world.map === 'chelsea-museum'
+                          ? 'Truyền Thống'
+                          : world.map === 'united'
+                            ? 'Hang Quỷ Đỏ'
+                            : 'Khu vực',
                 },
                 { id: 'nearby', label: 'Gần bạn' },
               ].map(({ id: t, label }) => (
@@ -924,6 +957,15 @@ export default function App({
             <button className="close" onClick={() => setModal(null)} aria-label="Đóng">
               <X size={20} />
             </button>
+            {modal === 'exhibit' && kopExhibit && (
+              <MuseumExhibitPanel
+                key={kopExhibit.id}
+                exhibit={kopExhibit}
+                hall="PHÒNG TRUYỀN THỐNG LIVERPOOL FC"
+                club="Liverpool FC"
+                verifiedAt={LIVERPOOL_VERIFIED_AT}
+              />
+            )}
             {modal === 'exhibit' && gunnersExhibit && (
               <MuseumExhibitPanel
                 key={gunnersExhibit.id}
@@ -1057,25 +1099,33 @@ export default function App({
                   heading={world.direction}
                 />
                 <div className="map-legend">
-                  {(arsenalRoom
-                    ? (world.map === 'arsenal' ? ARSENAL_CAVE : ARSENAL_MUSEUM).zones.map((z) => ({
+                  {(liverpoolRoom
+                    ? (world.map === 'liverpool' ? KOP_CAVE : KOP_MUSEUM).zones.map((z) => ({
                         ...z,
                         short: z.label,
-                        color: '#edb468',
+                        color: '#efbd75',
                       }))
-                    : world.map === 'chelsea' || world.map === 'chelsea-museum'
-                      ? (world.map === 'chelsea' ? BLUES_CAVE : BLUES_MUSEUM).zones.map((z) => ({
-                          ...z,
-                          short: z.label,
-                          color: '#75b6ff',
-                        }))
-                      : world.map === 'hall-of-legends'
-                        ? HALL.zones.map((z) => ({ ...z, short: z.label, color: '#e6af61' }))
-                        : world.map === 'united'
-                          ? RED_CAVE.zones
-                              .filter((z) => !['fun', 'event'].includes(z.id))
-                              .map((z) => ({ id: z.id, short: z.label, color: z.color }))
-                          : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
+                    : arsenalRoom
+                      ? (world.map === 'arsenal' ? ARSENAL_CAVE : ARSENAL_MUSEUM).zones.map(
+                          (z) => ({
+                            ...z,
+                            short: z.label,
+                            color: '#edb468',
+                          }),
+                        )
+                      : world.map === 'chelsea' || world.map === 'chelsea-museum'
+                        ? (world.map === 'chelsea' ? BLUES_CAVE : BLUES_MUSEUM).zones.map((z) => ({
+                            ...z,
+                            short: z.label,
+                            color: '#75b6ff',
+                          }))
+                        : world.map === 'hall-of-legends'
+                          ? HALL.zones.map((z) => ({ ...z, short: z.label, color: '#e6af61' }))
+                          : world.map === 'united'
+                            ? RED_CAVE.zones
+                                .filter((z) => !['fun', 'event'].includes(z.id))
+                                .map((z) => ({ id: z.id, short: z.label, color: z.color }))
+                            : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
                   ).map((t) => (
                     <span key={t.id}>
                       <i style={{ background: t.color }} />
@@ -1260,6 +1310,11 @@ export default function App({
                 <p>
                   {demoMatch.time} · {demoMatch.caption}
                 </p>
+                {world.map === 'liverpool' && (
+                  <p>
+                    Trạng thái: {liverpoolDemo.status}. {liverpoolDemo.message}
+                  </p>
+                )}
                 <p>
                   Đây là dữ liệu minh họa. Chưa kết nối API kết quả trực tiếp; người chơi luôn tự do
                   vào và ra hang.
@@ -1374,6 +1429,45 @@ export default function App({
               <>
                 <div className="eyebrow">GÓC CỦA BẠN</div>
                 <h2>Thoải mái mà chơi.</h2>
+                <div className="settings-row">
+                  <span>Camera tự xoay</span>
+                  <button
+                    className="secondary"
+                    aria-label="Camera tự xoay"
+                    aria-pressed={cameraSettings.autoRotate}
+                    onClick={() => setCameraSettings((v) => ({ ...v, autoRotate: !v.autoRotate }))}
+                  >
+                    {cameraSettings.autoRotate ? 'Đang bật' : 'Đang tắt'}
+                  </button>
+                </div>
+                <label className="settings-row">
+                  <span>Độ nhạy xoay chuột</span>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={cameraSettings.sensitivity}
+                    aria-valuetext={`${Math.round(cameraSettings.sensitivity * 100)}%`}
+                    onChange={(e) =>
+                      setCameraSettings((v) => ({ ...v, sensitivity: e.target.valueAsNumber }))
+                    }
+                  />
+                </label>
+                <label className="settings-row">
+                  <span>Khoảng cách camera</span>
+                  <select
+                    value={cameraSettings.distance}
+                    onChange={(e) => {
+                      const distance = e.target.value as typeof cameraSettings.distance;
+                      setCameraSettings((v) => ({ ...v, distance }));
+                    }}
+                  >
+                    <option value="near">Gần</option>
+                    <option value="medium">Trung bình</option>
+                    <option value="far">Xa</option>
+                  </select>
+                </label>
                 <div className="settings-row">
                   <span>Chất lượng 3D</span>
                   <select

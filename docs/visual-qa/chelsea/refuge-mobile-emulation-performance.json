@@ -1,38 +1,38 @@
 [
   {
-    "fps": 60,
-    "drawCalls": 123,
-    "triangles": 193752,
+    "fps": 58,
+    "drawCalls": 111,
+    "triangles": 279438,
+    "quality": "low"
+  },
+  {
+    "fps": 58,
+    "drawCalls": 111,
+    "triangles": 279438,
     "quality": "low"
   },
   {
     "fps": 60,
-    "drawCalls": 123,
-    "triangles": 193752,
+    "drawCalls": 111,
+    "triangles": 279438,
     "quality": "low"
   },
   {
     "fps": 60,
-    "drawCalls": 123,
-    "triangles": 193752,
+    "drawCalls": 111,
+    "triangles": 279438,
     "quality": "low"
   },
   {
     "fps": 60,
-    "drawCalls": 123,
-    "triangles": 193752,
+    "drawCalls": 111,
+    "triangles": 279438,
     "quality": "low"
   },
   {
     "fps": 60,
-    "drawCalls": 123,
-    "triangles": 193752,
-    "quality": "low"
-  },
-  {
-    "fps": 60,
-    "drawCalls": 123,
-    "triangles": 193752,
+    "drawCalls": 111,
+    "triangles": 279438,
     "quality": "low"
   }
 ]

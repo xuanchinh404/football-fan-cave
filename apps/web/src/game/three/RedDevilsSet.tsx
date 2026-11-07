@@ -2,7 +2,8 @@ import { CatmullRomCurve3, Vector3 } from 'three';
 import { PlacedGlb, type Placement } from './BlenderAsset';
 import { Doorway, Plaque, type V3 } from './IndoorKit';
 
-const models = import.meta.glob('../../../../../public/assets/3d/united/*.glb', {
+const modelDirectory = '../../../../../public/assets/3d/red-devils';
+const models = import.meta.glob('../../../../../public/assets/3d/red-devils/*.glb', {
   eager: true,
   query: '?url',
   import: 'default',
@@ -22,7 +23,7 @@ export function CaveModel({
   return (
     <PlacedGlb
       asset={asset}
-      url={`${import.meta.env.BASE_URL}models/red-devils/${asset}.glb`}
+      url={models[`${modelDirectory}/${asset}.glb`]}
       placements={placements}
       cameraSolid={solid}
       shadow={shadow}
@@ -118,7 +119,7 @@ function TrellisProp({
   height: number;
   fallback: React.ReactNode;
 }) {
-  const url = Object.entries(models).find(([path]) => path.endsWith(`/${asset}.glb`))?.[1];
+  const url = models[`${modelDirectory}/${asset}-trellis.glb`];
   return url ? (
     <PlacedGlb
       asset={asset}
@@ -187,7 +188,7 @@ export function CaveGate({
     <group position={position} rotation={[0, rotation, 0]}>
       <PlacedGlb
         asset="arch"
-        url={`${import.meta.env.BASE_URL}models/red-devils/arch.glb`}
+        url={models[`${modelDirectory}/arch.glb`]}
         placements={[{ position: [0, 0, 0], scale: [scale, 1, 1] }]}
         cameraSolid
         fallback={<Doorway position={[0, 0, 0]} width={width} title={title} subtitle={subtitle} />}

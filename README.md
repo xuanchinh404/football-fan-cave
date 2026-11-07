@@ -1,6 +1,6 @@
 # Hội Vào Hang — Football Fan Cave 3D
 
-Bản chơi thử web game 3D góc nhìn thứ ba: **Three.js + React Three Fiber + Rapier**, React + TypeScript + Vite, Node.js + Socket.IO. Đại Sảnh Chung có **ba tầng cao độ và chín cổng hang**; Hai cổng MU và Chelsea dẫn vào hang 3D riêng, mỗi hang có lối đi bộ đến một phòng truyền thống. Bảy nội thất còn lại ghi rõ sắp ra mắt. Nhân vật đi tự do, camera xoay 360°, collision capsule và cầu có cao độ thật. Thế giới được dựng từ mesh 3D; không dùng ảnh toàn cảnh làm nền/sàn.
+Bản chơi thử web game 3D góc nhìn thứ ba: **Three.js + React Three Fiber + Rapier**, React + TypeScript + Vite, Node.js + Socket.IO. Đại Sảnh Chung có **ba tầng cao độ và chín cổng hang**; Ba cổng MU, Chelsea và Arsenal dẫn vào hang 3D riêng, mỗi hang có lối đi bộ đến một phòng truyền thống. Sáu nội thất còn lại ghi rõ sắp ra mắt. Nhân vật đi tự do, camera xoay 360°, collision capsule và cầu có cao độ thật. Thế giới được dựng từ mesh 3D; không dùng ảnh toàn cảnh làm nền/sàn.
 
 ## Chạy bản thử
 
@@ -23,7 +23,7 @@ npm run dev -w apps/web
 
 - WASD / phím mũi tên hoặc joystick: di chuyển theo camera. Giữ Shift hoặc nút Chạy để chạy.
 - Kéo chuột / vuốt trên cảnh: xoay camera; cuộn: zoom; R: đưa camera về sau nhân vật.
-- Đi qua giữa cổng Hang Quỷ Đỏ hoặc Hang The Blues. Bạn cũng có thể đến gần và nhấn E hoặc chạm Tương tác. Cổng phía sau vị trí xuất hiện trong hang đưa bạn trở lại sảnh.
+- Đi qua giữa cổng Hang Quỷ Đỏ, Hang The Blues hoặc Hang Pháo Thủ. Bạn cũng có thể đến gần và nhấn E hoặc chạm Tương tác. Cổng phía sau vị trí xuất hiện trong hang đưa bạn trở lại sảnh.
 - Nút Toàn cảnh cho góc nhìn từ trên cao; Cổng chính cho góc nhìn ngược. Có Low / Medium / High trong Cài đặt.
 - Enter mở chat; Esc đóng cửa sổ. React HUD, minimap, biểu cảm và chụp cảnh được nối qua event bridge.
 
@@ -32,7 +32,7 @@ npm run dev -w apps/web
 ```text
 apps/web/src/game/GameCanvas.tsx       Canvas R3F + Physics
 apps/web/src/game/three/World3D.tsx    Input, capsule, camera, event bridge, realtime
-apps/web/src/game/three/Environments.tsx  Chọn Đại Sảnh, hang MU/Chelsea và phòng truyền thống
+apps/web/src/game/three/Environments.tsx  Chọn Đại Sảnh, hang MU/Chelsea/Arsenal và phòng truyền thống
 apps/web/src/game/three/Models.tsx    Mô hình procedural 3D
 apps/web/src/game/three/worldLayout.ts   Quy đổi tọa độ, phạm vi playtest
 apps/web/src/auth/                   Luồng Supabase hiện có
@@ -41,7 +41,7 @@ apps/server/src/index.ts             HTTP + Socket.IO hiện có
 packages/shared/                    Giao thức, bản đồ và validator hiện có
 ```
 
-Mã Phaser và asset 2D cũ được giữ làm tham chiếu; renderer mới không tải chúng. Chín cổng, sân trước, đấu trường, đền, quầy, góc ảnh, sân sút bóng và khu giao lưu được dựng 3D; không tuyên bố đã có nội thất cho bảy hang chưa phát hành. Tài liệu README trước chuyển đổi nằm trong [hồ sơ 2D cũ](docs/legacy-2d-readme.md).
+Mã Phaser và asset 2D cũ được giữ làm tham chiếu; renderer mới không tải chúng. Chín cổng, sân trước, đấu trường, đền, quầy, góc ảnh, sân sút bóng và khu giao lưu được dựng 3D; sáu nội thất còn lại đang chờ phát hành. Tài liệu README trước chuyển đổi nằm trong [hồ sơ 2D cũ](docs/legacy-2d-readme.md).
 
 ## Kiểm tra
 
@@ -80,3 +80,10 @@ Từ Đại Sảnh, lên tầng hai và đi qua cổng Chelsea. Góc Tâm Sự n
 ## Tạo asset 3D từ ảnh
 
 [Xem cách dùng TRELLIS.2 và tích hợp GLB vào game](docs/trellis-2.md).
+
+
+## Hang Arsenal và Phòng Truyền Thống Arsenal
+
+Chạy `npm run dev`, mở [bản chơi thử 3D](http://localhost:5173/playtest) rồi lên tầng hai Đại Sảnh. Đi về phía tây đến cổng Hang Pháo Thủ. Góc Tâm Sự nằm bên trái sảnh. Bên phải là cổng dẫn qua hành lang vào Phòng Truyền Thống. Đi sát tủ cúp hoặc hiện vật và nhấn E, hoặc chạm nút Tương tác. Cổng phía nam bảo tàng đưa bạn về hành lang. Cổng Ra Hang đưa bạn về sân trước cổng Arsenal.
+
+[Bàn giao Arsenal 3D](docs/arsenal-3d-implementation.md) · [Ảnh kiểm thử Chromium](docs/visual-qa/arsenal/README.md).

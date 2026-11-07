@@ -1,3 +1,4 @@
+import { kopSeatFacing } from '../../../packages/shared/liverpool/layout';
 import {CAVES} from '../../../packages/shared/grandHall.ts';
 import './env.ts';
 import { createServer } from 'node:http';
@@ -104,7 +105,7 @@ function join(id: string, map: MapId, position = spawn(map)) {
   roomOf.set(id, room);
   io.sockets.sockets.get(id)?.join(room);
   const p = players.get(id)!;
-  Object.assign(p, position, { map, height: groundHeight(map,position) || 0, moving: false, seated: false });
+  Object.assign(p, position, { map, height: groundHeight(map,position) || 0, moving: false, seated: false, motion: undefined, airOffset: undefined });
   lastMove.set(id, Date.now());
   moveBudget.set(id, 40);
   io.to(id).emit('joined', { player: p, room });
@@ -187,15 +188,22 @@ io.on('connection', (socket) => {
       item.destination &&
       walkable(p.map, item.destination.x, item.destination.y)
     ) {
-      Object.assign(p, item.destination, { moving: false, seated: false });
+      Object.assign(p, item.destination, { moving: false, seated: false, motion: undefined, airOffset: undefined });
       moveBudget.set(socket.id, 40);
       lastMove.set(socket.id, Date.now());
       socket.emit('relocate', { map: p.map, x: p.x, y: p.y });
     } else if (item.kind === 'seat') {
-      if (!p.seated && clearPath(p.map, p, item)) Object.assign(p, { x: item.x, y: item.y });
+      if (!p.seated) {
+        const reachable = clearPath(p.map, p, item);
+        if (!reachable && p.map === 'liverpool') return;
+        if (reachable) Object.assign(p, { x: item.x, y: item.y });
+        if (p.map === 'liverpool') p.direction = kopSeatFacing(item);
+      }
       p.seated = !p.seated;
       p.moving = false;
-      socket.emit('seated', { seated: p.seated, x: p.x, y: p.y });
+      p.motion = undefined;
+      p.airOffset = undefined;
+      socket.emit('seated', { seated: p.seated, x: p.x, y: p.y, direction: p.direction });
     }
   });
   socket.on('stand', () => {
@@ -229,6 +237,11 @@ io.on('connection', (socket) => {
     p.height=surface;
     p.direction = Number.isFinite(raw.direction) ? raw.direction : 0;
     p.moving = raw.moving === true;
+    p.motion = !p.seated && raw.motion === 'Jump'
+      ? 'Jump'
+      : p.moving && raw.motion === 'Run' ? 'Run' : undefined;
+    p.airOffset = p.motion === 'Jump' && Number.isFinite(raw.airOffset)
+      ? Math.max(0, Math.min(1.5, raw.airOffset)) : undefined;
     lastMove.set(socket.id, now);
   });
   socket.on('chat', (raw: unknown) => {

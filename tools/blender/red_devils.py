@@ -11,7 +11,7 @@ from architecture import arch, lantern, lantern_palette
 from geometry import Model
 from materials import Palette
 
-OUT = Path(__file__).resolve().parents[2] / "apps/web/public/models/red-devils"
+OUT = Path(__file__).resolve().parents[2] / "public/assets/3d/red-devils"
 OUT.mkdir(parents=True, exist_ok=True)
 rng = Random(2707)
 p = Palette()

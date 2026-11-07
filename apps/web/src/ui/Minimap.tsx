@@ -22,6 +22,17 @@ export function Minimap({
   onClick?: () => void;
   heading?: number;
 }) {
+  if (map === 'liverpool' || map === 'liverpool-museum')
+    return (
+      <TeamMinimap
+        liverpool
+        position={position}
+        museum={map === 'liverpool-museum'}
+        large={large}
+        onClick={onClick}
+        heading={heading}
+      />
+    );
   if (map === 'arsenal' || map === 'arsenal-museum')
     return (
       <TeamMinimap

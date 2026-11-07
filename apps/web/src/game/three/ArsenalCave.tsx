@@ -141,8 +141,8 @@ export const ArsenalCave = memo(function ArsenalCave({ quality }: { quality: Qua
       <ScarletDrapes position={[0, 8.55, -12.58]} />
       <RedStandards
         positions={[
-          [-9.6, 6.55, -13.7],
-          [8.1, 6.55, -13.7],
+          [-9.6, 6.55, -13.04],
+          [8.1, 6.55, -13.04],
           [-19, 6.2, -3.5],
           [18.8, 6.2, -3.5],
         ]}
