@@ -1,3 +1,5 @@
+import { ARSENAL_CAVE, ARSENAL_MUSEUM, arsenalGround, gunnersWire } from './arsenal/layout';
+import { arsenalExhibits } from './arsenal/content';
 import { BLUES_CAVE, BLUES_MUSEUM, bluesWire, bluesGround } from './chelsea/layout';
 import { chelseaExhibits } from './chelsea/content';
 import {
@@ -15,7 +17,13 @@ import {
 import { HALL, exhibits, hallObstacles } from './museum/index';
 import { RED_CAVE } from './cave';
 export type TeamId = 'united' | 'arsenal' | 'liverpool' | 'chelsea' | 'city' | 'common';
-export type MapId = 'plaza' | 'hall-of-legends' | 'chelsea-museum' | TeamId | CaveId;
+export type MapId =
+  | 'plaza'
+  | 'hall-of-legends'
+  | 'chelsea-museum'
+  | 'arsenal-museum'
+  | TeamId
+  | CaveId;
 export type Point = { x: number; y: number };
 export type Profile = { nickname: string; team: TeamId; avatar: number };
 export type Player = Profile &
@@ -127,8 +135,51 @@ export const PORTALS: Interaction[] = CAVES.map((c) => ({
   kind: 'portal',
   target: c.id,
 }));
+export const isOpenCave = (map: MapId | undefined) =>
+  CAVES.some((cave) => cave.id === map && cave.available);
 export type Rect = { x: number; y: number; w: number; h: number };
 export function interactions(map: MapId): Interaction[] {
+  if (map === 'arsenal-museum')
+    return [
+      ...arsenalExhibits.map((e) => ({
+        id: e.id,
+        label: 'Khám phá · ' + e.heading,
+        kind: 'exhibit' as const,
+        ...gunnersWire(e.approach?.x ?? e.x, e.approach?.z ?? e.z + 1.65),
+      })),
+      {
+        id: 'arsenal-museum-exit',
+        ...ARSENAL_MUSEUM.exit,
+        label: 'Về Hang Arsenal',
+        kind: 'portal',
+        target: 'arsenal',
+      },
+    ];
+  if (map === 'arsenal')
+    return [
+      {
+        id: 'arsenal-museum-entry',
+        ...ARSENAL_CAVE.entry,
+        label: 'Vào Phòng Truyền Thống Arsenal',
+        kind: 'portal',
+        target: 'arsenal-museum',
+      },
+      {
+        id: 'arsenal-exit',
+        ...ARSENAL_CAVE.exit,
+        label: 'Ra Hang · Đại Sảnh Chung',
+        kind: 'portal',
+        target: 'plaza',
+      },
+      { id: 'arsenal-score', ...ARSENAL_CAVE.score, label: 'Tỷ số minh họa · DEMO', kind: 'score' },
+      ...ARSENAL_CAVE.seats.map((p, i) => ({
+        ...p,
+        id: 'arsenal-seat-' + i,
+        label: 'Ngồi / đứng dậy',
+        kind: 'seat' as const,
+      })),
+    ];
+
   if (map === 'chelsea-museum')
     return [
       ...chelseaExhibits.map((e) => ({
@@ -281,6 +332,8 @@ export function interactions(map: MapId): Interaction[] {
       ];
 }
 export function spawn(map: MapId): Point {
+  if (map === 'arsenal') return { ...ARSENAL_CAVE.spawn };
+  if (map === 'arsenal-museum') return { ...ARSENAL_MUSEUM.spawn };
   if (map === 'chelsea') return { ...BLUES_CAVE.spawn };
   if (map === 'chelsea-museum') return { ...BLUES_MUSEUM.spawn };
   return map === 'hall-of-legends'
@@ -292,6 +345,8 @@ export function spawn(map: MapId): Point {
         : { x: 1200, y: 1370 };
 }
 export function obstacles(map: MapId): Rect[] {
+  if (map === 'arsenal') return ARSENAL_CAVE.obstacles;
+  if (map === 'arsenal-museum') return ARSENAL_MUSEUM.obstacles;
   if (map === 'chelsea') return BLUES_CAVE.obstacles;
   if (map === 'chelsea-museum') return BLUES_MUSEUM.obstacles;
   if (map === 'hall-of-legends') return hallObstacles;
@@ -316,15 +371,19 @@ export function walkable(map: MapId, x: number, y: number) {
     return grandWalkable(p.x, p.z);
   }
   const b =
-    map === 'chelsea'
-      ? BLUES_CAVE.bounds
-      : map === 'chelsea-museum'
-        ? BLUES_MUSEUM.bounds
-        : map === 'hall-of-legends'
-          ? HALL.bounds
-          : map === 'united'
-            ? RED_CAVE.bounds
-            : { l: 580, r: 1820, t: 420, b: 1550 };
+    map === 'arsenal'
+      ? ARSENAL_CAVE.bounds
+      : map === 'arsenal-museum'
+        ? ARSENAL_MUSEUM.bounds
+        : map === 'chelsea'
+          ? BLUES_CAVE.bounds
+          : map === 'chelsea-museum'
+            ? BLUES_MUSEUM.bounds
+            : map === 'hall-of-legends'
+              ? HALL.bounds
+              : map === 'united'
+                ? RED_CAVE.bounds
+                : { l: 580, r: 1820, t: 420, b: 1550 };
   return (
     x >= b.l &&
     x <= b.r &&
@@ -375,6 +434,7 @@ export function validMap(value: unknown): value is MapId {
     value === 'plaza' ||
     value === 'hall-of-legends' ||
     value === 'chelsea-museum' ||
+    value === 'arsenal-museum' ||
     TEAMS.some((t) => t.id === value) ||
     CAVES.some((c) => c.id === value)
   );
@@ -413,6 +473,8 @@ export function mapSize(map: MapId) {
       : MAP_SIZE;
 }
 export function roomKey(map: MapId) {
+  if (map === 'arsenal') return 'cave:arsenal';
+  if (map === 'arsenal-museum') return 'museum:arsenal';
   if (map === 'chelsea') return 'cave:chelsea';
   if (map === 'chelsea-museum') return 'museum:chelsea';
   return map === 'hall-of-legends'
@@ -428,6 +490,7 @@ export function plazaReturn(from: MapId): Point {
 
 export function groundHeight(map: MapId, p: Point) {
   if (map === 'chelsea') return bluesGround(p);
+  if (map === 'arsenal') return arsenalGround(p);
   if (map !== 'plaza') return 0;
   const q = grandMetres(p);
   return grandHeight(q.x, q.z);
@@ -437,6 +500,8 @@ export function groundHeight(map: MapId, p: Point) {
 export function arrival(from: MapId, target: MapId): Point {
   if (target === 'plaza') return plazaReturn(from);
   if (from === 'hall-of-legends' && target === 'united') return { x: 2048, y: 1100 };
+  if (from === 'arsenal-museum' && target === 'arsenal')
+    return { ...ARSENAL_CAVE.returnFromMuseum };
   if (from === 'chelsea-museum' && target === 'chelsea') return { ...BLUES_CAVE.returnFromMuseum };
   return spawn(target);
 }

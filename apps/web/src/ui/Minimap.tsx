@@ -1,4 +1,4 @@
-import { ChelseaMinimap } from './ChelseaMinimap';
+import { TeamMinimap } from './TeamMinimap';
 import { CaveMinimap } from './CaveMinimap';
 import { MuseumMinimap } from './MuseumMinimap';
 import { layouts, playtestInteractions, type SceneId } from '../game/three/worldLayout';
@@ -22,7 +22,27 @@ export function Minimap({
   onClick?: () => void;
   heading?: number;
 }) {
-  if(map==='chelsea'||map==='chelsea-museum') return <ChelseaMinimap position={position} museum={map==='chelsea-museum'} large={large} onClick={onClick} heading={heading}/>;
+  if (map === 'arsenal' || map === 'arsenal-museum')
+    return (
+      <TeamMinimap
+        arsenal
+        position={position}
+        museum={map === 'arsenal-museum'}
+        large={large}
+        onClick={onClick}
+        heading={heading}
+      />
+    );
+  if (map === 'chelsea' || map === 'chelsea-museum')
+    return (
+      <TeamMinimap
+        position={position}
+        museum={map === 'chelsea-museum'}
+        large={large}
+        onClick={onClick}
+        heading={heading}
+      />
+    );
   if (map === 'united')
     return <CaveMinimap position={position} large={large} onClick={onClick} heading={heading} />;
   if (map === 'hall-of-legends')

@@ -1,0 +1,18 @@
+[
+  {"id":"ruby","name":"Cụm pha lê đỏ","group":"mineral","box":[1557,803,1662,952],"priority":"high","method":"blender","occluded":true,"mask":[[27,136],[13,125],[16,91],[26,99],[32,73],[38,76],[35,48],[48,11],[58,0],[65,18],[66,49],[81,42],[85,68],[77,94],[99,72],[94,106],[70,137],[49,146]]},
+  {"id":"lantern","name":"Đèn lồng vàng","group":"lighting","box":[1536,273,1577,339],"priority":"high","method":"trellis","occluded":false,"mask":[[17,0],[22,0],[22,10],[27,12],[28,19],[35,24],[40,28],[34,31],[31,54],[26,58],[25,65],[12,65],[13,57],[8,54],[5,30],[0,28],[9,20],[12,13],[17,10]]},
+  {"id":"trident","name":"Đinh ba đỏ","group":"ornament","box":[701,136,789,294],"priority":"high","method":"trellis","occluded":false,"mask":[[4,40],[10,19],[25,37],[20,39],[29,70],[37,68],[33,35],[25,37],[34,6],[49,27],[42,30],[49,63],[57,60],[51,28],[46,29],[57,1],[79,21],[70,23],[82,57],[79,68],[67,76],[58,81],[83,150],[72,156],[47,83],[29,86],[20,81],[9,42]]},
+  {"id":"arch","name":"Cổng vòm đá","group":"architecture","box":[1319,342,1738,638],"priority":"high","method":"blender","occluded":true},
+  {"id":"wood-sign","name":"Biển gỗ viền vàng","group":"signage","box":[803,291,1231,349],"priority":"high","method":"scene","occluded":false,"mask":[[0,20],[14,8],[83,3],[332,2],[411,8],[424,20],[425,42],[414,54],[283,49],[141,49],[17,56],[4,48]]},
+  {"id":"banner","name":"Cờ đỏ viền vàng","group":"textile","box":[1360,163,1474,335],"priority":"medium","method":"scene","occluded":false,"mask":[[1,17],[100,0],[113,3],[113,11],[95,13],[94,137],[49,171],[18,149],[8,144],[4,22]]},
+  {"id":"sofa","name":"Sofa da đỏ","group":"furniture","box":[236,867,671,1072],"priority":"high","method":"blender","occluded":true},
+  {"id":"coffee-table","name":"Bàn tròn lounge","group":"furniture","box":[442,926,606,1030],"priority":"high","method":"blender","occluded":true},
+  {"id":"plant","name":"Cây cảnh nhiệt đới","group":"foliage","box":[1913,514,2047,635],"priority":"medium","method":"blender","occluded":true},
+  {"id":"hall","name":"Sảnh Trú Ẩn","group":"zone","box":[702,555,1377,1052],"priority":"high","method":"scene","occluded":true},
+  {"id":"talk","name":"Góc Tâm Sự Fan","group":"zone","box":[356,346,811,689],"priority":"high","method":"scene","occluded":true},
+  {"id":"lounge","name":"Khu Trò Chuyện Fan","group":"zone","box":[340,675,679,878],"priority":"high","method":"scene","occluded":true},
+  {"id":"museum","name":"Hành lang Hoài Niệm","group":"zone","box":[1309,349,1743,661],"priority":"high","method":"scene","occluded":true},
+  {"id":"exit","name":"Cổng Ra Hang","group":"zone","box":[1615,605,2047,956],"priority":"high","method":"scene","occluded":true},
+  {"id":"vault","name":"Vách, mái và nhũ đá","group":"architecture","box":[351,67,1715,363],"priority":"high","method":"blender","occluded":true},
+  {"id":"floor","name":"Nền lát đá và bậc trang trí","group":"architecture","box":[670,712,1722,1042],"priority":"high","method":"blender","occluded":true}
+]

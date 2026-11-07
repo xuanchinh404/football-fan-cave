@@ -1,39 +1,52 @@
+import { ARSENAL_CAVE, ARSENAL_MUSEUM } from '../../../../packages/shared/arsenal/layout';
 import { BLUES_CAVE, BLUES_MUSEUM } from '../../../../packages/shared/chelsea/layout';
 import type { Point } from '../../../../packages/shared/world';
-export function ChelseaMinimap({
+export function TeamMinimap({
   position,
+  arsenal = false,
   museum = false,
   large = false,
   onClick,
   heading = Math.PI,
 }: {
   position: Point;
+  arsenal?: boolean;
   museum?: boolean;
   large?: boolean;
   onClick?: () => void;
   heading?: number;
 }) {
-  const data = museum ? BLUES_MUSEUM : BLUES_CAVE,
+  const data = arsenal
+      ? museum
+        ? ARSENAL_MUSEUM
+        : ARSENAL_CAVE
+      : museum
+        ? BLUES_MUSEUM
+        : BLUES_CAVE,
     b = data.bounds;
   const svg = (
     <svg
       viewBox={`${b.l - 35} ${b.t - 35} ${b.r - b.l + 70} ${b.b - b.t + 70}`}
       role="img"
-      aria-label={museum ? 'Bản đồ Phòng Truyền Thống Chelsea' : 'Bản đồ Hang The Blues'}
+      aria-label={
+        museum
+          ? 'Bản đồ Phòng Truyền Thống ' + (arsenal ? 'Arsenal' : 'Chelsea')
+          : 'Bản đồ ' + (arsenal ? 'Hang Arsenal' : 'Hang The Blues')
+      }
     >
       <rect
         x={b.l - 35}
         y={b.t - 35}
         width={b.r - b.l + 70}
         height={b.b - b.t + 70}
-        fill="#071830"
+        fill={arsenal ? '#240f1b' : '#071830'}
       />
       <rect
         x={b.l}
         y={b.t}
         width={b.r - b.l}
         height={b.b - b.t}
-        fill="#214779"
+        fill={arsenal ? '#793548' : '#214779'}
         stroke="#dcb76b"
         strokeWidth="12"
       />
@@ -44,8 +57,8 @@ export function ChelseaMinimap({
           y={o.y}
           width={o.w}
           height={o.h}
-          fill="#07162e"
-          stroke="#6594d0"
+          fill={arsenal ? '#2a1421' : '#07162e'}
+          stroke={arsenal ? '#b57c70' : '#6594d0'}
           strokeWidth="3"
         />
       ))}
@@ -77,7 +90,11 @@ export function ChelseaMinimap({
   return large ? (
     <div className="map-large">{svg}</div>
   ) : (
-    <button className="mini-map" onClick={onClick} aria-label="Mở bản đồ Chelsea">
+    <button
+      className="mini-map"
+      onClick={onClick}
+      aria-label={arsenal ? 'Mở bản đồ Arsenal' : 'Mở bản đồ Chelsea'}
+    >
       {svg}
       <span className="north">N</span>
     </button>

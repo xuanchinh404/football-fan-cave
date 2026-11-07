@@ -1,3 +1,4 @@
+import { TrophyCase } from './MuseumKit';
 import { useMemo, useEffect, type ReactNode } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
@@ -99,7 +100,17 @@ export function BlueArch({
   );
 }
 /** Complete rock volume, vaulted ceiling, side walls and instanced PBR paving. */
-export function ChelseaShell({ map, museum = false }: { map: SceneId; museum?: boolean }) {
+export function ChelseaShell({
+  map,
+  museum = false,
+  warm = false,
+  children,
+}: {
+  map: SceneId;
+  museum?: boolean;
+  warm?: boolean;
+  children?: ReactNode;
+}) {
   const b = sceneBounds(map),
     w = b.right - b.left,
     d = b.bottom - b.top,
@@ -133,7 +144,9 @@ export function ChelseaShell({ map, museum = false }: { map: SceneId; museum?: b
       o.updateMatrix();
       rows.push({
         m: o.matrix.clone(),
-        c: new THREE.Color(i % 3 ? '#28496f' : '#1b3558').multiplyScalar(0.8 + (i % 4) * 0.08),
+        c: new THREE.Color(
+          warm ? (i % 3 ? '#66505a' : '#44333f') : i % 3 ? '#28496f' : '#1b3558',
+        ).multiplyScalar(0.8 + (i % 4) * 0.08),
       });
     };
     let i = 0;
@@ -147,7 +160,7 @@ export function ChelseaShell({ map, museum = false }: { map: SceneId; museum?: b
       for (let x = b.left; x <= b.right; x += 4)
         add(x, 14.5 - Math.pow(x / (w / 2), 2) * 2, z, 3, 1.7, 3, i++);
     return rows;
-  }, [map]);
+  }, [map, warm]);
   const tiles = useMemo(() => {
     const a: THREE.Matrix4[] = [];
     for (let x = b.left + 0.75; x < b.right; x += 1.5)
@@ -167,14 +180,29 @@ export function ChelseaShell({ map, museum = false }: { map: SceneId; museum?: b
         ))}
         <CuboidCollider args={[w / 2 + 1, 0.4, d / 2 + 1]} position={[0, 13.6, cz]} />
       </RigidBody>
-      <Box position={[0, -0.15, cz]} size={[w, 0.3, d]} color="#243e60" solid={false} />
+      <Box
+        position={[0, -0.15, cz]}
+        size={[w, 0.3, d]}
+        color={warm ? '#514047' : '#243e60'}
+        solid={false}
+      />
       {[b.left - 0.65, b.right + 0.65].map((x) => (
-        <Box key={x} position={[x, 6.5, cz]} size={[1, 13, d + 2]} color="#172c49" />
+        <Box
+          key={x}
+          position={[x, 6.5, cz]}
+          size={[1, 13, d + 2]}
+          color={warm ? '#42303a' : '#172c49'}
+        />
       ))}
       {[b.top - 0.65, b.bottom + 0.65].map((z) => (
-        <Box key={z} position={[0, 6.5, z]} size={[w + 2, 13, 1]} color="#172c49" />
+        <Box
+          key={z}
+          position={[0, 6.5, z]}
+          size={[w + 2, 13, 1]}
+          color={warm ? '#42303a' : '#172c49'}
+        />
       ))}
-      <Box position={[0, 14, cz]} size={[w + 2, 0.8, d + 2]} color="#0d1c33" />
+      <Box position={[0, 14, cz]} size={[w + 2, 0.8, d + 2]} color={warm ? '#261923' : '#0d1c33'} />
       <instancedMesh
         args={[undefined, undefined, stones.length]}
         userData={{ cameraSolid: true }}
@@ -210,7 +238,7 @@ export function ChelseaShell({ map, museum = false }: { map: SceneId; museum?: b
       >
         <boxGeometry />
         <meshStandardMaterial
-          color={museum ? '#9db4cd' : '#6685a5'}
+          color={warm ? '#cfb7ae' : museum ? '#9db4cd' : '#6685a5'}
           map={maps[0]}
           normalMap={maps[1]}
           normalScale={new THREE.Vector2(0.18, 0.18)}
@@ -231,19 +259,20 @@ export function ChelseaShell({ map, museum = false }: { map: SceneId; museum?: b
           </mesh>
         </group>
       ))}
-      {[-1, 1].flatMap((s) =>
-        [-6, 6, 12].map((z) => (
-          <group key={`${s}-${z}`}>
-            <AssetModel
-              asset="blues-column"
-              position={[s * (museum ? 16 : 16), 0, z]}
-              scale={[1, 1.25, 1]}
-            />
-            <AssetModel asset="lantern" position={[s * 15, 3, z]} solid={false} />
-            <Sapphire position={[s * (w / 2 - 1), 0.05, z - 2]} scale={1.3} />
-          </group>
-        )),
-      )}
+      {children ??
+        [-1, 1].flatMap((s) =>
+          [-6, 6, 12].map((z) => (
+            <group key={`${s}-${z}`}>
+              <AssetModel
+                asset="blues-column"
+                position={[s * (museum ? 16 : 16), 0, z]}
+                scale={[1, 1.25, 1]}
+              />
+              <AssetModel asset="lantern" position={[s * 15, 3, z]} solid={false} />
+              <Sapphire position={[s * (w / 2 - 1), 0.05, z - 2]} scale={1.3} />
+            </group>
+          )),
+        )}
     </group>
   );
 }
@@ -271,53 +300,6 @@ export function BlueRug({
     </group>
   );
 }
-export function BlueCase({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
-}) {
-  return (
-    <group>
-      <Box position={[0, 0.45, 0]} size={[2.9, 0.9, 2.1]} color="#112c5a" />
-      <Box position={[0, 0.93, 0]} size={[2.98, 0.08, 2.18]} color={GOLD} />
-      <group position={[0, 0.99, 0]}>{children}</group>
-      <BluePlaque
-        lines={[title, subtitle, 'E · Khám phá']}
-        width={2.65}
-        height={0.74}
-        position={[0, 0.49, 1.08]}
-      />
-      {[-1, 1].flatMap((s) =>
-        [-1, 1].map((t) => (
-          <Box
-            key={`${s}-${t}`}
-            position={[s * 1.42, 2.35, t * 1.02]}
-            size={[0.045, 2.8, 0.045]}
-            color={GOLD}
-          />
-        )),
-      )}
-      <Box position={[0, 3.76, 0]} size={[2.98, 0.12, 2.18]} color={GOLD} />
-      <mesh position={[0, 2.35, 0]}>
-        <boxGeometry args={[2.85, 2.8, 2.05]} />
-        <meshPhysicalMaterial
-          color="#89baff"
-          transparent
-          opacity={0.075}
-          roughness={0.06}
-          metalness={0.1}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      <mesh position={[0, 3.67, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.22, 24]} />
-        <meshBasicMaterial color="#cceeff" />
-      </mesh>
-    </group>
-  );
+export function BlueCase(props: React.ComponentProps<typeof TrophyCase>) {
+  return <TrophyCase {...props} />;
 }

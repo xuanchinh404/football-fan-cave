@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import { verifyToken, profileForToken, adminClient, isLinked } from './auth.ts';
 import {
   arrival,
+  isOpenCave,
   groundHeight,
   cleanText,
   clearPath,
@@ -169,7 +170,7 @@ io.on('connection', (socket) => {
       socket.emit('notice', 'Hãy đến gần cổng hang để di chuyển.');
       return;
     }
-    if(p.map==='plaza' && target!=='united' && target!=='chelsea') { socket.emit('notice','Nội thất hang này sắp ra mắt. Bạn có thể khám phá sân trước cổng.');return; }
+    if(p.map==='plaza' && !isOpenCave(target)) { socket.emit('notice','Nội thất hang này sắp ra mắt. Bạn có thể khám phá sân trước cổng.');return; }
     join(
       socket.id,
       target,

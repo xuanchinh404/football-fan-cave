@@ -76,3 +76,7 @@ Xem [phân tích repo, cấu trúc scene, danh sách file và checklist kiểm t
 Từ Đại Sảnh, lên tầng hai và đi qua cổng Chelsea. Góc Tâm Sự nằm bên trái. Hành lang lên bốn bậc thang bên phải dẫn đến Phòng Truyền Thống, với 12 nhóm cúp, gallery HLV, tượng Drogba, timeline và tư liệu các trận chung kết. Đến gần hiện vật rồi nhấn E hoặc chạm Tương tác để mở thông tin. Cổng phía nam bảo tàng đưa bạn trở về hành lang. Cổng phía nam hang đưa bạn ra đúng sân trước cổng Chelsea ở Đại Sảnh.
 
 [Báo cáo bàn giao Chelsea](docs/chelsea-3d-implementation.md) · [Ảnh kiểm thử và video](docs/visual-qa/chelsea/README.md)
+
+## Tạo asset 3D từ ảnh
+
+[Xem cách dùng TRELLIS.2 và tích hợp GLB vào game](docs/trellis-2.md).

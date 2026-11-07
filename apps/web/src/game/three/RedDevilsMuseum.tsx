@@ -1,4 +1,10 @@
-import type { ReactNode } from 'react';
+import { ManagerGallery } from './MuseumKit';
+import { Suspense, useMemo, type ReactNode } from 'react';
+import { useLoader } from '@react-three/fiber';
+import { Box3, Vector3 } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import chibiUrl from '../../../../../public/assets/3d/characters/chibi-red-7.glb?url';
+import { AssetBoundary } from './BlenderAsset';
 import {
   trophies,
   managers,
@@ -34,6 +40,23 @@ const counts = [
 ];
 export { Exhibit } from './Exhibit';
 import { Exhibit } from './Exhibit';
+
+function ChibiStatue() {
+  const { scene } = useLoader(GLTFLoader, chibiUrl);
+  const { model, scale } = useMemo(() => {
+    const bounds = new Box3().setFromObject(scene);
+    const size = bounds.getSize(new Vector3());
+    const center = bounds.getCenter(new Vector3());
+    const model = scene.clone();
+    model.position.sub(new Vector3(center.x, bounds.min.y, center.z));
+    return { model, scale: Math.min(1.45 / size.y, 1 / size.x, 0.45 / size.z) };
+  }, [scene]);
+  return (
+    <group name="chibi-red-7" scale={scale}>
+      <primitive object={model} />
+    </group>
+  );
+}
 
 function Bust({
   shirt = '#aa2037',
@@ -284,31 +307,33 @@ export function RedDevilsMuseum({ quality }: { quality: Quality }) {
         width={18}
         background="#3e1525"
       />
-      {managers.map((m) => {
-        const [x, z] = toScene('hall-of-legends', m),
-          front = m.y < 590;
-        return (
-          <group key={m.id} position={[x, 0, front ? -21.2 : z]}>
-            <Exhibit id={m.id}>
-              <Display
-                title={m.name}
-                subtitle={`${m.start.slice(0, 4)}–${m.end?.slice(0, 4) || 'nay'}${m.current ? ' · HIỆN TẠI' : ''}`}
-                width={front ? 1.3 : 1.35}
-              >
-                <group scale={0.85}>
-                  <Bust
-                    shirt={m.current ? '#a11b31' : '#303849'}
-                    gold={m.name === 'Sir Alex Ferguson'}
-                  />
-                </group>
-              </Display>
-              {m.current && (
-                <Label text="HIỆN TẠI" position={[0, 3.7, -0.2]} width={1.3} background="#9e192d" />
-              )}
-            </Exhibit>
-          </group>
-        );
-      })}
+      <ManagerGallery
+        stations={managers.map((m) => {
+          const [x, z] = toScene('hall-of-legends', m),
+            front = m.y < 590;
+          return { ...m, front, position: [x, 0, front ? -21.2 : z] };
+        })}
+      >
+        {(m) => (
+          <>
+            <Display
+              title={m.name}
+              subtitle={`${m.start.slice(0, 4)}–${m.end?.slice(0, 4) || 'nay'}${m.current ? ' · HIỆN TẠI' : ''}`}
+              width={m.front ? 1.3 : 1.35}
+            >
+              <group scale={0.85}>
+                <Bust
+                  shirt={m.current ? '#a11b31' : '#303849'}
+                  gold={m.name === 'Sir Alex Ferguson'}
+                />
+              </group>
+            </Display>
+            {m.current && (
+              <Label text="HIỆN TẠI" position={[0, 3.7, -0.2]} width={1.3} background="#9e192d" />
+            )}
+          </>
+        )}
+      </ManagerGallery>
       <Plaque
         lines={['DÒNG THỜI GIAN', '1878 → Hôm nay']}
         width={3.3}
@@ -396,12 +421,21 @@ export function RedDevilsMuseum({ quality }: { quality: Quality }) {
       <Label text="HUYỀN THOẠI QUỶ ĐỎ" position={[8.4, 4, 18.95]} width={16} background="#51172c" />
       {legends.map((l, i) => {
         const [x, z] = toScene('hall-of-legends', l);
+        const bust = <Bust number={l.number} shirt={i === 10 ? '#578064' : '#ab2135'} />;
         return (
           <group key={l.id} position={[x, 0, z - 0.52]} rotation={[0, Math.PI, 0]}>
             <Exhibit id={l.id}>
               <Display title={l.name} subtitle={l.years} width={1.225}>
                 <group scale={0.9}>
-                  <Bust number={l.number} shirt={i === 10 ? '#578064' : '#ab2135'} />
+                  {l.name === 'Cristiano Ronaldo' ? (
+                    <AssetBoundary asset="chibi-red-7" fallback={bust}>
+                      <Suspense fallback={bust}>
+                        <ChibiStatue />
+                      </Suspense>
+                    </AssetBoundary>
+                  ) : (
+                    bust
+                  )}
                 </group>
               </Display>
             </Exhibit>

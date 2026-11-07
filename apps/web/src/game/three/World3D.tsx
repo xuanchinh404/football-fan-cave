@@ -1,3 +1,4 @@
+import { playerAvatarFile } from './PlayerAvatar3D';
 import { CAVES } from '../../../../../packages/shared/grandHall';
 import { type Quality } from './GrandHall';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
@@ -16,6 +17,7 @@ import {
   SPEED,
   RUN_SPEED,
   groundHeight,
+  isOpenCave,
   spawn,
   TEAMS,
   type Player,
@@ -126,7 +128,10 @@ export function World3D() {
     const r = runtime.current;
     function travel(e: { map: SceneId; x?: number; y?: number }) {
       if (!(e.map in layouts)) {
-        emit('notice', 'Bản chơi thử 3D hiện mở Đại Sảnh Chung cùng nội thất MU và Chelsea.');
+        emit(
+          'notice',
+          'Bản chơi thử 3D hiện mở Đại Sảnh Chung cùng nội thất MU, Chelsea và Arsenal.',
+        );
         return;
       }
       const p = e.x === undefined ? spawn(e.map) : { x: e.x, y: e.y! };
@@ -135,7 +140,9 @@ export function World3D() {
         (r.map === 'united' && e.map === 'plaza') ||
         (r.map === 'hall-of-legends' && e.map === 'united') ||
         (r.map === 'chelsea' && e.map === 'plaza') ||
-        (r.map === 'chelsea-museum' && e.map === 'chelsea');
+        (r.map === 'chelsea-museum' && e.map === 'chelsea') ||
+        (r.map === 'arsenal' && e.map === 'plaza') ||
+        (r.map === 'arsenal-museum' && e.map === 'arsenal');
       pendingPosition.current = p;
       r.feet.set(x, groundHeight(e.map, p) || 0, z);
       r.map = e.map;
@@ -169,7 +176,7 @@ export function World3D() {
         direction: r.direction,
         moving: r.moving,
       });
-      emit('interact', { map: r.map, position });
+      emit('interact', { map: r.map, position, seated: r.seated });
     }
     function keydown(e: KeyboardEvent) {
       if (isTyping() || r.controls.blocked || !r.controls.enabled) return;
@@ -417,7 +424,7 @@ export function World3D() {
     if (
       portal?.kind === 'portal' &&
       r.portal === portal.id &&
-      (r.map !== 'plaza' || portal.target === 'united' || portal.target === 'chelsea') &&
+      (r.map !== 'plaza' || isOpenCave(portal.target)) &&
       r.controls.enabled &&
       !r.controls.blocked &&
       r.moving &&
@@ -464,7 +471,7 @@ export function World3D() {
       quality,
       caves:
         r.map === 'plaza' ? CAVES.map((c) => ({ id: c.id, tier: c.tier, height: c.height })) : [],
-      characterModel: 'fan-chibi.glb',
+      characterModel: playerAvatarFile,
       profile: { nickname: r.profile.nickname, team: r.profile.team, avatar: r.profile.avatar },
       view: r.controls.view,
     };
@@ -783,11 +790,7 @@ function PortalTriggers({ map, runtime }: { map: SceneId; runtime: React.RefObje
   return (
     <RigidBody type="fixed" colliders={false}>
       {playtestInteractions(map)
-        .filter(
-          (p) =>
-            p.kind === 'portal' &&
-            (map !== 'plaza' || p.target === 'united' || p.target === 'chelsea'),
-        )
+        .filter((p) => p.kind === 'portal' && (map !== 'plaza' || isOpenCave(p.target)))
         .map((p) => {
           const [x, z] = toScene(map, p),
             h = groundHeight(map, p) || 0;

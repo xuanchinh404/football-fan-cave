@@ -326,6 +326,282 @@
         ]
       ],
       "previewSha256": "e1e833ebf6d5822a62fb0b3fd81690aa3e113fca3716cb0f838e9fafd0a9f9f0"
+    },
+    "gunners-arch": {
+      "fingerprint": "2a1766c0152029388ca8ed1fffb566d8730c47921ec65b6e9e9f82931f629443",
+      "sha256": "3feafc8e95334dbc08c24435090e709dd118f523b12a0b965118ea5b2b3d76b3",
+      "bytes": 403520,
+      "triangles": 2964,
+      "primitives": 4,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1398100,
+      "bounds": [
+        [
+          -5.02,
+          0.015,
+          -0.765
+        ],
+        [
+          5.02,
+          8.986,
+          0.765
+        ]
+      ],
+      "previewSha256": "725a2eabf6f5bfe3f3b8ffb35d686106a290af671e09d7f9b559660a3c8723ff"
+    },
+    "gunners-cannon": {
+      "fingerprint": "d54740b2d8ecd132ca3467727b15dbe1a3b0dda3adf599bea3cde325dce36611",
+      "sha256": "0dc5aeddcb7554481ecd33f1e34aa16345df6c0d111f3548a62bdcb6a58bf0fe",
+      "bytes": 66724,
+      "triangles": 3440,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -1.435,
+          -0.054,
+          -0.85
+        ],
+        [
+          1.523,
+          1.9,
+          0.85
+        ]
+      ],
+      "previewSha256": "e483d2704179500d8d90a27956b84c9d5d3cd6d29e34c1993fb4c70a13057648"
+    },
+    "gunners-emblem": {
+      "fingerprint": "ed68904098ca2282623da43eecb4030c729c1668605c574f151a73b659b615c6",
+      "sha256": "52bd364512f6a477404ba41ab0cc59b3edece5dcba7602cc3d8885f4a8685a9e",
+      "bytes": 16260,
+      "triangles": 768,
+      "primitives": 1,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -1.63,
+          -0.025,
+          -0.08
+        ],
+        [
+          1.82,
+          1.505,
+          0.215
+        ]
+      ]
+    },
+    "gunners-sofa": {
+      "fingerprint": "6670294e336d0c24811d14a14098630a13aa453d71c328ef21bed3f60b976280",
+      "sha256": "24bb5a6fbbe40ba0a98527759c6bd517976f4a80cb3014605de131e370ad3dd2",
+      "bytes": 38676,
+      "triangles": 1232,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -2.91,
+          0.02,
+          -0.87
+        ],
+        [
+          2.91,
+          1.7,
+          0.85
+        ]
+      ]
+    },
+    "gunners-ruby": {
+      "fingerprint": "46256bceaf9dd099b55137d2307642174ff52d074cc381c2265d5342795a9c92",
+      "sha256": "4ffc1799b6a08e216007aca11c6a029da52fc177e3444017bcecc98a75a9f4a8",
+      "bytes": 17088,
+      "triangles": 352,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.595,
+          -0.066,
+          -0.439
+        ],
+        [
+          0.883,
+          2.489,
+          0.435
+        ]
+      ]
+    },
+    "gunners-shirt": {
+      "fingerprint": "7ff0bed5fae233e617b3223a04212dcce557edb74b9f7f7ceb1e1d3cb75d8cf4",
+      "sha256": "57d65a5def236128074f4e6b536cfce6fcb68ea2846a8fe6fadebffc7bb2381a",
+      "bytes": 5476,
+      "triangles": 48,
+      "primitives": 2,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.75,
+          0.04,
+          -0.1
+        ],
+        [
+          0.75,
+          1.16,
+          0.1
+        ]
+      ]
+    },
+    "gunners-cup-league": {
+      "fingerprint": "6a858b40bf3b9fd0315b4f15b85b704539a95104a39d0a18e6932506bba9f468",
+      "sha256": "025ec0c33224fbc2037baadaf7bf3ce32318420820d80292c914157832badefa",
+      "bytes": 26180,
+      "triangles": 1068,
+      "primitives": 4,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.879,
+          0.01,
+          -0.58
+        ],
+        [
+          0.879,
+          2.03,
+          0.58
+        ]
+      ],
+      "previewSha256": "ea102e2117d409367a646da20917e7eea45d0223b0c5683d1417aeb17d00632a"
+    },
+    "gunners-cup-fa": {
+      "fingerprint": "d03ce22c3514bc577f71f8b24d6ffac30ee0e973385466363c2d5c924bef41e3",
+      "sha256": "407353a7c65c5b7c8d09494ad26d807bed6d0f7553f4d04ea82d09b72fd4e328",
+      "bytes": 26772,
+      "triangles": 1148,
+      "primitives": 4,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.879,
+          0.01,
+          -0.51
+        ],
+        [
+          0.879,
+          2.03,
+          0.51
+        ]
+      ]
+    },
+    "gunners-cup-league-cup": {
+      "fingerprint": "a7c1baac585e16e8e62172d948c0812f894f0f10304b566a3b9078a08aefda12",
+      "sha256": "b37c45a7905d8ef5dda75c93e7b860f1c0196bfd0000c545ab437f09d0b262cf",
+      "bytes": 20920,
+      "triangles": 848,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.879,
+          0.01,
+          -0.54
+        ],
+        [
+          0.879,
+          1.664,
+          0.54
+        ]
+      ]
+    },
+    "gunners-cup-winners": {
+      "fingerprint": "71e93e31f606c9407938205c3b03dbb1cab3a9c2773bc4315c961f62a15c760f",
+      "sha256": "684b3928176249c06c95ce7ead2c32e600f3c7bc433d8eac64de214676459daa",
+      "bytes": 20028,
+      "triangles": 848,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.879,
+          0.01,
+          -0.61
+        ],
+        [
+          0.879,
+          1.81,
+          0.61
+        ]
+      ]
+    },
+    "gunners-cup-fairs": {
+      "fingerprint": "4ba01d28a79e2bb3a0175efdf2beba322249b4553568c6d7ae0dd97ce07d8d7f",
+      "sha256": "823eb32201ed7581c049e4b7d8a12fca89902372f0305f759624a30b22be220d",
+      "bytes": 20664,
+      "triangles": 928,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.879,
+          0.01,
+          -0.54
+        ],
+        [
+          0.879,
+          1.71,
+          0.54
+        ]
+      ]
+    },
+    "gunners-cup-shield": {
+      "fingerprint": "dc32e047995658fa9125b552ab761e1c54c6bfed112510f46ba82784eb909a8d",
+      "sha256": "48070346154f491a31235da058d2ca8bffad1b9deaf90864cb2146068b85c08d",
+      "bytes": 28368,
+      "triangles": 1000,
+      "primitives": 3,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 0,
+      "bounds": [
+        [
+          -0.79,
+          0.01,
+          -0.47
+        ],
+        [
+          0.79,
+          1.78,
+          0.47
+        ]
+      ]
+    },
+    "gunners-masonry": {
+      "fingerprint": "f0240bedd46b37e1a49ca398f5ebc18122373d7fb916532090e84b1bc8460d54",
+      "sha256": "4954a210d0f3c6cf0b9799e59c4d526ca18f1400580b746455e670e3a89117c0",
+      "bytes": 503448,
+      "triangles": 3120,
+      "primitives": 4,
+      "meshopt": true,
+      "textureRgba8WithMipmapsBytes": 1747625,
+      "bounds": [
+        [
+          -2.381,
+          0.025,
+          -0.281
+        ],
+        [
+          2.381,
+          10.975,
+          0.278
+        ]
+      ]
     }
   }
 }

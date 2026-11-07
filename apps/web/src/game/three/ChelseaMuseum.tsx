@@ -1,3 +1,4 @@
+import { ManagerGallery } from './MuseumKit';
 import { useEffect, useState } from 'react';
 import { AssetModel } from './AssetModel';
 import { Box, Label } from './Models';
@@ -104,9 +105,11 @@ export function ChelseaMuseum({ quality }: { quality: Quality }) {
         width={25}
         height={1.2}
       />
-      {managerGroups.map((g, i) => (
-        <group key={g.id} position={[g.x, 0, g.z]}>
-          <Exhibit id={g.id}>
+      <ManagerGallery
+        stations={managerGroups.map((g, i) => ({ ...g, i, position: [g.x, 0, g.z] }))}
+      >
+        {({ i, ...g }) => (
+          <>
             <Box position={[0, 2, 0]} size={[2.7, 4, 1.2]} color="#102950" />
             <BluePlaque
               lines={[
@@ -121,9 +124,9 @@ export function ChelseaMuseum({ quality }: { quality: Quality }) {
               <circleGeometry args={[0.18, 16]} />
               <meshBasicMaterial color={i === 9 ? '#ffd166' : '#92cfff'} />
             </mesh>
-          </Exhibit>
-        </group>
-      ))}
+          </>
+        )}
+      </ManagerGallery>
       <group position={[-11, 0, -19]}>
         <Exhibit id="blues-drogba-statue">
           <Box position={[0, 0.8, 0]} size={[4.4, 1.6, 3.2]} color="#223d60" />

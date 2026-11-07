@@ -56,6 +56,26 @@ export function Plaque({
     </group>
   );
 }
+export function RoomReflections({ intensity }: { intensity: number }) {
+  const { gl, scene } = useThree();
+  useEffect(() => {
+    const generator = new THREE.PMREMGenerator(gl),
+      room = new RoomEnvironment();
+    const target = generator.fromScene(room, 0.04),
+      previous = scene.environment;
+    const oldIntensity = scene.environmentIntensity;
+    scene.environment = target.texture;
+    scene.environmentIntensity = intensity;
+    return () => {
+      scene.environment = previous;
+      scene.environmentIntensity = oldIntensity;
+      target.dispose();
+      generator.dispose();
+      room.dispose();
+    };
+  }, [gl, scene, intensity]);
+  return null;
+}
 export function IndoorLight({
   museum = false,
   shadows = true,
@@ -65,25 +85,9 @@ export function IndoorLight({
   shadows?: boolean;
   blue?: boolean;
 }) {
-  const { gl, scene } = useThree();
-  useEffect(() => {
-    const generator = new THREE.PMREMGenerator(gl),
-      room = new RoomEnvironment();
-    const target = generator.fromScene(room, 0.04),
-      previous = scene.environment;
-    const oldIntensity = scene.environmentIntensity;
-    scene.environment = target.texture;
-    scene.environmentIntensity = museum ? 0.5 : 0.28;
-    return () => {
-      scene.environment = previous;
-      scene.environmentIntensity = oldIntensity;
-      target.dispose();
-      generator.dispose();
-      room.dispose();
-    };
-  }, [gl, scene]);
   return (
     <>
+      <RoomReflections intensity={museum ? 0.5 : 0.28} />
       <color attach="background" args={[blue ? '#08162d' : museum ? '#21151d' : '#1c101d']} />
       <fog
         attach="fog"
@@ -127,7 +131,15 @@ export function IndoorLight({
     </>
   );
 }
-export function IndoorShell({ map, museum = false }: { map: SceneId; museum?: boolean }) {
+export function IndoorShell({
+  map,
+  museum = false,
+  paving = true,
+}: {
+  map: SceneId;
+  museum?: boolean;
+  paving?: boolean;
+}) {
   const b = sceneBounds(map),
     w = b.right - b.left,
     d = b.bottom - b.top,
@@ -167,7 +179,7 @@ export function IndoorShell({ map, museum = false }: { map: SceneId; museum?: bo
       ))}
       <Box position={[cx, 12, cz]} size={[w + 1, 0.6, d + 1]} color="#261a26" />
       {/* Instanced paving gives a real broken-stone floor with hundreds of independently lit tiles. */}
-      <Paving bounds={b} museum={museum} />
+      {paving && <Paving bounds={b} museum={museum} />}
       {museum &&
         [b.left + 0.16, b.right - 0.16].map((x) => (
           <group key={x}>

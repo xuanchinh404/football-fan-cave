@@ -4,17 +4,16 @@ import * as THREE from 'three';
 import { Box, Character, Label, Torch } from './Models';
 import {
   Banner,
-  Doorway,
   GOLD,
   IndoorLight,
   IndoorShell,
   InteriorColliders,
   Plaque,
-  Trident,
   type V3,
 } from './IndoorKit';
-import { sceneBounds, sceneObstacles, toScene } from './worldLayout';
+import { sceneObstacles, toScene } from './worldLayout';
 import type { Quality } from './GrandHall';
+import { CaveGate, CaveModel, RedDevilsSet } from './RedDevilsSet';
 
 const sighs = [
   'Lại hẹn mùa sau…',
@@ -22,28 +21,6 @@ const sighs = [
   'Ngày xưa ta đã từng!',
   'Trà nóng, tim nguội.',
 ];
-function Crystal({ position, scale = 1 }: { position: V3; scale?: number }) {
-  return (
-    <group position={position} scale={scale}>
-      {[0, 1, 2].map((i) => (
-        <mesh
-          key={i}
-          position={[(i - 1) * 0.3, 0.5 + i * 0.1, 0]}
-          rotation={[0, i * 0.8, (i - 1) * 0.32]}
-        >
-          <octahedronGeometry args={[0.55 + i * 0.08, 0]} />
-          <meshStandardMaterial
-            color="#f92d66"
-            emissive="#f7194d"
-            emissiveIntensity={1.4}
-            metalness={0.25}
-            roughness={0.18}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
 function CaveRock({ position, scale }: { position: V3; scale: V3 }) {
   return (
     <mesh
@@ -74,28 +51,7 @@ function Sofa({
   depth?: number;
   rotation?: number;
 }) {
-  return (
-    <group position={position} rotation={[0, rotation, 0]} scale={[1, 1, depth / 1.5]}>
-      <Box position={[0, 0.38, 0]} size={[width, 0.76, 1.4]} color="#601d35" />
-      <Box position={[0, 1.1, -0.58]} size={[width, 1.5, 0.3]} color="#842c41" />
-      {[-1, 1].map((s) => (
-        <Box
-          key={s}
-          position={[s * (width / 2 - 0.15), 0.8, 0]}
-          size={[0.3, 0.9, 1.5]}
-          color="#aa6b40"
-        />
-      ))}
-      {[-1, 0, 1].map((i) => (
-        <Box
-          key={i}
-          position={[(i * width) / 3, 0.8, 0.05]}
-          size={[width / 3 - 0.12, 0.18, 1.05]}
-          color="#a33a4e"
-        />
-      ))}
-    </group>
-  );
+  return <CaveModel asset="sofa" placements={[{ position, yaw: rotation, scale: [width / 4, 1, depth / 1.48] }]} solid shadow />;
 }
 function SadFan({ position, i }: { position: V3; i: number }) {
   const head = useRef<THREE.Group>(null);
@@ -122,39 +78,14 @@ function SadFan({ position, i }: { position: V3; i: number }) {
   );
 }
 export function RedDevilsCave({ quality }: { quality: Quality }) {
-  const b = sceneBounds('united'),
-    solids = sceneObstacles('united');
+  const solids = sceneObstacles('united');
   const [mx, mz] = toScene('united', { x: 2048, y: 1100 });
   return (
     <group name="red-devils-cave">
       <IndoorLight shadows={quality !== 'low'} />
-      <IndoorShell map="united" />
+      <IndoorShell map="united" paving={false} />
       <InteriorColliders map="united" />
-      {/* Opaque stone envelope; no concept image is loaded into this world. */}
-      {Array.from({ length: 18 }, (_, i) => {
-        const z = b.top + 1 + (i * (b.bottom - b.top - 2)) / 17;
-        return (
-          <group key={i}>
-            {[-1, 1].map((s) => (
-              <group key={s}>
-                <CaveRock
-                  position={[s < 0 ? b.left - 0.9 : b.right + 0.9, 3.5 + (i % 3), z]}
-                  scale={[1.8, 5 + (i % 3), 1.7]}
-                />
-                {i % 2 === 0 && (
-                  <Crystal
-                    position={[s < 0 ? b.left + 0.5 : b.right - 0.5, 0.1, z]}
-                    scale={1 + (i % 3) * 0.25}
-                  />
-                )}
-              </group>
-            ))}
-          </group>
-        );
-      })}
-      {Array.from({ length: 10 }, (_, i) => (
-        <CaveRock key={i} position={[b.left + 2 + i * 4, 10.9, b.top + 3]} scale={[2.8, 2.5, 4]} />
-      ))}
+      <RedDevilsSet detailed={quality !== 'low'} />
       <Plaque
         lines={['HANG QUỶ ĐỎ', 'Hội fan MU trú ẩn sau mỗi trận thua']}
         width={12}
@@ -163,18 +94,7 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
       />
       <Banner position={[-8.2, 6.7, -16]} />
       <Banner position={[8.2, 6.7, -16]} />
-      <Trident position={[0, 2.2, -7.1]} scale={0.7} />
-      {/* The central footprint is the shared authoritative plinth. */}
-      <Box
-        position={[solids[0].x, 0.55, solids[0].z]}
-        size={[solids[0].w, 1.1, solids[0].d]}
-        color="#6d2739"
-      />
-      <Box
-        position={[solids[0].x, 1.2, solids[0].z]}
-        size={[solids[0].w + 0.06, 0.2, solids[0].d + 0.06]}
-        color={GOLD}
-      />
+      <CaveModel asset="plinth" placements={[{ position: [solids[0].x, 0, solids[0].z] }]} solid shadow />
       <Plaque
         lines={['SẢNH TRÚ ẨN', 'Tụ tập · Than thở · Động viên']}
         width={4.1}
@@ -203,7 +123,7 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
         size={[solids[4].w, 10, solids[4].d]}
         color="#38202f"
       />
-      <Doorway
+      <CaveGate
         position={[mx, 0, -9.55]}
         title="LỐI VÀO PHÒNG HOÀI NIỆM"
         subtitle="Đi sâu vào hành lang · E để bước vào"
@@ -216,7 +136,7 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
       <pointLight position={[0, 3, -12]} color="#ffd798" intensity={45} distance={8} />
       {/* Lounge: screen, real sofa volumes, a solid coffee table and seated fans. */}
       <group name="fan-lounge">
-        <Doorway
+        <CaveGate
           position={[-13.8, 0, -3.8]}
           title="GÓC TÂM SỰ FAN"
           subtitle="Trà còn nóng. Anh em cứ kể."
@@ -241,10 +161,11 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
         />
         <Sofa position={[-15.1, 0, -9.4]} width={6.2} />
         <Sofa position={[-15.1, 0, -6.15]} width={6.2} rotation={Math.PI} />
-        <Box
-          position={[solids[11].x, 0.3, solids[11].z]}
-          size={[solids[11].w, 0.6, solids[11].d]}
-          color="#b78653"
+        <CaveModel
+          asset="coffee-table"
+          placements={[{ position: [solids[11].x, 0, solids[11].z], scale: [solids[11].w / 1.25, 1, solids[11].d / 1.25] }]}
+          solid
+          shadow
         />
         {[-1, 0, 1].map((i) => (
           <mesh key={i} position={[-15.1 + i * 0.65, 0.78, -8.05]}>
@@ -257,6 +178,7 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
         <pointLight position={[-15, 4, -8]} color="#ffc486" intensity={95} distance={14} />
       </group>
       <Sofa position={[solids[5].x, 0, solids[5].z]} width={solids[5].w} depth={solids[5].d} />
+      <Plaque lines={['KHU TRÒ CHUYỆN FAN', 'Lounge · Giao lưu nhẹ']} position={[-16.3, 3.3, -2.3]} width={6.25} height={0.9} />
       <SadFan position={[solids[5].x - 0.7, 0.65, solids[5].z + 0.3]} i={2} />
       <Sofa position={[solids[6].x, 0, solids[6].z]} width={solids[6].w} depth={solids[6].d} />
       <SadFan position={[solids[6].x, 0.65, solids[6].z + 0.3]} i={3} />
@@ -297,29 +219,16 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
           <group key={i}>
             <Box position={[o.x, 4, o.z]} size={[o.w, 8, o.d]} color="#69363c" />
             <Torch position={[o.x, 2, o.z + 0.6]} />
-            <Crystal position={[o.x, 0.1, o.z + 0.7]} />
           </group>
         );
       })}
-      <Doorway
+      <CaveGate
         position={[0, 0, 7.15]}
         rotation={Math.PI}
         title="CỔNG RA HANG"
         subtitle="Trở lại Đại Sảnh Chung"
         width={4}
       />
-      {quality !== 'low' &&
-        [
-          [-9, -3],
-          [9, -3],
-          [-6, -18],
-          [6, -18],
-        ].map(([x, z], i) => (
-          <group key={i}>
-            <Crystal position={[x, 0, z]} scale={1.3} />
-            <Torch position={[x + 0.6, 0, z]} />
-          </group>
-        ))}
     </group>
   );
 }

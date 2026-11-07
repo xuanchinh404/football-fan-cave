@@ -19,6 +19,19 @@
     { "id": "ornamental-cherry", "generator": "landscape:cherry", "triangles": 22000, "maxKiB": 1400 },
     { "id": "ornamental-cherry-low", "generator": "landscape:cherry", "args": { "lod": true }, "triangles": 5500, "maxKiB": 320, "preview": false },
     { "id": "golden-ball-garden", "generator": "plaza:statue", "triangles": 23000, "maxKiB": 2100 },
-    { "id": "plaza-promenade", "generator": "plaza:promenade", "triangles": 38000, "maxKiB": 2500 }
+    { "id": "plaza-promenade", "generator": "plaza:promenade", "triangles": 38000, "maxKiB": 2500 },
+    {"id":"gunners-arch","generator":"arsenal:fortress_arch","triangles":8000,"maxKiB":1100,"preview":true},
+    {"id":"gunners-cannon","generator":"arsenal:cannon","triangles":8000,"maxKiB":1100,"preview":true},
+    {"id":"gunners-emblem","generator":"arsenal:cannon","args":{"emblem":true},"triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-sofa","generator":"arsenal:sofa","triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-ruby","generator":"arsenal:ruby","triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-shirt","generator":"arsenal:keepsake","triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-cup-league","generator":"arsenal:cup","args":{"kind":"league"},"triangles":8000,"maxKiB":1100,"preview":true},
+    {"id":"gunners-cup-fa","generator":"arsenal:cup","args":{"kind":"fa"},"triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-cup-league-cup","generator":"arsenal:cup","args":{"kind":"league-cup"},"triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-cup-winners","generator":"arsenal:cup","args":{"kind":"winners"},"triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-cup-fairs","generator":"arsenal:cup","args":{"kind":"fairs"},"triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-cup-shield","generator":"arsenal:cup","args":{"kind":"shield"},"triangles":8000,"maxKiB":1100,"preview":false},
+    {"id":"gunners-masonry","generator":"arsenal:masonry","triangles":8000,"maxKiB":1100,"preview":false}
   ]
 }

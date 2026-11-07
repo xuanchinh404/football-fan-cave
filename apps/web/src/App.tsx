@@ -1,3 +1,12 @@
+import { ArsenalHUD } from './ui/ArsenalHUD';
+import { MuseumExhibitPanel } from './ui/MuseumExhibitPanel';
+import {
+  arsenalDemo,
+  arsenalExhibits,
+  ARSENAL_VERIFIED_AT,
+} from '../../../packages/shared/arsenal/content';
+import { ARSENAL_CAVE, ARSENAL_MUSEUM } from '../../../packages/shared/arsenal/layout';
+import './ui/arsenal-3d.css';
 import { ChelseaHUD, ChelseaExhibitPanel } from './ui/ChelseaHUD';
 import { chelseaExhibits, chelseaMatchState } from '../../../packages/shared/chelsea/content';
 import { BLUES_CAVE, BLUES_MUSEUM } from '../../../packages/shared/chelsea/layout';
@@ -48,9 +57,9 @@ import {
   TEAMS,
   SPAWN,
   arrival,
+  isOpenCave,
   validProfile,
   type ChatMessage,
-  type MapId,
   type Player,
   type Profile,
 } from '../../../packages/shared/world';
@@ -118,6 +127,7 @@ export default function App({
   const [exhibitId, setExhibitId] = useState('');
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const exhibit = exhibits.find((e) => e.id === exhibitId);
+  const gunnersExhibit = arsenalExhibits.find((e) => e.id === exhibitId);
   const bluesExhibit = chelseaExhibits.find((e) => e.id === exhibitId);
   const input = useRef<HTMLInputElement>(null),
     chatEnd = useRef<HTMLDivElement>(null),
@@ -140,9 +150,6 @@ export default function App({
       on<WorldState>('state', setWorld),
       on('stand', () => {
         if (socket.connected) socket.emit('stand');
-      }),
-      on<MapId>('map-changed', (map) => {
-        if (map !== worldRef.current.map) setMessages([]);
       }),
       on('ready', () => setReady(true)),
       on<string>('notice', notice),
@@ -271,7 +278,7 @@ export default function App({
       return;
     }
     if (p.kind === 'portal') {
-      if (w.map === 'plaza' && p.target !== 'united' && p.target !== 'chelsea') {
+      if (w.map === 'plaza' && !isOpenCave(p.target)) {
         notice('Nội thất ' + p.label + ' sắp ra mắt. Bạn vẫn có thể khám phá sân trước cổng.');
         return;
       }
@@ -283,7 +290,7 @@ export default function App({
           ...arrival(w.map, p.target!),
         });
         notice(
-          `Đã đến ${p.target === 'chelsea-museum' ? 'Phòng Truyền Thống Chelsea' : p.target === 'hall-of-legends' ? 'Phòng Hoài Niệm' : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
+          `Đã đến ${p.target === 'arsenal-museum' ? 'Phòng Truyền Thống Arsenal' : p.target === 'chelsea-museum' ? 'Phòng Truyền Thống Chelsea' : p.target === 'hall-of-legends' ? 'Phòng Hoài Niệm' : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
         );
       }
     } else if (p.kind === 'seat') {
@@ -406,18 +413,23 @@ export default function App({
       notice(`Đường dẫn mời bạn: ${window.location.origin}`);
     }
   }
+  const arsenalRoom = world.map === 'arsenal' || world.map === 'arsenal-museum';
+  const demoMatch =
+    world.map === 'arsenal' ? arsenalDemo : world.map === 'chelsea' ? chelseaMatchState : undefined;
   const team = TEAMS.find((t) => t.id === profile.team)!,
     area =
-      world.map === 'chelsea-museum'
-        ? 'Phòng Truyền Thống Chelsea'
-        : world.map === 'hall-of-legends'
-          ? 'Phòng Hoài Niệm'
-          : world.map === 'plaza'
-            ? 'Đại Sảnh Chung'
-            : TEAMS.find((t) => t.id === world.map)?.name;
+      world.map === 'arsenal-museum'
+        ? 'Phòng Truyền Thống Arsenal'
+        : world.map === 'chelsea-museum'
+          ? 'Phòng Truyền Thống Chelsea'
+          : world.map === 'hall-of-legends'
+            ? 'Phòng Hoài Niệm'
+            : world.map === 'plaza'
+              ? 'Đại Sảnh Chung'
+              : TEAMS.find((t) => t.id === world.map)?.name;
   return (
     <div
-      className={`app-shell ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' ? 'museum-shell' : ''}`}
+      className={`app-shell ${arsenalRoom ? 'red-cave gunners-cave' : ''} ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' || world.map === 'arsenal-museum' ? 'museum-shell' : ''}`}
     >
       <header className="topbar">
         <a
@@ -498,6 +510,9 @@ export default function App({
             settings={() => setModal('settings')}
             notice={notice}
           />
+        )}
+        {arsenalRoom && (
+          <ArsenalHUD world={world} openMap={() => setModal('map')} notice={notice} />
         )}
         {(world.map === 'chelsea' || world.map === 'chelsea-museum') && (
           <ChelseaHUD world={world} openMap={() => setModal('map')} notice={notice} />
@@ -629,8 +644,11 @@ export default function App({
               {[
                 {
                   id: 'room',
-                  label:
-                    world.map === 'chelsea'
+                  label: arsenalRoom
+                    ? world.map === 'arsenal'
+                      ? 'Hang Arsenal'
+                      : 'Truyền Thống'
+                    : world.map === 'chelsea'
                       ? 'Hang The Blues'
                       : world.map === 'chelsea-museum'
                         ? 'Truyền Thống'
@@ -906,6 +924,15 @@ export default function App({
             <button className="close" onClick={() => setModal(null)} aria-label="Đóng">
               <X size={20} />
             </button>
+            {modal === 'exhibit' && gunnersExhibit && (
+              <MuseumExhibitPanel
+                key={gunnersExhibit.id}
+                exhibit={gunnersExhibit}
+                hall="THE GUNNERS HERITAGE HALL"
+                club="Arsenal"
+                verifiedAt={ARSENAL_VERIFIED_AT}
+              />
+            )}
             {modal === 'exhibit' && bluesExhibit && (
               <ChelseaExhibitPanel key={bluesExhibit.id} exhibit={bluesExhibit} />
             )}
@@ -1030,19 +1057,25 @@ export default function App({
                   heading={world.direction}
                 />
                 <div className="map-legend">
-                  {(world.map === 'chelsea' || world.map === 'chelsea-museum'
-                    ? (world.map === 'chelsea' ? BLUES_CAVE : BLUES_MUSEUM).zones.map((z) => ({
+                  {(arsenalRoom
+                    ? (world.map === 'arsenal' ? ARSENAL_CAVE : ARSENAL_MUSEUM).zones.map((z) => ({
                         ...z,
                         short: z.label,
-                        color: '#75b6ff',
+                        color: '#edb468',
                       }))
-                    : world.map === 'hall-of-legends'
-                      ? HALL.zones.map((z) => ({ ...z, short: z.label, color: '#e6af61' }))
-                      : world.map === 'united'
-                        ? RED_CAVE.zones
-                            .filter((z) => !['fun', 'event'].includes(z.id))
-                            .map((z) => ({ id: z.id, short: z.label, color: z.color }))
-                        : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
+                    : world.map === 'chelsea' || world.map === 'chelsea-museum'
+                      ? (world.map === 'chelsea' ? BLUES_CAVE : BLUES_MUSEUM).zones.map((z) => ({
+                          ...z,
+                          short: z.label,
+                          color: '#75b6ff',
+                        }))
+                      : world.map === 'hall-of-legends'
+                        ? HALL.zones.map((z) => ({ ...z, short: z.label, color: '#e6af61' }))
+                        : world.map === 'united'
+                          ? RED_CAVE.zones
+                              .filter((z) => !['fun', 'event'].includes(z.id))
+                              .map((z) => ({ id: z.id, short: z.label, color: z.color }))
+                          : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
                   ).map((t) => (
                     <span key={t.id}>
                       <i style={{ background: t.color }} />
@@ -1218,14 +1251,14 @@ export default function App({
                 )}
               </>
             )}
-            {modal === 'score' && world.map === 'chelsea' && (
+            {modal === 'score' && demoMatch && (
               <>
-                <div className="eyebrow">{chelseaMatchState.label}</div>
+                <div className="eyebrow">{demoMatch.label}</div>
                 <h2>
-                  {chelseaMatchState.home} {chelseaMatchState.score} {chelseaMatchState.away}
+                  {demoMatch.home} {demoMatch.score} {demoMatch.away}
                 </h2>
                 <p>
-                  {chelseaMatchState.time} · {chelseaMatchState.caption}
+                  {demoMatch.time} · {demoMatch.caption}
                 </p>
                 <p>
                   Đây là dữ liệu minh họa. Chưa kết nối API kết quả trực tiếp; người chơi luôn tự do
@@ -1233,7 +1266,7 @@ export default function App({
                 </p>
               </>
             )}
-            {modal === 'score' && world.map !== 'chelsea' && (
+            {modal === 'score' && !demoMatch && (
               <>
                 <div className="eyebrow">GÓC BÓNG ĐÁ · DỮ LIỆU MINH HỌA</div>
                 <h2>Hết trận, còn câu chuyện.</h2>

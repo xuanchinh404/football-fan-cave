@@ -11,7 +11,7 @@ export type BlenderId = (typeof manifest.assets)[number]['id'];
 export type Placement = {
   position: [number, number, number];
   yaw?: number;
-  scale?: number;
+  scale?: number | [number, number, number];
 };
 
 type Props = {
@@ -24,8 +24,8 @@ type Props = {
   lod?: { asset: BlenderId; distance: number };
 };
 
-class AssetBoundary extends Component<
-  { asset: BlenderId; fallback?: ReactNode; children: ReactNode },
+export class AssetBoundary extends Component<
+  { asset: string; fallback?: ReactNode; children: ReactNode },
   { failed: boolean }
 > {
   state = { failed: false };
@@ -33,7 +33,7 @@ class AssetBoundary extends Component<
     return { failed: true };
   }
   componentDidCatch(error: Error) {
-    console.error(`Blender asset ${this.props.asset} could not load`, error);
+    console.error(`3D asset ${this.props.asset} could not load`, error);
   }
   render() {
     return this.state.failed ? this.props.fallback : this.props.children;
@@ -68,14 +68,18 @@ function waterMaterial(source: THREE.MeshStandardMaterial, clock: { value: numbe
   return material;
 }
 
+type PlacedProps = Omit<Props, 'asset' | 'lod'> & { asset: string; url: string; fitHeight?: number };
+
 function StaticAsset({
   asset,
+  url,
+  fitHeight,
   placements,
   shadow = true,
   cameraSolid = false,
   animatedWater = false,
-}: Props) {
-  const { scene } = useLoader(GLTFLoader, `${publicModels}/${asset}.glb`, (loader) =>
+}: PlacedProps) {
+  const { scene } = useLoader(GLTFLoader, url, (loader) =>
     loader.setMeshoptDecoder(MeshoptDecoder),
   );
   const clock = useMemo(() => ({ value: 0 }), []);
@@ -86,7 +90,17 @@ function StaticAsset({
     const materials: THREE.Material[] = [];
     const matrix = new THREE.Matrix4();
     const transform = new THREE.Object3D();
+    const normalization = new THREE.Matrix4();
     scene.updateMatrixWorld(true);
+    if (fitHeight) {
+      const bounds = new THREE.Box3().setFromObject(scene);
+      const center = bounds.getCenter(new THREE.Vector3());
+      const size = bounds.getSize(new THREE.Vector3());
+      if (size.y <= 0) throw new Error('Model has no height');
+      const scale = fitHeight / size.y;
+      normalization.makeScale(scale, scale, scale);
+      normalization.setPosition(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+    }
     scene.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
       let material = object.material;
@@ -105,9 +119,10 @@ function StaticAsset({
       placements.forEach(({ position, yaw = 0, scale = 1 }, i) => {
         transform.position.fromArray(position);
         transform.rotation.set(0, yaw, 0);
-        transform.scale.setScalar(scale);
+        if (Array.isArray(scale)) transform.scale.fromArray(scale);
+        else transform.scale.setScalar(scale);
         transform.updateMatrix();
-        batch.setMatrixAt(i, matrix.multiplyMatrices(transform.matrix, object.matrixWorld));
+        batch.setMatrixAt(i, matrix.multiplyMatrices(transform.matrix, normalization).multiply(object.matrixWorld));
       });
       batch.instanceMatrix.needsUpdate = true;
       batch.computeBoundingSphere();
@@ -115,7 +130,7 @@ function StaticAsset({
       root.add(batch);
     });
     return { root, instances, materials };
-  }, [asset, scene, placements, shadow, cameraSolid, animatedWater, clock]);
+  }, [asset, scene, placements, shadow, cameraSolid, animatedWater, clock, fitHeight]);
   useEffect(
     () => () => {
       instances.forEach((instance) => instance.dispose());
@@ -129,6 +144,16 @@ function StaticAsset({
   return <primitive object={root} />;
 }
 
+export function PlacedGlb({ asset, url, fallback = null, ...props }: PlacedProps) {
+  return (
+    <AssetBoundary key={url} asset={asset} fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <StaticAsset asset={asset} url={url} {...props} />
+      </Suspense>
+    </AssetBoundary>
+  );
+}
+
 /** Static Blender GLBs share geometry and textures and batch repeated placements per material. */
 export function BlenderAsset({ asset, lod, fallback = null, ...props }: Props) {
   const [far, setFar] = useState(false);
@@ -140,11 +165,5 @@ export function BlenderAsset({ asset, lod, fallback = null, ...props }: Props) {
     if (!far && d > lod.distance + 2) setFar(true);
   });
   const selected = far && lod ? lod.asset : asset;
-  return (
-    <AssetBoundary key={selected} asset={selected} fallback={fallback}>
-      <Suspense fallback={fallback}>
-        <StaticAsset asset={selected} {...props} />
-      </Suspense>
-    </AssetBoundary>
-  );
+  return <PlacedGlb asset={selected} url={`${publicModels}/${selected}.glb`} fallback={fallback} {...props} />;
 }

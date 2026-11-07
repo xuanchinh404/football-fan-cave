@@ -1,3 +1,4 @@
+import { BlenderAsset } from './BlenderAsset';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -283,7 +284,17 @@ function Portal({ c }: { c: (typeof CAVES)[number] }) {
       position={[c.x, c.height, c.z]}
       scale={scale}
     >
-      <AssetModel asset="portal-grand" tint={c.color} />
+      {c.id === 'arsenal' ? (
+        <BlenderAsset
+          asset="gunners-arch"
+          placements={[{ position: [0, 0, 0] }]}
+          cameraSolid
+          fallback={<AssetModel asset="portal-grand" tint={c.color} />}
+        />
+      ) : (
+        <AssetModel asset="portal-grand" tint={c.color} />
+      )}
+
       <Label
         text={c.short}
         position={[0, 8.38, 2.04]}

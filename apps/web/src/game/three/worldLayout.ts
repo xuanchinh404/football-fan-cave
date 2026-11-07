@@ -1,4 +1,10 @@
 import {
+  ARSENAL_CAVE,
+  ARSENAL_MUSEUM,
+  ARSENAL_ORIGIN,
+  ARSENAL_SCALE,
+} from '../../../../../packages/shared/arsenal/layout';
+import {
   BLUES_CAVE,
   BLUES_MUSEUM,
   CHELSEA_ORIGIN,
@@ -15,9 +21,19 @@ import {
 import { HALL } from '../../../../../packages/shared/museum';
 import { RED_CAVE } from '../../../../../packages/shared/cave';
 
-export type SceneId = 'plaza' | 'united' | 'hall-of-legends' | 'chelsea' | 'chelsea-museum';
+export type SceneId =
+  | 'plaza'
+  | 'united'
+  | 'hall-of-legends'
+  | 'chelsea'
+  | 'chelsea-museum'
+  | 'arsenal'
+  | 'arsenal-museum';
 // Keep the existing authoritative Socket.IO room coordinates. Only the renderer uses metres.
 export const layouts = {
+  arsenal: { scale: ARSENAL_SCALE, origin: ARSENAL_ORIGIN, bounds: ARSENAL_CAVE.bounds },
+  'arsenal-museum': { scale: ARSENAL_SCALE, origin: ARSENAL_ORIGIN, bounds: ARSENAL_MUSEUM.bounds },
+
   chelsea: { scale: CHELSEA_SCALE, origin: CHELSEA_ORIGIN, bounds: BLUES_CAVE.bounds },
   'chelsea-museum': { scale: CHELSEA_SCALE, origin: CHELSEA_ORIGIN, bounds: BLUES_MUSEUM.bounds },
   plaza: {
@@ -51,7 +67,7 @@ export function sceneObstacles(map: SceneId) {
   return obstacles(map).map((o, index) => {
     const [x, z] = toScene(map, { x: o.x + o.w / 2, y: o.y + o.h / 2 });
     const height =
-      map === 'chelsea' || map === 'chelsea-museum'
+      map === 'chelsea' || map === 'chelsea-museum' || map === 'arsenal' || map === 'arsenal-museum'
         ? 'height' in o
           ? Number(o.height)
           : 3.8
@@ -72,7 +88,14 @@ export function sceneObstacles(map: SceneId) {
   });
 }
 export function playtestInteractions(map: MapId): Interaction[] {
-  if (map === 'plaza' || map === 'chelsea' || map === 'chelsea-museum') return interactions(map);
+  if (
+    map === 'plaza' ||
+    map === 'chelsea' ||
+    map === 'chelsea-museum' ||
+    map === 'arsenal' ||
+    map === 'arsenal-museum'
+  )
+    return interactions(map);
   if (map === 'hall-of-legends') return interactions(map);
   if (map === 'united')
     return interactions(map).filter(

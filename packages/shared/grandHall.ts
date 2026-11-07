@@ -57,7 +57,7 @@ export const CAVES = [
     tier: 2,
     color: '#ff6338',
     symbol: 'A',
-    available: false,
+    available: true,
   },
   {
     id: 'liverpool',

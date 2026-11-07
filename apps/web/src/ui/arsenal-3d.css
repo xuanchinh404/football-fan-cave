@@ -1,0 +1,57 @@
+.app-shell.gunners-cave:has(.three-canvas) {
+  --grand-panel: #371724eb;
+  --grand-gold: #efbd75;
+}
+.app-shell.gunners-cave:has(.three-canvas) .topbar {
+  background: linear-gradient(180deg, #4b1929, #211321);
+  border-bottom-color: #d99d53;
+}
+.app-shell.gunners-cave:has(.three-canvas) .area-card,
+.app-shell.gunners-cave:has(.three-canvas) .grand-sidebar,
+.app-shell.gunners-cave:has(.three-canvas) .grand-camera-tools button {
+  background: #361928ea;
+  border-color: #da995c70;
+}
+.gunners-cave .gunners-guide {
+  background: #2c1622ee;
+  max-height: min(47vh, 395px);
+  overflow: auto;
+}
+.gunners-cave .gunners-guide button {
+  border-color: #d6a46d2e;
+  color: #ffe5cd;
+}
+.gunners-cave .gunners-guide button:hover {
+  background: #6a2741;
+}
+.gunners-cave .blues-seasons button {
+  background: #4b2333;
+  color: #ffe5cd;
+}
+.gunners-cave .blues-seasons button[aria-pressed='true'] {
+  background: #d3ad5c;
+  color: #261321;
+}
+.gunners-cave .blues-verified {
+  color: #ecd1bb;
+}
+@media (max-width: 700px) {
+  .gunners-cave .museum-breadcrumb {
+    left: 12px !important;
+    top: 138px !important;
+    font-size: 9px !important;
+  }
+  .gunners-cave .cave-wayfinding {
+    bottom: 169px;
+    width: 75vw;
+  }
+  .gunners-cave .cave-wayfinding strong {
+    font-size: 11px;
+  }
+  .gunners-cave .cave-wayfinding small {
+    font-size: 8px;
+  }
+  .gunners-cave .gunners-guide button {
+    min-height: 42px;
+  }
+}

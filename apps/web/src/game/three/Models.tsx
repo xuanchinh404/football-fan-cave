@@ -1,3 +1,4 @@
+import { PlayerAvatar3D } from './PlayerAvatar3D';
 import { AssetModel } from './AssetModel';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -200,26 +201,30 @@ export function Character({
   return (
     <group>
       <group ref={root}>
-        <AssetModel
-          asset="fan-chibi"
-          tint={color}
-          animation={gesture || (moving ? (running ? 'Run' : 'Walk') : 'Idle')}
-          scale={0.86}
-          solid={false}
+        <PlayerAvatar3D
+          fallback={
+            <AssetModel
+              asset="fan-chibi"
+              tint={color}
+              animation={gesture || (moving ? (running ? 'Run' : 'Walk') : 'Idle')}
+              scale={0.86}
+              solid={false}
+            />
+          }
         />
       </group>
-      <NameTag name={name} />
+      <NameTag name={name} color={color} />
     </group>
   );
 }
-function NameTag({ name }: { name: string }) {
+function NameTag({ name, color }: { name: string; color: string }) {
   const group = useRef<THREE.Group>(null);
   useFrame(({ camera }) => {
     group.current?.quaternion.copy(camera.quaternion);
   });
   return (
     <group ref={group} position={[0, 2.5, 0]}>
-      <Label text={name} position={[0, 0, 0]} width={2.1} />
+      <Label text={name} position={[0, 0, 0]} width={2.1} color={color} />
     </group>
   );
 }
