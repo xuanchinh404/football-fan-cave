@@ -85,7 +85,8 @@ for (const [i, region] of regions.entries()) {
     glb,
     method,
     fallbackGlb: method === 'trellis' ? `apps/web/public/models/red-devils/${id}.glb` : null,
-    lastTrellisStatus: previous.get(id)?.lastTrellisStatus ??
+    lastTrellisStatus:
+      previous.get(id)?.lastTrellisStatus ??
       (previous.get(id)?.status === 'trellis_failed' ? 'trellis_failed' : null),
     status: 'pending',
   });

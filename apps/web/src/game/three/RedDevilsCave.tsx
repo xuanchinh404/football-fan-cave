@@ -51,7 +51,14 @@ function Sofa({
   depth?: number;
   rotation?: number;
 }) {
-  return <CaveModel asset="sofa" placements={[{ position, yaw: rotation, scale: [width / 4, 1, depth / 1.48] }]} solid shadow />;
+  return (
+    <CaveModel
+      asset="sofa"
+      placements={[{ position, yaw: rotation, scale: [width / 4, 1, depth / 1.48] }]}
+      solid
+      shadow
+    />
+  );
 }
 function SadFan({ position, i }: { position: V3; i: number }) {
   const head = useRef<THREE.Group>(null);
@@ -94,7 +101,12 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
       />
       <Banner position={[-8.2, 6.7, -16]} />
       <Banner position={[8.2, 6.7, -16]} />
-      <CaveModel asset="plinth" placements={[{ position: [solids[0].x, 0, solids[0].z] }]} solid shadow />
+      <CaveModel
+        asset="plinth"
+        placements={[{ position: [solids[0].x, 0, solids[0].z] }]}
+        solid
+        shadow
+      />
       <Plaque
         lines={['SẢNH TRÚ ẨN', 'Tụ tập · Than thở · Động viên']}
         width={4.1}
@@ -129,11 +141,29 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
         subtitle="Đi sâu vào hành lang · E để bước vào"
         width={3.75}
       />
-      <mesh position={[mx, 2.7, mz - 0.5]}>
-        <planeGeometry args={[3.7, 5.4]} />
-        <meshStandardMaterial color="#edb568" emissive="#ff9a35" emissiveIntensity={0.45} />
-      </mesh>
-      <pointLight position={[0, 3, -12]} color="#ffd798" intensity={45} distance={8} />
+      <CaveModel
+        asset="arch"
+        placements={[-11.15, -13.45, mz - 1.35].map((z) => ({
+          position: [mx, 0, z],
+          scale: [0.9, 0.91, 0.38],
+        }))}
+      />
+      {[-10.9, -12.9, -14.5].map((z, i) => (
+        <group key={z}>
+          <group position={[-1.8, 2.38, z]} rotation={[0, Math.PI / 2, 0]}>
+            <Plaque
+              lines={[['MUNICH · 1958', 'WEMBLEY · 1968', 'MOSCOW · 2008'][i]]}
+              width={1.25}
+              height={1.48}
+            />
+          </group>
+          <group position={[1.8, 2.38, z]} rotation={[0, -Math.PI / 2, 0]}>
+            <Plaque lines={[['ĐỨNG DẬY', 'VÔ ĐỊCH', 'HOÀI NIỆM'][i]]} width={1.25} height={1.48} />
+          </group>
+        </group>
+      ))}
+      <pointLight position={[0, 3, -12]} color="#ffd798" intensity={36} distance={8} />
+      <pointLight position={[0, 3, -15]} color="#ff854a" intensity={32} distance={7} />
       {/* Lounge: screen, real sofa volumes, a solid coffee table and seated fans. */}
       <group name="fan-lounge">
         <CaveGate
@@ -163,7 +193,12 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
         <Sofa position={[-15.1, 0, -6.15]} width={6.2} rotation={Math.PI} />
         <CaveModel
           asset="coffee-table"
-          placements={[{ position: [solids[11].x, 0, solids[11].z], scale: [solids[11].w / 1.25, 1, solids[11].d / 1.25] }]}
+          placements={[
+            {
+              position: [solids[11].x, 0, solids[11].z],
+              scale: [solids[11].w / 1.25, 1, solids[11].d / 1.25],
+            },
+          ]}
           solid
           shadow
         />
@@ -178,7 +213,12 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
         <pointLight position={[-15, 4, -8]} color="#ffc486" intensity={95} distance={14} />
       </group>
       <Sofa position={[solids[5].x, 0, solids[5].z]} width={solids[5].w} depth={solids[5].d} />
-      <Plaque lines={['KHU TRÒ CHUYỆN FAN', 'Lounge · Giao lưu nhẹ']} position={[-16.3, 3.3, -2.3]} width={6.25} height={0.9} />
+      <Plaque
+        lines={['KHU TRÒ CHUYỆN FAN', 'Lounge · Giao lưu nhẹ']}
+        position={[-16.3, 3.3, -2.3]}
+        width={6.25}
+        height={0.9}
+      />
       <SadFan position={[solids[5].x - 0.7, 0.65, solids[5].z + 0.3]} i={2} />
       <Sofa position={[solids[6].x, 0, solids[6].z]} width={solids[6].w} depth={solids[6].d} />
       <SadFan position={[solids[6].x, 0.65, solids[6].z + 0.3]} i={3} />

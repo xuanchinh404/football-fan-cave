@@ -26,14 +26,17 @@ try {
   await page.goto(base + '/playtest');
   const state = () => page.evaluate(() => window.__world3d);
   const wait = (predicate, arg) => page.waitForFunction(predicate, arg, { timeout: 30000 });
-  const waitMap = (map) => wait((m) => window.__world3d?.map === m && window.__world3d.grounded, map);
+  const waitMap = (map) =>
+    wait((m) => window.__world3d?.map === m && window.__world3d.grounded, map);
   const move = async (key, test, arg, run = true) => {
     if (run) await page.keyboard.down('Shift');
     await page.keyboard.down(key);
     try {
       await wait(test, arg);
     } catch (error) {
-      throw new Error(`Movement ${key} stopped at ${JSON.stringify(await state())}`, { cause: error });
+      throw new Error(`Movement ${key} stopped at ${JSON.stringify(await state())}`, {
+        cause: error,
+      });
     } finally {
       await page.keyboard.up(key);
       if (run) await page.keyboard.up('Shift');
@@ -43,7 +46,12 @@ try {
     const sign = Math.sign(target - (await state()).position[coord]);
     if (!sign) return;
     const key = coord === 'x' ? (sign > 0 ? 'd' : 'a') : sign > 0 ? 's' : 'w';
-    await move(key, ({ coord, target, sign }) => (window.__world3d.position[coord] - target) * sign >= 0, { coord, target, sign }, run);
+    await move(
+      key,
+      ({ coord, target, sign }) => (window.__world3d.position[coord] - target) * sign >= 0,
+      { coord, target, sign },
+      run,
+    );
   };
   const shot = async (name) => {
     await page.waitForTimeout(550);
@@ -75,9 +83,8 @@ try {
   await axis('z', -3.2);
   await shot('02-nhan-vat-trung-tam');
 
-  await axis('x', -9.9);
-  await axis('z', -5.5);
-  await orbit(130);
+  await axis('x', -12.15);
+  await axis('z', -2.45);
   await shot('03-goc-tam-su');
   await reset();
   await axis('z', 2.5);
@@ -89,12 +96,15 @@ try {
   await axis('x', 5.15);
   await axis('z', -8.25);
   await axis('x', 0.12);
-  await axis('z', -10.25, false);
+  await axis('z', -10.8, false);
+  await page.mouse.move(900, 440);
+  await page.mouse.wheel(0, -810);
   await shot('05-hanh-lang-hoai-niem');
   await move('w', () => window.__world3d?.map === 'hall-of-legends');
   await waitMap('hall-of-legends');
   // A normal portal transition back into the cave.
-  await move('s', () => window.__world3d?.map === 'united');
+  await move('s', () => window.__world3d?.trigger === 'hall-exit');
+  await page.keyboard.press('e');
   await waitMap('united');
   await reset();
   await axis('z', -8.15);
@@ -104,15 +114,34 @@ try {
   await orbit(-524);
   await shot('06-cong-ra-hang');
   await reset();
-  await move('s', () => window.__world3d?.map === 'plaza');
+  await move('s', () => window.__world3d?.map === 'plaza' || window.__world3d?.trigger === 'exit');
+  if ((await state()).map !== 'plaza') await page.keyboard.press('e');
   await waitMap('plaza');
   if (errors.length) throw new Error(errors.join('\n'));
-  const expected = ['arch', 'coffee-table', 'floor', 'lantern', 'plant', 'plinth', 'ruby', 'sofa', 'trident', 'vault'];
+  const expected = [
+    'arch',
+    'coffee-table',
+    'floor',
+    'lantern',
+    'plant',
+    'plinth',
+    'ruby',
+    'sofa',
+    'trident',
+    'vault',
+  ];
   for (const name of expected) {
     if (!models.has(`${name}.glb`) && !['lantern', 'trident'].includes(name))
       throw new Error(`Game did not load ${name}.glb`);
   }
-  await writeFile(`${output}/metrics.json`, JSON.stringify({ mode: 'offline, single local player', models: [...models].sort(), metrics }, null, 2) + '\n');
+  await writeFile(
+    `${output}/metrics.json`,
+    JSON.stringify(
+      { mode: 'offline, single local player', models: [...models].sort(), metrics },
+      null,
+      2,
+    ) + '\n',
+  );
   console.log('PASS: six captures, real WASD routes and both room transitions.');
 } finally {
   await browser.close();
