@@ -6,15 +6,18 @@ import { PlacedGlb, type Placement } from '../BlenderAsset';
 import type { Quality } from '../GrandHall';
 import { InteriorColliders, RoomReflections, type V3 } from '../IndoorKit';
 import { sceneBounds, type SceneId } from '../worldLayout';
+import { KOP_TUNNEL } from '../../../../../../packages/shared/liverpool/layout';
 
 export function LiverpoolAsset({
   asset,
   placements,
   shadow = false,
+  required = false,
 }: {
   asset: string;
   placements: readonly Placement[];
   shadow?: boolean;
+  required?: boolean;
 }) {
   return (
     <PlacedGlb
@@ -22,6 +25,7 @@ export function LiverpoolAsset({
       url={`/models/liverpool/${asset}.glb`}
       placements={placements}
       shadow={shadow}
+      required={required}
     />
   );
 }
@@ -35,16 +39,23 @@ export function LiverpoolLayout({
 }) {
   const b = sceneBounds(map);
   const w = (b.right - b.left) / 2;
-  const d = (b.bottom - b.top) / 2;
-  const z = (b.bottom + b.top) / 2;
+  const sideEnd = map === 'liverpool' ? 15.8 : b.bottom;
+  const sideDepth = (sideEnd - b.top) / 2;
+  const sideCenter = (sideEnd + b.top) / 2;
   return (
     <>
       <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[w, 0.32, d]} position={[0, -0.32, z]} />
+        <CuboidCollider args={[w, 0.32, sideDepth]} position={[0, -0.32, sideCenter]} />
+        {map === 'liverpool' && (
+          <CuboidCollider
+            args={[KOP_TUNNEL.width / 2, 0.32, (b.bottom - sideEnd) / 2]}
+            position={[KOP_TUNNEL.x, -0.32, (b.bottom + sideEnd) / 2]}
+          />
+        )}
         {[b.left - 0.2, b.right + 0.2].map((x) => (
-          <CuboidCollider key={x} args={[0.2, 6, d + 0.4]} position={[x, 6, z]} />
+          <CuboidCollider key={x} args={[0.2, 6, sideDepth + 0.4]} position={[x, 6, sideCenter]} />
         ))}
-        {[b.top - 0.2, b.bottom + 0.2].map((edge) => (
+        {(map === 'liverpool' ? [b.top - 0.2] : [b.top - 0.2, b.bottom + 0.2]).map((edge) => (
           <CuboidCollider key={edge} args={[w + 0.4, 6, 0.2]} position={[0, 6, edge]} />
         ))}
         {children}
@@ -79,28 +90,32 @@ export function LiverpoolLighting({
   const shadows = quality !== 'low';
   return (
     <>
-      <RoomReflections intensity={museum ? 0.65 : 0.37} />
-      <color attach="background" args={[museum ? '#26141e' : '#edb283']} />
-      <fog attach="fog" args={[museum ? '#422131' : '#481927', 29, 67]} />
-      <hemisphereLight args={[museum ? '#ffe7cb' : '#ffd0b4', '#713b54', museum ? 1.04 : 0.83]} />
-      <directionalLight
-        position={[5, 12, 8]}
-        color="#ffe0ba"
-        intensity={museum ? 1.2 : 1.12}
-        castShadow={shadows}
-        shadow-mapSize={quality === 'high' ? [2048, 2048] : [1024, 1024]}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={18}
-        shadow-camera-bottom={-18}
-        shadow-camera-far={47}
-        shadow-normalBias={0.035}
-      />
+      {museum && (
+        <>
+          <RoomReflections intensity={0.65} />
+          <color attach="background" args={['#26141e']} />
+          <fog attach="fog" args={['#422131', 29, 67]} />
+          <hemisphereLight args={['#ffe7cb', '#713b54', 0.88]} />
+          <directionalLight
+            position={[5, 12, 8]}
+            color="#ffe0ba"
+            intensity={0.98}
+            castShadow={shadows}
+            shadow-mapSize={quality === 'high' ? [2048, 2048] : [1024, 1024]}
+            shadow-camera-left={-20}
+            shadow-camera-right={20}
+            shadow-camera-top={18}
+            shadow-camera-bottom={-18}
+            shadow-camera-far={47}
+            shadow-normalBias={0.035}
+          />
+        </>
+      )}
       {(museum ? museumLights : caveLights).map((p, i) => (
         <pointLight
           key={i}
           position={p}
-          intensity={museum ? 85 : i === 0 ? 145 : 90}
+          intensity={museum ? 85 : i === 0 ? 190 : 112}
           color={museum || i % 2 ? '#ffbd69' : '#ff5667'}
           distance={i === 3 && !museum ? 14 : 22}
           decay={2}

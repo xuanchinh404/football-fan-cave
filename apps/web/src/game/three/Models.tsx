@@ -183,6 +183,7 @@ export function Character({
   gesture,
   jumping = false,
   seated = false,
+  hideTemplateCrest,
 }: {
   color?: string;
   name: string;
@@ -192,6 +193,7 @@ export function Character({
   jumping?: boolean;
   seated?: boolean;
   gesture?: string;
+  hideTemplateCrest?: boolean;
 }) {
   const root = useRef<THREE.Group>(null);
   useFrame((_, dt) => {
@@ -206,6 +208,7 @@ export function Character({
     <group>
       <group ref={root}>
         <PlayerAvatar3D
+          hideTemplateCrest={hideTemplateCrest}
           motion={
             seated
               ? 'SitIdle'
@@ -228,7 +231,7 @@ export function Character({
           }
         />
       </group>
-      <NameTag name={name} color={color} />
+      {name && <NameTag name={name} color={color} />}
     </group>
   );
 }

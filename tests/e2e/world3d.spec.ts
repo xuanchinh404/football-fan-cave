@@ -1,3 +1,5 @@
+import { PerspectiveCamera, Vector3 } from 'three';
+import { hallCoaches, hallHistory, hallStatue, hallTrophies } from '../../packages/shared/museum/hall';
 import { test, expect, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -7,7 +9,16 @@ fs.mkdirSync(shotDir, { recursive: true });
 type State = {
   map: string;
   position: { x: number; y: number; z: number };
-  camera: { x: number; y: number; z: number; yaw: number; pitch: number };
+  worldPosition: { x: number; y: number; z: number };
+  camera: {
+    x: number;
+    y: number;
+    z: number;
+    yaw: number;
+    pitch: number;
+    viewYaw: number;
+    viewPitch: number;
+  };
   direction: number;
   movementDirection: number | null;
   movementVelocity: { x: number; z: number };
@@ -23,6 +34,7 @@ type State = {
   drawCalls: number;
   view: string;
   cameraHit?: number;
+  gates?: Record<string, string>;
 };
 async function state(page: Page): Promise<State> {
   return page.evaluate(() => (window as any).__world3d || {});
@@ -58,11 +70,17 @@ async function orbitQuarterTurn(page: Page) {
   await page.mouse.move(738, 400, { steps: 12 });
   await page.mouse.up();
 }
+async function dragCamera(page: Page, x: number, y: number, dx: number, dy: number) {
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y + dy, { steps: 8 });
+  await page.mouse.up();
+}
 function cameraArm(s: State) {
   return Math.hypot(
-    s.camera.x - s.position.x,
-    s.camera.y - s.position.y - 1.4,
-    s.camera.z - s.position.z,
+    s.camera.x - s.worldPosition.x,
+    s.camera.y - s.worldPosition.y - 1.4,
+    s.camera.z - s.worldPosition.z,
   );
 }
 async function loginFixture(page: Page, name: string) {
@@ -220,6 +238,131 @@ for (const { keys, x, z, startZ, duration } of heldMovement) {
   });
 }
 
+for (const map of ['plaza', 'united', 'liverpool'] as const) {
+  test(`third-person pitch and full orbit in ${map}`, async ({ page }) => {
+    await open(page, false);
+    if (map !== 'plaza') {
+      await toAvenue(page);
+      if (map === 'liverpool') {
+        await axis(page, 'x', -15);
+        await axis(page, 'z', -27.6);
+        await expect.poll(async () => (await state(page)).gates?.liverpool).toBe('OPEN');
+      }
+      await walk(page, 'w', (s) => s.map === map && (map !== 'united' || s.position.z <= 1));
+      if (map === 'liverpool') {
+        // Start under the tunnel roof so the camera arm stays inside the doorway.
+        await axis(page, 'z', 29);
+        await expect.poll(async () => (await state(page)).grounded).toBe(true);
+        await dragCamera(page, 1000, 400, 0, 240);
+        await expect
+          .poll(async () => (await state(page)).camera.viewPitch)
+          .toBeCloseTo((-65 * Math.PI) / 180, 2);
+        await expect.poll(async () => (await state(page)).cameraHit ?? Infinity).toBeLessThan(5.4);
+        expect((await state(page)).camera.y).toBeLessThan(12.5);
+        await axis(page, 'z', 12.5);
+        await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
+      }
+    }
+    await expect.poll(async () => (await state(page)).grounded).toBe(true);
+    const viewPitch = async () => (await state(page)).camera.viewPitch;
+    const up = (70 * Math.PI) / 180;
+    const down = (-65 * Math.PI) / 180;
+
+    await dragCamera(page, 1000, 450, 0, -340);
+    await expect.poll(viewPitch).toBeCloseTo(up, 2);
+    // At this angle the arm must retract before it reaches the floor.
+    expect((await state(page)).cameraHit).toBeLessThan(5.4);
+    const lowCamera = await state(page);
+    expect(lowCamera.camera.y).toBeGreaterThan(lowCamera.worldPosition.y);
+
+    let turned = 0;
+    let yaw = (await state(page)).camera.viewYaw;
+    for (let i = 0; i < 3; i++) {
+      await dragCamera(page, 1050, 400, -400, 0);
+      const before = yaw;
+      await expect
+        .poll(async () => angleDelta((await state(page)).camera.viewYaw, before))
+        .toBeCloseTo(2.4, 2);
+      yaw = (await state(page)).camera.viewYaw;
+      turned += angleDelta(yaw, before);
+      expect(await viewPitch()).toBeCloseTo(up, 2);
+    }
+    expect(turned).toBeGreaterThan(Math.PI * 2);
+
+    await page.keyboard.press('r');
+    await expect.poll(async () => behindError(await state(page))).toBeLessThan(0.02);
+    expect(await viewPitch()).toBeCloseTo(up, 2);
+    const beforeRun = await state(page);
+    await walk(
+      page,
+      'w',
+      (s) =>
+        Math.hypot(s.position.x - beforeRun.position.x, s.position.z - beforeRun.position.z) > 1,
+    );
+    expect(await viewPitch()).toBeCloseTo(up, 2);
+
+    const floor = (await state(page)).position.y;
+    await page.keyboard.press('Space');
+    await expect.poll(async () => (await state(page)).position.y).toBeGreaterThan(floor + 0.2);
+    expect(await viewPitch()).toBeCloseTo(up, 2);
+    await expect.poll(async () => (await state(page)).grounded).toBe(true);
+
+    await dragCamera(page, 1000, 180, 0, 520);
+    await expect.poll(viewPitch).toBeCloseTo(down, 2);
+    expect((await state(page)).map).toBe(map);
+    if (map === 'liverpool') {
+      // At maximum zoom-out the arm reaches the vault above the main hall.
+      await page.mouse.move(1000, 400);
+      await page.mouse.wheel(0, 1000);
+      await expect.poll(async () => cameraArm(await state(page))).toBeGreaterThan(5.4);
+      const vaulted = await state(page);
+      expect(vaulted.cameraHit).toBeLessThan(12);
+      expect(vaulted.camera.viewPitch).toBeCloseTo(down, 2);
+    }
+  });
+}
+
+test('third-person touch pitch works alongside joystick and jump HUD', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  try {
+    const page = await context.newPage();
+    await open(page, false);
+    await expect.poll(async () => (await state(page)).grounded).toBe(true);
+    const cdp = await context.newCDPSession(page);
+    const touch = (
+      type: 'touchStart' | 'touchMove' | 'touchEnd',
+      ...touchPoints: { x: number; y: number; id: number }[]
+    ) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+    const stick = (await page.locator('.joystick').boundingBox())!;
+    const move = { x: stick.x + stick.width * 0.8, y: stick.y + stick.height / 2, id: 1 };
+    const look = { x: 300, y: 480, id: 2 };
+    await touch('touchStart', move);
+    await touch('touchStart', move, look);
+    await touch('touchMove', move, { ...look, y: 240 });
+    await expect.poll(async () => (await state(page)).camera.viewPitch).toBeCloseTo(0.95, 2);
+    expect((await state(page)).input.joystick.x).toBeGreaterThan(0.25);
+    await touch('touchEnd');
+    await expect.poll(async () => (await state(page)).moving).toBe(false);
+    await expect.poll(async () => (await state(page)).input.joystick.x).toBe(0);
+    expect((await state(page)).camera.viewPitch).toBeCloseTo(0.95, 2);
+
+    const floor = (await state(page)).position.y;
+    await page.getByRole('button', { name: 'Nhảy', exact: true }).tap();
+    await expect.poll(async () => (await state(page)).position.y).toBeGreaterThan(floor + 0.2);
+    expect((await state(page)).camera.viewPitch).toBeCloseTo(0.95, 2);
+    await touch('touchStart', { ...look, y: 240 });
+    await touch('touchMove', { ...look, y: 650 });
+    await touch('touchEnd');
+    await expect.poll(async () => (await state(page)).camera.viewPitch).toBeCloseTo(-1.1, 2);
+  } finally {
+    await context.close();
+  }
+});
+
 test('third-person W holds its steering during orbit, then recenters and clears obstacles', async ({
   page,
 }) => {
@@ -241,7 +384,7 @@ test('third-person W holds its steering during orbit, then recenters and clears 
     await expect.poll(async () => behindError(await state(page))).toBeLessThan(0.1);
     await page.mouse.move(1000, 400);
     await page.mouse.down();
-    await page.mouse.move(800, 400, { steps: 12 });
+    await page.mouse.move(800, 310, { steps: 12 });
     const manual = (await sample()).camera.yaw;
     await page.waitForTimeout(1050);
     expect((await sample()).camera.yaw).toBeCloseTo(manual, 3);
@@ -252,6 +395,7 @@ test('third-person W holds its steering during orbit, then recenters and clears 
       .poll(async () => behindError(await state(page)), { timeout: 2200 })
       .toBeLessThan(0.15);
     const after = await sample();
+    expect((await state(page)).camera.viewPitch).toBeCloseTo(0.2, 2);
     expect(Math.abs(after.position.x - beforeDrag.position.x)).toBeLessThan(0.25);
     for (const point of samples.slice(1)) {
       expect(point.movementVelocity.z).toBeLessThan(-4.8);
@@ -487,8 +631,7 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
   expect((await state(page)).position.y).toBeGreaterThan(14.8);
   await axis(page, 'x', -33);
   await axis(page, 'z', -51.4);
-  await page.keyboard.press('e');
-  await expect(page.locator('.toast')).toContainText('sắp ra mắt');
+  await expect.poll(async () => (await state(page)).gates?.bayern).toBe('OPEN');
   await page.screenshot({ path: `${shotDir}/grand-hall-bayern.png` });
   await axis(page, 'z', -48.5);
   await axis(page, 'x', -37.5);
@@ -503,20 +646,18 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
   await axis(page, 'z', -24.5);
   await axis(page, 'x', -45);
   await axis(page, 'z', -27.2);
-  await page.keyboard.press('e');
-  await expect(page.locator('.toast')).toContainText('sắp ra mắt');
+  await expect.poll(async () => (await state(page)).gates?.real).toBe('OPEN');
   await axis(page, 'z', -24.5);
   await axis(page, 'x', 45);
   await axis(page, 'z', -27.2);
-  await page.keyboard.press('e');
-  await expect(page.locator('.toast')).toContainText('sắp ra mắt');
+  await expect.poll(async () => (await state(page)).gates?.barcelona).toBe('OPEN');
   await axis(page, 'z', -24.5);
   await page.getByRole('button', { name: 'Góc nhìn từ trên cao', exact: true }).click();
   await expect.poll(async () => (await state(page)).view).toBe('atlas');
   await page.screenshot({ path: `${shotDir}/grand-hall-overview.png` });
   await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
   await axis(page, 'x', 0);
-  await walk(page, 'w', (s) => s.map === 'united');
+  await walk(page, 'w', (s) => s.map === 'united' && s.position.z <= 1);
   await expect(page.locator('.area-card')).toContainText('Hang Quỷ Đỏ');
   await page.screenshot({ path: `${shotDir}/grand-hall-mu-interior.png` });
   await axis(page, 'x', 4);
@@ -527,7 +668,7 @@ test('nine caves, 360 orbit, zoom, physical tiers, Bayern/PSG/Real/Barcelona and
   await walk(page, 's', (s) => s.map === 'plaza');
   await expect.poll(async () => (await state(page)).position.y).toBeGreaterThan(6.9);
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
-  expect((await state(page)).position.z).toBeCloseTo(-28.35, 0);
+  expect(Math.abs((await state(page)).position.z - (-31.2))).toBeLessThan(1.6);
   expect(behindError(await state(page))).toBeLessThan(0.1);
   expect(errors).toEqual([]);
 });
@@ -666,19 +807,65 @@ test('visual QA: reverse main gate, high quality and overview', async ({ page })
   await page.screenshot({ path: `${shotDir}/grand-hall-overview.png` });
 });
 
+async function museumShot(page: Page, name: string) {
+  const toast = page.getByRole('button', { name: 'Đóng thông báo' });
+  if (await toast.isVisible()) await toast.click();
+  await page.waitForFunction(() =>
+    ['/art/mu-manager-portraits.webp', ...['1878', '1958', '1999', '2008'].map((year) => `/art/mu-history/${year}.webp`)]
+      .every((path) => performance.getEntriesByName(new URL(path, location.href).href).length > 0),
+  );
+  await page.waitForTimeout(650);
+  await page.screenshot({ path: `${process.env.FFC_MU_SHOTS ?? test.info().outputDir}/${name}.png` });
+}
+
+async function clickMuseumMesh(page: Page, point: Vector3) {
+  const canvas = (await page.locator('.three-canvas canvas').boundingBox())!;
+  const { camera: view } = await state(page);
+  const camera = new PerspectiveCamera(60, canvas.width / canvas.height, 0.08, 320);
+  camera.position.set(view.x, view.y, view.z);
+  const horizontal = Math.cos(view.viewPitch);
+  camera.lookAt(camera.position.clone().add(new Vector3(
+    -Math.sin(view.viewYaw) * horizontal,
+    Math.sin(view.viewPitch),
+    -Math.cos(view.viewYaw) * horizontal,
+  )));
+  camera.updateMatrixWorld();
+  const screen = point.project(camera);
+  await page.mouse.click(canvas.x + (screen.x + 1) * canvas.width / 2, canvas.y + (1 - screen.y) * canvas.height / 2);
+}
+
+async function enterUnitedForMuseum(page: Page) {
+  await toAvenue(page);
+  const { x } = (await state(page)).position;
+  if (Math.abs(x) > 0.35) {
+    const key = x < 0 ? 'd' : 'a';
+    await page.keyboard.down(key);
+    try {
+      await expect
+        .poll(async () => (await state(page)).position.x * Math.sign(x), { intervals: [30] })
+        .toBeLessThan(0.12);
+    } finally {
+      await page.keyboard.up(key);
+    }
+    await expect.poll(async () => (await state(page)).moving).toBe(false);
+  }
+  await walk(page, 'w', (s) => s.map === 'united' && s.position.z <= 1);
+}
+
 test('MU 3D: refuge, separate museum, physical exhibits, history and full return flow online', async ({
   page,
 }) => {
   test.setTimeout(180000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('ffc-camera-settings', JSON.stringify({ autoRotate: false }));
+  });
   await open(page);
-  await toAvenue(page);
-  await walk(page, 'w', (s) => s.map === 'united');
+  await enterUnitedForMuseum(page);
   await expect(page.getByRole('img', { name: 'Bản đồ Hang Quỷ Đỏ' })).toBeVisible();
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
   await page.waitForTimeout(250);
-  await page.screenshot({ path: 'docs/mu-3d-refuge.png' });
   // Walk into the plinth, rather than injecting coordinates or bypassing collision.
   await walk(page, 'w', (s) => s.position.z < -4.9);
   await hold(page, 'w', 500);
@@ -687,7 +874,6 @@ test('MU 3D: refuge, separate museum, physical exhibits, history and full return
   await axis(page, 'x', -10);
   await axis(page, 'z', -6.3);
   await expect(page.locator('.cave-wayfinding')).toContainText('Góc Tâm Sự Fan');
-  await page.screenshot({ path: 'docs/mu-3d-lounge.png' });
   // Circle the plinth and enter the opaque passage in the back of the refuge.
   await axis(page, 'x', -8);
   await axis(page, 'z', -2.5);
@@ -695,11 +881,13 @@ test('MU 3D: refuge, separate museum, physical exhibits, history and full return
   await axis(page, 'z', -8);
   await axis(page, 'x', 0);
   await walk(page, 'w', (s) => s.map === 'hall-of-legends');
-  await expect(page.locator('.museum-breadcrumb')).toContainText('Phòng Hoài Niệm');
-  await expect(page.getByRole('img', { name: 'Bản đồ bảo tàng bảy khu vực' })).toBeVisible();
+  await expect(page.locator('.museum-breadcrumb')).toContainText('Phòng Truyền Thống');
+  await expect(page.getByRole('img', { name: 'Bản đồ Phòng Truyền Thống MU' })).toBeVisible();
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
   await page.waitForTimeout(250);
-  await page.screenshot({ path: 'docs/mu-3d-museum.png' });
+  expect((await state(page)).position.x).toBeCloseTo(0, 0);
+  expect((await state(page)).position.z).toBeGreaterThan(8);
+  await museumShot(page, '01-entrance');
   const standing = (await state(page)).position;
   await page.keyboard.press('Space');
   await expect
@@ -707,65 +895,71 @@ test('MU 3D: refuge, separate museum, physical exhibits, history and full return
     .toBeGreaterThan(0.25);
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
   expect(Math.abs((await state(page)).position.x - standing.x)).toBeLessThan(0.15);
-  // Bust gallery is on the rear wall, reached through the real aisle.
-  await axis(page, 'x', 2.25);
-  await axis(page, 'z', 17.05);
-  await page.keyboard.press('e');
-  await expect(page.getByRole('heading', { name: 'Eric Cantona', exact: true })).toBeVisible();
-  const beforeModal = await state(page);
-  await hold(page, 'w', 200);
-  expect((await state(page)).position.z).toBeCloseTo(beforeModal.position.z, 1);
-  await page.keyboard.press('Escape');
-  await axis(page, 'x', 15);
-  await axis(page, 'z', 15.25);
-  await page.keyboard.press('e');
-  await expect(
-    page.getByRole('heading', { name: 'Thư viện ảnh · Khoảnh khắc huyền thoại' }),
-  ).toBeVisible();
-  await page.keyboard.press('Escape');
-  // Take the western aisle to the European Cup and manager wall.
-  await axis(page, 'z', 16.8);
-  await axis(page, 'x', -18.6);
-  await axis(page, 'z', -17.8);
-  await axis(page, 'x', 0);
-  await page.keyboard.press('e');
-  await expect(page.getByRole('heading', { name: /European Cup.*1998\/99/ })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await hold(page, 'w', 500);
-  expect((await state(page)).position.z).toBeGreaterThan(-18.7);
-  await axis(page, 'x', 7);
-  await axis(page, 'z', -20);
-  await axis(page, 'x', 11.5);
-  await axis(page, 'z', -20.5);
-  await page.keyboard.press('e');
-  await expect(page.getByRole('heading', { name: 'Michael Carrick', exact: true })).toBeVisible();
-  await expect(page.locator('.museum-exhibit')).toContainText('hiện tại');
-  await page.screenshot({ path: 'docs/mu-3d-manager.png' });
-  await page.keyboard.press('Escape');
-  // Orbit a complete circle while remaining at the same world position.
-  const beforeOrbit = await state(page);
-  for (let i = 0; i < 3; i++) {
-    await page.mouse.move(1050, 400);
-    await page.mouse.down();
-    await page.mouse.move(650, 400, { steps: 16 });
-    await page.mouse.up();
+  await axis(page, 'z', -1.8);
+  await dragCamera(page, 840, 425, 0, -35);
+  await museumShot(page, '02-trophy-wall');
+  await axis(page, 'z', -9.35);
+  for (const trophy of hallTrophies) {
+    await axis(page, 'x', trophy.x);
+    await expect(page.locator('.interaction-prompt')).toContainText(trophy.title.vi);
+    await page.keyboard.press('f');
+    await expect(page.getByRole('heading', { name: trophy.title.vi, exact: true })).toBeVisible();
+    await expect(page.locator('.blues-seasons button')).toHaveCount(trophy.seasons.length);
+    const last = trophy.seasons.at(-1)!;
+    await page.locator('.blues-seasons').getByRole('button', { name: last.season, exact: true }).click();
+    await expect(page.locator('.museum-exhibit').last()).toContainText(last.manager);
+    await page.keyboard.press('Escape');
   }
-  expect((await state(page)).camera.yaw - beforeOrbit.camera.yaw).toBeGreaterThan(Math.PI * 2);
-  expect((await state(page)).position.x).toBeCloseTo(beforeOrbit.position.x, 1);
-  await page.getByRole('button', { name: 'Nhìn về cổng chính', exact: true }).click();
-  await expect.poll(async () => (await state(page)).cameraHit).toBeLessThan(3);
-  await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
-  await axis(page, 'z', -19.5);
-  await axis(page, 'x', 19.4);
-  await axis(page, 'z', -16.4);
-  await axis(page, 'x', 17.5);
-  await page.keyboard.press('e');
-  await expect(page.getByRole('heading', { name: /1902–1931/ })).toBeVisible();
+  await hold(page, 'w', 850);
+  expect((await state(page)).position.z).toBeGreaterThan(-10.3);
+  await axis(page, 'z', -7.05);
+  const carrick = hallCoaches.at(-1)!;
+  await axis(page, 'x', carrick.x);
+  await dragCamera(page, 835, 455, 0, -70);
+  expect((await state(page)).camera.pitch).toBeGreaterThan(0.2);
+  await page.waitForTimeout(260);
+  await clickMuseumMesh(page, new Vector3(carrick.x, 4.93, -11.5));
+  await expect(page.getByRole('heading', { name: 'Michael Carrick', exact: true })).toBeVisible();
+  await expect(page.locator('.museum-exhibit')).toContainText('Đương nhiệm');
   await page.keyboard.press('Escape');
-  await axis(page, 'x', 19.4);
-  await axis(page, 'z', -19.5);
-  await axis(page, 'x', -18.6);
-  await axis(page, 'z', 16.8);
+  const beforeOrbit = await state(page);
+  for (let i = 0; i < 4; i++) await dragCamera(page, 1040, 410, -355, 0);
+  const afterOrbit = await state(page);
+  expect(afterOrbit.camera.yaw - beforeOrbit.camera.yaw).toBeGreaterThan(Math.PI * 2);
+  expect(afterOrbit.camera.pitch).toBeCloseTo(beforeOrbit.camera.pitch, 3);
+  expect(afterOrbit.position.x).toBeCloseTo(beforeOrbit.position.x, 1);
+  await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
+
+  await axis(page, 'z', -5.9);
+  await axis(page, 'x', hallStatue.x);
+  await axis(page, 'z', -6.3);
+  await page.keyboard.press('f');
+  await expect(page.getByRole('heading', { name: 'Sir Alex Ferguson', exact: true })).toBeVisible();
+  await expect(page.locator('.museum-exhibit')).toContainText('1986');
+  await page.keyboard.press('Escape');
+  await dragCamera(page, 845, 430, 0, -43);
+  await museumShot(page, '03-ferguson-statue');
+  await hold(page, 'w', 850);
+  expect((await state(page)).position.z).toBeGreaterThan(-7.1);
+
+  await axis(page, 'z', 0.6);
+  await axis(page, 'x', 12.2);
+  for (const milestone of [...hallHistory].reverse()) {
+    await axis(page, 'z', milestone.z);
+    await expect(page.locator('.interaction-prompt')).toContainText(milestone.year);
+    await page.keyboard.press('f');
+    await expect(page.getByRole('heading', { name: `${milestone.year} · ${milestone.title.vi}` })).toBeVisible();
+    await expect.poll(() => page.locator('.mu-history-photo img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    if (milestone.year === '2008') await expect(page.locator('.museum-exhibit')).toContainText('6–5');
+    await page.keyboard.press('Escape');
+  }
+  await hold(page, 'd', 760);
+  expect((await state(page)).position.x).toBeLessThan(13.75);
+  await axis(page, 'z', -0.55);
+  await axis(page, 'x', 7.4);
+  await dragCamera(page, 690, 435, 236, -33);
+  await museumShot(page, '04-history-wall');
+  await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
   await axis(page, 'x', 0);
   await walk(page, 's', (s) => s.map === 'united');
   await expect(page.locator('.area-card')).toContainText('Hang Quỷ Đỏ');
@@ -792,24 +986,29 @@ test('MU 3D mobile: offline entry, joystick, orbit, jump and room-specific minim
   const page = await context.newPage();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('ffc-camera-settings', JSON.stringify({ autoRotate: false }));
+  });
   await open(page, false);
-  await toAvenue(page);
-  await walk(page, 'w', (s) => s.map === 'united');
+  await enterUnitedForMuseum(page);
   await expect(page.getByRole('img', { name: 'Bản đồ Hang Quỷ Đỏ' })).toBeVisible();
-  await page.screenshot({ path: 'docs/mu-3d-cave-mobile.png' });
   await axis(page, 'x', 5);
   await axis(page, 'z', -8);
   await axis(page, 'x', 0);
   await walk(page, 'w', (s) => s.map === 'hall-of-legends');
-  await expect(page.getByRole('img', { name: 'Bản đồ bảo tàng bảy khu vực' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Bản đồ Phòng Truyền Thống MU' })).toBeVisible();
+  await museumShot(page, '05-mobile-entrance');
   const initial = await state(page),
     stick = (await page.locator('.joystick').boundingBox())!;
-  await page.mouse.move(stick.x + stick.width * 0.82, stick.y + stick.height / 2);
-  await page.mouse.down();
-  await expect
-    .poll(async () => (await state(page)).position.x)
-    .toBeGreaterThan(initial.position.x + 0.8);
-  await page.mouse.up();
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [{ x: stick.x + stick.width * 0.82, y: stick.y + stick.height / 2 }],
+  });
+  try {
+    await expect.poll(async () => (await state(page)).position.x).toBeGreaterThan(initial.position.x + 0.8);
+  } finally {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  }
   await expect.poll(async () => (await state(page)).moving).toBe(false);
   const stopped = await state(page);
   await page.mouse.move(300, 400);
@@ -825,7 +1024,16 @@ test('MU 3D mobile: offline entry, joystick, orbit, jump and room-specific minim
     .toBeGreaterThan(0.25);
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
-  await page.screenshot({ path: 'docs/mu-3d-museum-mobile.png' });
+  await page.getByRole('button', { name: 'Góc nhìn mặc định', exact: true }).click();
+  await axis(page, 'x', 0);
+  await axis(page, 'z', -9.35);
+  const prompt = page.locator('.interaction-prompt');
+  await expect(prompt).toContainText('UEFA Europa League');
+  await prompt.tap();
+  await expect(page.getByRole('heading', { name: 'UEFA Europa League' })).toBeVisible();
+  await museumShot(page, '06-mobile-exhibit');
+  await page.getByRole('button', { name: 'Tiếp tục tham quan' }).tap();
+  await walk(page, 's', (s) => s.map === 'united');
   expect(errors).toEqual([]);
   await context.close();
 });

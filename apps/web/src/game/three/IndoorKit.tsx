@@ -1,3 +1,4 @@
+import { CORRIDOR_HALF_WIDTH } from '../../../../../packages/shared/grandHall';
 import { useEffect, useMemo } from 'react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useThree } from '@react-three/fiber';
@@ -16,6 +17,7 @@ export function Plaque({
   position = [0, 0, 0],
   dark = false,
   background,
+  maxFontSize = 76,
 }: {
   lines: string[];
   width?: number;
@@ -23,6 +25,7 @@ export function Plaque({
   position?: V3;
   dark?: boolean;
   background?: string;
+  maxFontSize?: number;
 }) {
   const texture = useMemo(() => {
     const c = document.createElement('canvas');
@@ -38,13 +41,13 @@ export function Plaque({
     ctx.textBaseline = 'middle';
     lines.forEach((line, i) => {
       ctx.fillStyle = i === 0 ? '#ffdb83' : '#f1e0bf';
-      ctx.font = `${i === 0 ? 'bold ' : ''}${Math.min(76, ((c.height - 35) / lines.length) * 0.68)}px Arial`;
+      ctx.font = `${i === 0 ? 'bold ' : ''}${Math.min(maxFontSize, ((c.height - 35) / lines.length) * 0.68)}px Arial`;
       ctx.fillText(line, 512, 20 + ((c.height - 40) / lines.length) * (i + 0.5), 950);
     });
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
-  }, [lines.join('|'), width, height, dark, background]);
+  }, [lines.join('|'), width, height, dark, background, maxFontSize]);
   useEffect(() => () => texture.dispose(), [texture]);
   return (
     <group position={position}>
@@ -87,6 +90,7 @@ export function IndoorLight({
 }) {
   return (
     <>
+      {museum && <>
       <RoomReflections intensity={museum ? 0.5 : 0.28} />
       <color attach="background" args={[blue ? '#08162d' : museum ? '#21151d' : '#1c101d']} />
       <fog
@@ -113,6 +117,7 @@ export function IndoorLight({
         shadow-camera-far={50}
         shadow-normalBias={0.05}
       />
+      </>}
       {[
         [-10, -10],
         [10, -10],
@@ -130,6 +135,23 @@ export function IndoorLight({
       ))}
     </>
   );
+}
+/** Solid room wall with a centered opening for the connected corridor. */
+export function RoomFront({ left, right, z, height, depth, color, opening }: {
+  left: number; right: number; z: number; height: number; depth: number; color: string; opening?: boolean;
+}) {
+  const half = CORRIDOR_HALF_WIDTH;
+  const sections = opening ? [
+    { left, right: -half, bottom: 0, top: height },
+    { left: half, right, bottom: 0, top: height },
+    { left: -half, right: half, bottom: 4.7, top: height },
+  ] : [{ left, right, bottom: 0, top: height }];
+  return <RigidBody type="fixed" colliders="cuboid">
+    {sections.map((section) => <Box key={section.left + section.bottom}
+      position={[(section.left + section.right) / 2, (section.bottom + section.top) / 2, z]}
+      size={[section.right - section.left, section.top - section.bottom, depth]} color={color}
+    />)}
+  </RigidBody>;
 }
 export function IndoorShell({
   map,
@@ -152,7 +174,6 @@ export function IndoorShell({
         <CuboidCollider args={[0.4, 6, d / 2 + 0.8]} position={[b.left - 0.4, 6, cz]} />
         <CuboidCollider args={[0.4, 6, d / 2 + 0.8]} position={[b.right + 0.4, 6, cz]} />
         <CuboidCollider args={[w / 2 + 0.8, 6, 0.4]} position={[cx, 6, b.top - 0.4]} />
-        <CuboidCollider args={[w / 2 + 0.8, 6, 0.4]} position={[cx, 6, b.bottom + 0.4]} />
         <CuboidCollider args={[w / 2 + 0.8, 0.3, d / 2 + 0.8]} position={[cx, 11.8, cz]} />
       </RigidBody>
       <Box
@@ -169,7 +190,7 @@ export function IndoorShell({
           color={museum ? '#46232d' : '#402430'}
         />
       ))}
-      {[b.top - 0.4, b.bottom + 0.4].map((z) => (
+      {[b.top - 0.4].map((z) => (
         <Box
           key={z}
           position={[cx, 5.9, z]}
@@ -177,6 +198,8 @@ export function IndoorShell({
           color={museum ? '#512333' : '#402430'}
         />
       ))}
+      <RoomFront left={b.left - 0.5} right={b.right + 0.5} z={b.bottom + 0.4}
+        depth={0.8} height={11.8} color={museum ? '#512333' : '#402430'} opening={!museum} />
       <Box position={[cx, 12, cz]} size={[w + 1, 0.6, d + 1]} color="#261a26" />
       {/* Instanced paving gives a real broken-stone floor with hundreds of independently lit tiles. */}
       {paving && <Paving bounds={b} museum={museum} />}

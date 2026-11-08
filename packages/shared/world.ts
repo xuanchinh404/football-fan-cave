@@ -1,4 +1,8 @@
-import { KOP_CAVE, KOP_MUSEUM, liverpoolGround, liverpoolWire } from './liverpool/layout';
+import type { Loadout } from './store/state';
+import { CITY_OBSTACLES, cityGround, cityWalkable, cityWire } from './city/layout';
+import { cityInteractions } from './city/content';
+import { corridorSurface, isCaveZone, isRefuge, REFUGE_BOUNDS, REFUGE_WIRE } from './caveConnections';
+import { KOP_CAVE, KOP_MUSEUM, insideLiverpoolFootprint, liverpoolGround, liverpoolWire } from './liverpool/layout';
 import { liverpoolExhibits } from './liverpool/content';
 import { ARSENAL_CAVE, ARSENAL_MUSEUM, arsenalGround, gunnersWire } from './arsenal/layout';
 import { arsenalExhibits } from './arsenal/content';
@@ -16,7 +20,8 @@ import {
   grandWalkable,
   type CaveId,
 } from './grandHall';
-import { HALL, exhibits, hallObstacles } from './museum/index';
+import { HALL } from './museum/index';
+import { hallExit, hallObstacles, hallStations } from './museum/hall';
 import { RED_CAVE } from './cave';
 export type TeamId = 'united' | 'arsenal' | 'liverpool' | 'chelsea' | 'city' | 'common';
 export type MapId =
@@ -39,6 +44,7 @@ export type Player = Profile &
     airOffset?: number;
     height?: number;
     seated?: boolean;
+    loadout?: Loadout;
   };
 export type ChatMessage = {
   id: string;
@@ -115,6 +121,7 @@ export const RUN_SPEED = 330;
 export type Interaction = Point & {
   id: string;
   label: string;
+  inspectRadius?: number;
   kind:
     | 'portal'
     | 'shop'
@@ -144,6 +151,8 @@ export const isOpenCave = (map: MapId | undefined) =>
   CAVES.some((cave) => cave.id === map && cave.available);
 export type Rect = { x: number; y: number; w: number; h: number };
 export function interactions(map: MapId): Interaction[] {
+  if (map === 'city') return cityInteractions;
+  if (isRefuge(map)) return [];
   if (map === 'liverpool-museum')
     return [
       ...liverpoolExhibits.map((e) => ({
@@ -151,6 +160,7 @@ export function interactions(map: MapId): Interaction[] {
         id: e.id,
         label: 'Khám phá · ' + e.heading,
         kind: 'exhibit' as const,
+        ...(e.type === 'manager' ? { inspectRadius: 240 } : {}),
       })),
       {
         ...KOP_MUSEUM.exit,
@@ -169,13 +179,6 @@ export function interactions(map: MapId): Interaction[] {
         kind: 'portal',
         target: 'liverpool-museum',
       },
-      {
-        ...KOP_CAVE.exit,
-        id: 'kop-exit',
-        label: 'Cổng Ra Hang · Đại Sảnh Chung',
-        kind: 'portal',
-        target: 'plaza',
-      },
       { ...KOP_CAVE.score, id: 'kop-score', label: 'Bảng trận đấu · DEMO', kind: 'score' },
       ...KOP_CAVE.seats.map((p, i) => ({
         ...p,
@@ -190,6 +193,7 @@ export function interactions(map: MapId): Interaction[] {
         id: e.id,
         label: 'Khám phá · ' + e.heading,
         kind: 'exhibit' as const,
+        ...(e.type === 'manager' ? { inspectRadius: 240 } : {}),
         ...gunnersWire(e.approach?.x ?? e.x, e.approach?.z ?? e.z + 1.65),
       })),
       {
@@ -230,7 +234,12 @@ export function interactions(map: MapId): Interaction[] {
       ...chelseaExhibits.map((e) => ({
         id: e.id,
         label: 'Khám phá · ' + e.heading,
-        ...bluesWire(e.x, e.z + (e.id === 'blues-drogba-statue' ? 2.4 : 1.65)),
+        ...bluesWire(
+          e.x,
+          e.z +
+            (e.id.startsWith('blues-manager-') ? 0 : e.id === 'blues-drogba-statue' ? 2.4 : 1.65),
+        ),
+        ...(e.id.startsWith('blues-manager-') ? { inspectRadius: 240 } : {}),
         kind: 'exhibit' as const,
       })),
       {
@@ -273,22 +282,13 @@ export function interactions(map: MapId): Interaction[] {
     ];
   if (map === 'hall-of-legends')
     return [
-      ...exhibits.map((e) => ({
-        id: e.id,
-        label: e.type === 'trophy' ? 'Xem danh hiệu · ' + e.heading : 'Khám phá · ' + e.heading,
-        x: e.x,
-        y: e.y + (e.type === 'legend' ? -100 : e.type === 'manager' ? 85 : 65),
+      ...hallStations.map(({ title, ...station }) => ({
+        ...station,
+        label: 'Khám phá · ' + title.vi,
         kind: 'exhibit' as const,
       })),
-      {
-        id: 'hall-exit',
-        x: 1800,
-        y: 3730,
-        label: 'Quay về Hang Quỷ Đỏ',
-        kind: 'portal',
-        target: 'united',
-      },
-      { id: 'hall-photo', x: 2450, y: 3630, label: 'Chụp ảnh kỷ niệm', kind: 'photo' },
+      { ...hallExit, label: 'Quay về Hang Quỷ Đỏ', kind: 'portal', target: 'united' },
+      { id: 'hall-photo', x: 2100, y: 3010, label: 'Chụp ảnh kỷ niệm', kind: 'photo' },
     ];
   if (map === 'united')
     return [
@@ -296,7 +296,7 @@ export function interactions(map: MapId): Interaction[] {
         id: 'hall-entry',
         x: 2048,
         y: 1100,
-        label: 'Lối vào Phòng Hoài Niệm',
+        label: 'Lối vào Phòng Truyền Thống',
         kind: 'portal',
         target: 'hall-of-legends',
       },
@@ -361,7 +361,7 @@ export function interactions(map: MapId): Interaction[] {
     ];
   return map === 'plaza'
     ? [
-        ...PORTALS,
+        ...PORTALS.filter((portal) => portal.id !== 'liverpool'),
         ...GRAND_PLACES.map((p) => ({
           ...grandWire(p.x, p.z),
           id: p.id,
@@ -377,6 +377,8 @@ export function interactions(map: MapId): Interaction[] {
       ];
 }
 export function spawn(map: MapId): Point {
+  if (map === 'city') return cityWire(0, -4);
+  if (isRefuge(map)) return { ...REFUGE_WIRE.origin };
   if (map === 'liverpool') return KOP_CAVE.spawn;
   if (map === 'liverpool-museum') return KOP_MUSEUM.spawn;
   if (map === 'arsenal') return { ...ARSENAL_CAVE.spawn };
@@ -392,6 +394,13 @@ export function spawn(map: MapId): Point {
         : { x: 1200, y: 1370 };
 }
 export function obstacles(map: MapId): Rect[] {
+  if (map === 'city') return CITY_OBSTACLES;
+  if (isRefuge(map)) {
+    const { origin, scale } = REFUGE_WIRE;
+    return [-4.9, 4.9].map((x) => ({
+      x: origin.x + (x - 0.68) / scale, y: origin.y - 7.95 / scale, w: 1.36 / scale, h: 4.5 / scale,
+    }));
+  }
   if (map === 'liverpool') return KOP_CAVE.obstacles;
   if (map === 'liverpool-museum') return KOP_MUSEUM.obstacles;
   if (map === 'arsenal') return ARSENAL_CAVE.obstacles;
@@ -419,8 +428,11 @@ export function walkable(map: MapId, x: number, y: number) {
     const p = grandMetres({ x, y });
     return grandWalkable(p.x, p.z);
   }
+  if (isCaveZone(map) && corridorSurface(map, { x, y }) !== undefined) return true;
+  if (map === 'city') return cityWalkable({ x, y });
+  if (map === 'liverpool' && !insideLiverpoolFootprint({ x, y })) return false;
   const b =
-    map === 'liverpool'
+    isRefuge(map) ? REFUGE_BOUNDS : map === 'liverpool'
       ? KOP_CAVE.bounds
       : map === 'liverpool-museum'
         ? KOP_MUSEUM.bounds
@@ -475,7 +487,7 @@ export function near(map: MapId, p: Point) {
   let distance = 125;
   for (const item of interactions(map)) {
     const d = Math.hypot(item.x - p.x, item.y - p.y);
-    if (d < distance) {
+    if (d < Math.min(distance, item.inspectRadius ?? 125)) {
       closest = item;
       distance = d;
     }
@@ -545,6 +557,11 @@ export function plazaReturn(from: MapId): Point {
 }
 
 export function groundHeight(map: MapId, p: Point) {
+  if (isCaveZone(map)) {
+    const corridor = corridorSurface(map, p);
+    if (corridor !== undefined) return corridor;
+  }
+  if (map === 'city') return cityGround(p);
   if (map === 'liverpool') return liverpoolGround(p);
   if (map === 'chelsea') return bluesGround(p);
   if (map === 'arsenal') return arsenalGround(p);

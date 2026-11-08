@@ -1,3 +1,12 @@
+import { CITY_BOUNDS, CITY_WIRE } from '../../../../../packages/shared/city/layout';
+import {
+  caveOffset,
+  isConnectedZone,
+  REFUGE_BOUNDS,
+  REFUGE_WIRE,
+  UNITED_WIRE,
+  type ConnectedZone,
+} from '../../../../../packages/shared/caveConnections';
 import {
   KOP_CAVE,
   KOP_MUSEUM,
@@ -25,20 +34,23 @@ import {
   type Point,
 } from '../../../../../packages/shared/world';
 import { HALL } from '../../../../../packages/shared/museum';
+import { MU_MUSEUM_ORIGIN, MU_MUSEUM_SCALE } from '../../../../../packages/shared/museum/hall';
 import { RED_CAVE } from '../../../../../packages/shared/cave';
 
 export type SceneId =
-  | 'plaza'
-  | 'united'
+  | ConnectedZone
   | 'hall-of-legends'
-  | 'chelsea'
   | 'chelsea-museum'
-  | 'arsenal'
   | 'arsenal-museum'
-  | 'liverpool'
   | 'liverpool-museum';
-// Keep the existing authoritative Socket.IO room coordinates. Only the renderer uses metres.
+// Interaction layouts retain local wire coordinates. The connected areas share a world transform.
+const refugeLayout = { ...REFUGE_WIRE, bounds: REFUGE_BOUNDS };
 export const layouts = {
+  bayern: refugeLayout,
+  psg: refugeLayout,
+  real: refugeLayout,
+  city: { ...CITY_WIRE, bounds: CITY_BOUNDS },
+  barcelona: refugeLayout,
   liverpool: { scale: LIVERPOOL_SCALE, origin: LIVERPOOL_ORIGIN, bounds: KOP_CAVE.bounds },
   'liverpool-museum': {
     scale: LIVERPOOL_SCALE,
@@ -60,8 +72,8 @@ export const layouts = {
       b: GRAND_BOUNDS.bottom / GRAND_SCALE + GRAND_ORIGIN.y,
     },
   },
-  'hall-of-legends': { scale: 0.0125, origin: { x: 1800, y: 2300 }, bounds: HALL.bounds },
-  united: { scale: 0.0125, origin: { x: 2048, y: 2180 }, bounds: RED_CAVE.bounds },
+  'hall-of-legends': { scale: MU_MUSEUM_SCALE, origin: MU_MUSEUM_ORIGIN, bounds: HALL.bounds },
+  united: { ...UNITED_WIRE, bounds: RED_CAVE.bounds },
 } as const;
 export function toScene(map: SceneId, p: Point): [number, number] {
   const { scale, origin } = layouts[map];
@@ -71,6 +83,22 @@ export function toNetwork(map: SceneId, x: number, z: number): Point {
   const { scale, origin } = layouts[map];
   return { x: x / scale + origin.x, y: z / scale + origin.y };
 }
+export function worldPosition(map: SceneId, p: Point, height: number): [number, number, number] {
+  const [x, z] = toScene(map, p);
+  const [dx, dy, dz] = caveOffset(map);
+  return [x + dx, height + dy, z + dz];
+}
+
+export function zonePosition(
+  map: SceneId,
+  x: number,
+  y: number,
+  z: number,
+): [number, number, number] {
+  const [dx, dy, dz] = caveOffset(map);
+  return [x - dx, y - dy, z - dz];
+}
+
 export function sceneBounds(map: SceneId) {
   const { bounds } = layouts[map];
   const [left, top] = toScene(map, { x: bounds.l, y: bounds.t });
@@ -100,27 +128,20 @@ export function sceneObstacles(map: SceneId) {
   });
 }
 export function playtestInteractions(map: MapId): Interaction[] {
-  if (
-    map === 'plaza' ||
-    map === 'liverpool' ||
-    map === 'liverpool-museum' ||
-    map === 'chelsea' ||
-    map === 'chelsea-museum' ||
-    map === 'arsenal' ||
-    map === 'arsenal-museum'
-  )
-    return interactions(map);
-  if (map === 'hall-of-legends') return interactions(map);
-  if (map === 'united')
-    return interactions(map).filter(
-      (p) => !['fun', 'fun-back', 'event-gate', 'event-back', 'photo', 'event'].includes(p.id),
-    );
-  return [];
+  if (!(map in layouts)) return [];
+  return interactions(map).filter(
+    (p) =>
+      !(p.kind === 'portal' && p.target && isConnectedZone(map) && isConnectedZone(p.target)) &&
+      !(
+        map === 'united' &&
+        ['fun', 'fun-back', 'event-gate', 'event-back', 'photo', 'event'].includes(p.id)
+      ),
+  );
 }
 export function playtestNear(map: MapId, p: Point) {
   return playtestInteractions(map).reduce<Interaction | undefined>((best, item) => {
     const distance = Math.hypot(item.x - p.x, item.y - p.y);
-    return distance < 125 && (!best || distance < Math.hypot(best.x - p.x, best.y - p.y))
+    return distance < Math.min(125, item.inspectRadius ?? 125) && (!best || distance < Math.hypot(best.x - p.x, best.y - p.y))
       ? item
       : best;
   }, undefined);

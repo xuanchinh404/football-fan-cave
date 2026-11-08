@@ -1,9 +1,10 @@
 import { memo } from 'react';
 import { BlenderAsset, type Placement } from './BlenderAsset';
 import { Box, Label } from './Models';
-import { GOLD, InteriorColliders, Plaque, type V3 } from './IndoorKit';
+import { GOLD, InteriorColliders, Plaque } from './IndoorKit';
 import { Exhibit } from './Exhibit';
-import { ManagerGallery, TrophyCase } from './MuseumKit';
+import { TrophyCase } from './MuseumKit';
+import { ManagerPortraitBoard } from './ManagerPortraitBoard';
 import {
   CannonMedallion,
   CrimsonRug,
@@ -28,7 +29,7 @@ import { HERITAGE_COLUMNS } from '../../../../../packages/shared/arsenal/layout'
 import type { Quality } from './GrandHall';
 
 const piers: Placement[] = HERITAGE_COLUMNS.map((p) => ({ position: [p.x, 0, p.z] }));
-const coaches = arsenalManagers.map((m) => ({ ...m, position: [m.x, 0, m.z] as V3 }));
+const coaches = arsenalManagers.map((m, portrait) => ({ ...m, name: m.heading, portrait }));
 export const ArsenalMuseum = memo(function ArsenalMuseum({ quality }: { quality: Quality }) {
   return (
     <group name="arsenal-heritage-hall-3d">
@@ -69,8 +70,8 @@ export const ArsenalMuseum = memo(function ArsenalMuseum({ quality }: { quality:
         positions={[
           [-18.9, 7.1, -20.6],
           [18.9, 7.1, -20.6],
-          [-10.2, 7.6, -21.6],
-          [10.2, 7.6, -21.6],
+          [-10.2, 10.15, -22.2],
+          [10.2, 10.15, -22.2],
         ]}
       />
       <Plaque
@@ -80,49 +81,13 @@ export const ArsenalMuseum = memo(function ArsenalMuseum({ quality }: { quality:
         background={WINE}
         lines={['PHÒNG TRUYỀN THỐNG ARSENAL', 'THE GUNNERS HERITAGE HALL']}
       />
-      <Plaque
-        width={21}
-        height={1.03}
-        position={[0, 5.62, -20.95]}
-        background={WINE}
-        lines={['CÁC ĐỜI HUẤN LUYỆN VIÊN TIÊU BIỂU']}
+      <ManagerPortraitBoard
+        atlas="/art/arsenal-manager-portraits.webp"
+        stations={coaches}
+        y={5.75}
+        z={-22.68}
+        scale={1.48}
       />
-      <ManagerGallery stations={coaches}>
-        {(m) => (
-          <>
-            <Box position={[0, 2, 0]} size={[2.7, 4, 1.2]} color={m.current ? '#91263d' : WINE} />
-            <mesh position={[0, 2.87, 0.62]}>
-              <circleGeometry args={[0.62, 36]} />
-              <meshStandardMaterial color={GOLD} metalness={0.6} roughness={0.34} />
-            </mesh>
-            <Label
-              text={m.heading
-                .split(' ')
-                .map((name) => name[0])
-                .slice(0, 2)
-                .join('')}
-              position={[0, 2.86, 0.645]}
-              width={1.18}
-              background="#54263b"
-            />
-            <Plaque
-              position={[0, 1.16, 0.64]}
-              width={2.48}
-              height={1.22}
-              background={WINE}
-              lines={[m.heading, m.tenure, m.current ? 'HLV HIỆN TẠI' : 'Hồ sơ HLV · E']}
-            />
-            {m.current && (
-              <Label
-                text="HLV HIỆN TẠI"
-                position={[0, 4.34, 0.72]}
-                width={2.42}
-                background="#92223d"
-              />
-            )}
-          </>
-        )}
-      </ManagerGallery>
       {arsenalTrophies.map((t) => (
         <group key={t.id} position={[t.x, 0, t.z]}>
           <Exhibit id={t.id}>

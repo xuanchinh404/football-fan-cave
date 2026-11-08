@@ -440,14 +440,14 @@
     "year": 1977,
     "season": "1977",
     "title": "Community Shield",
-    "manager": "Tommy Docherty",
+    "manager": "Dave Sexton",
     "description": "Danh hiệu Community Shield của Manchester United năm 1977. Đồng vô địch.",
     "shared": true,
     "x": 900,
     "y": 2350,
     "asset": "shield",
-    "source": "https://www.manutd.com/en/club/history/trophy-room",
-    "lastVerifiedAt": "2026-11-04"
+    "source": "https://www.lfchistory.net/games/980",
+    "lastVerifiedAt": "2026-11-08"
   },
   {
     "id": "community-1983",

@@ -72,10 +72,10 @@ const managerRows = [
   ['Ruud Gullit', '1996–1998', 'FA Cup 1997'],
   ['Gianluca Vialli', '1998–2000', 'Cup Winners’ Cup 1998 · FA Cup 2000'],
   ['Graham Rix', '2000', 'Tạm quyền'],
-  ['Claudio Ranieri', '2000–2004'],
+  ['Claudio Ranieri', '2000–2004', 'Vào bán kết Champions League 2003/04.'],
   ['José Mourinho', '2004–2007', 'Vô địch Anh 2005, 2006'],
   ['Avram Grant', '2007–2008', 'Chung kết Champions League 2008'],
-  ['Luiz Felipe Scolari', '2008–2009'],
+  ['Luiz Felipe Scolari', '2008–2009', 'Vô địch World Cup 2002 khi dẫn dắt Brazil.'],
   ['Ray Wilkins', '2009', 'Tạm quyền'],
   ['Guus Hiddink', '2009', 'Tạm quyền · FA Cup 2009'],
   ['Carlo Ancelotti', '2009–2011', 'Cú đúp quốc nội 2010'],
@@ -87,15 +87,15 @@ const managerRows = [
   ['Guus Hiddink', '2015–2016', 'Tạm quyền'],
   ['Antonio Conte', '2016–2018', 'Vô địch Anh 2017 · FA Cup 2018'],
   ['Maurizio Sarri', '2018–2019', 'Europa League 2019'],
-  ['Frank Lampard', '2019–2021'],
+  ['Frank Lampard', '2019–2021', 'Về thứ tư Premier League và vào chung kết FA Cup mùa 2019/20.'],
   ['Thomas Tuchel', '2021–2022', 'Champions League 2021'],
-  ['Graham Potter', '2022–2023'],
+  ['Graham Potter', '2022–2023', 'Đưa Chelsea vào tứ kết Champions League 2022/23.'],
   ['Bruno Saltor', '2023', 'Tạm quyền'],
   ['Frank Lampard', '2023', 'Tạm quyền'],
-  ['Mauricio Pochettino', '2023–2024'],
+  ['Mauricio Pochettino', '2023–2024', 'Đưa Chelsea vào chung kết League Cup 2023/24.'],
   ['Enzo Maresca', '07/2024–01/2026', 'Conference League và Club World Cup 2025'],
   ['Calum McFarlane', '2026 (tháng 1)', 'Tạm quyền'],
-  ['Liam Rosenior', '06/01/2026–22/04/2026'],
+  ['Liam Rosenior', '06/01/2026–22/04/2026', 'Từng đưa Strasbourg trở lại cúp châu Âu.'],
   ['Calum McFarlane', '2026 (tháng 4–6)', 'Tạm quyền'],
   [
     'Xabi Alonso',
@@ -110,19 +110,54 @@ const recentManagerSources = [
   'club-statement-liam-rosenior',
   'xabi-alonso-appointed-chelsea-manager',
 ];
+const managerProfiles: Record<number, string> = {
+  24: 'claudio-ranieri',
+  25: 'jose-mourinho',
+  26: 'avram-grant',
+  27: 'luiz-felipe-scolari',
+  30: 'carlo-ancelotti',
+  32: 'roberto-di-matteo',
+  33: 'rafael-benitez',
+  34: 'jose-mourinho',
+  37: 'antonio-conte',
+  38: 'maurizio-sarri',
+  39: 'news/article/everything-you-need-to-know-about-frank-lampard',
+  41: 'graham-potter',
+  44: 'mauricio-pochettino',
+  45: 'news/article/chelsea-mens-standout-stats-and-records-from-2025',
+  47: 'news/article/liam-rosenior-appointed-chelsea-head-coach',
+};
 export const chelseaManagers = managerRows.map(([name, tenure, story = ''], i) => ({
   id: `blues-manager-${i}`,
   name,
   tenure,
   story,
   current: i === managerRows.length - 1,
-  source:
-    i >= 45
+  source: managerProfiles[i]
+    ? `https://www.chelseafc.com/en/${managerProfiles[i]}`
+    : i >= 45
       ? `https://www.chelseafc.com/en/news/article/${recentManagerSources[i - 45]}`
       : i < 24
         ? 'https://www.bounder.friardale.co.uk/Managers.htm'
         : 'https://en.wikipedia.org/wiki/List_of_Chelsea_F.C._managers',
 }));
+// Atlas order from the Chelsea reference. Three ambiguous portraits were omitted.
+export const chelseaPortraits = [
+  24, 25, 26, 27, 30, 32, 33, 34, 37, 38, 39, 41, 44, 45, 47, 49,
+].map((manager, portrait) => {
+  const coach = chelseaManagers[manager];
+  const x = (portrait - 7.5) * 2.3;
+  return {
+    ...coach,
+    type: 'manager',
+    heading: coach.name,
+    detail: `${coach.tenure}\n${coach.story}`,
+    portrait,
+    x,
+    // Keep the approach outside Drogba's pedestal and ahead of the archive kiosks.
+    z: x > -13.5 && x < -8.5 ? -16.4 : -20.2,
+  };
+});
 export const managerGroups = Array.from({ length: 10 }, (_, i) => ({
   id: `blues-managers-${i}`,
   heading:
@@ -231,6 +266,7 @@ export const chelseaExhibits: BluesExhibit[] = [
       : undefined,
   })),
   ...managerGroups,
+  ...chelseaPortraits,
   ...chelseaLegends,
   ...chelseaHistory,
   ...chelseaMatches,

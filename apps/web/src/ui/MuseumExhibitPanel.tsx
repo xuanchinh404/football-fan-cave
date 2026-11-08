@@ -79,8 +79,19 @@ export function MuseumExhibitPanel({
       >
         Nguồn dữ liệu · {club} / hồ sơ lịch sử ↗
       </a>
+      {exhibit.type === 'manager' && !exhibit.coaches && (
+        <a
+          className="museum-source"
+          href="/art/manager-portrait-credits.md"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Nguồn chân dung ↗
+        </a>
+      )}
       <small className="blues-verified">
-        Đối chiếu {verifiedDate} · Tư liệu minh họa bằng mô hình gốc.
+        Đối chiếu {verifiedDate}
+        {exhibit.type === 'manager' ? '.' : ' · Tư liệu minh họa bằng mô hình gốc.'}
       </small>
     </>
   );

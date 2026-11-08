@@ -9,6 +9,13 @@ import {
   validateMuseum,
 } from '../packages/shared/museum/index.ts';
 import {
+  hallHistory,
+  hallObstacles,
+  hallStatue,
+  hallTrophies,
+  museumPoint,
+} from '../packages/shared/museum/hall';
+import {
   interactions,
   walkable,
   spawn,
@@ -38,7 +45,7 @@ test('verified trophy inventory: 68 unique awards, 20 league titles and shared S
   assert.equal(managers.find((m) => m.name === 'Ruben Amorim')?.end, '2026-01');
   assert.equal(new Set(trophies.map((t) => `${t.group}:${t.season}`)).size, 68);
 });
-test('all exhibits and seven zones are reachable from spawn, with a distinct nearest interaction', () => {
+test('all hall stations are reachable with a distinct prompt and the main aisle is clear', () => {
   const map = 'hall-of-legends' as const,
     step = 20,
     start = spawn(map);
@@ -76,5 +83,19 @@ test('all exhibits and seven zones are reachable from spawn, with a distinct nea
     );
   assert.equal(exhibits.length, 124);
   assert.equal(roomKey(map), 'cave:red-devils:hall-of-legends');
-  for (const t of trophies) assert(!walkable(map, t.x, t.y - 20), `missing collision ${t.id}`);
+  assert.equal(hallTrophies.length, 9);
+  assert.equal(
+    hallTrophies.reduce((count, trophy) => count + trophy.seasons.length, 0),
+    67,
+  );
+  assert.equal(hallObstacles.length, 2);
+  for (const x of [-2.5, 0, 2.5]) {
+    assert(clearPath(map, museumPoint(x, 8.2), museumPoint(x, -9.35)));
+  }
+  assert(clearPath(map, start, hallStatue.approach));
+  assert(clearPath(map, start, hallHistory[3].approach));
+  assert(!walkable(map, ...(Object.values(museumPoint(0, -11)) as [number, number])));
+  assert(
+    !walkable(map, ...(Object.values(museumPoint(hallStatue.x, hallStatue.z)) as [number, number])),
+  );
 });

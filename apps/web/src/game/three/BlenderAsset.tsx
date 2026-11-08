@@ -144,12 +144,17 @@ function StaticAsset({
   return <primitive object={root} />;
 }
 
-export function PlacedGlb({ asset, url, fallback = null, ...props }: PlacedProps) {
+export function PlacedGlb({
+  asset,
+  url,
+  fallback = null,
+  required = false,
+  ...props
+}: PlacedProps & { required?: boolean }) {
+  const model = <StaticAsset asset={asset} url={url} {...props} />;
   return (
     <AssetBoundary key={url} asset={asset} fallback={fallback}>
-      <Suspense fallback={fallback}>
-        <StaticAsset asset={asset} url={url} {...props} />
-      </Suspense>
+      {required ? model : <Suspense fallback={fallback}>{model}</Suspense>}
     </AssetBoundary>
   );
 }

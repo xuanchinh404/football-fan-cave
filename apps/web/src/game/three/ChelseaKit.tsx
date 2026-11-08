@@ -1,3 +1,5 @@
+import { CORRIDOR_HALF_WIDTH } from '../../../../../packages/shared/grandHall';
+import { RoomFront } from './IndoorKit';
 import { TrophyCase } from './MuseumKit';
 import { useMemo, useEffect, type ReactNode } from 'react';
 import { useLoader } from '@react-three/fiber';
@@ -154,13 +156,15 @@ export function ChelseaShell({
       for (let z = b.top; z <= b.bottom; z += 2.8)
         for (let y = 1; y < 13; y += 3) add(x, y, z, 2, 2.2, 2.3, i++);
     for (const z of [b.top - 1, b.bottom + 1])
-      for (let x = b.left; x <= b.right; x += 3)
+      for (let x = b.left; x <= b.right; x += 3) {
+        if (!museum && z > b.bottom && Math.abs(x) < CORRIDOR_HALF_WIDTH + 3) continue;
         for (let y = 2; y < 14; y += 3) add(x, y, z, 2.5, 2.4, 1.6, i++);
+      }
     for (let z = b.top; z <= b.bottom; z += 4)
       for (let x = b.left; x <= b.right; x += 4)
         add(x, 14.5 - Math.pow(x / (w / 2), 2) * 2, z, 3, 1.7, 3, i++);
     return rows;
-  }, [map, warm]);
+  }, [map, museum, warm]);
   const tiles = useMemo(() => {
     const a: THREE.Matrix4[] = [];
     for (let x = b.left + 0.75; x < b.right; x += 1.5)
@@ -175,7 +179,7 @@ export function ChelseaShell({
         {[b.left - 0.45, b.right + 0.45].map((x) => (
           <CuboidCollider key={x} args={[0.45, 7, d / 2 + 1]} position={[x, 7, cz]} />
         ))}
-        {[b.top - 0.45, b.bottom + 0.45].map((z) => (
+        {[b.top - 0.45].map((z) => (
           <CuboidCollider key={z} args={[w / 2 + 1, 7, 0.45]} position={[0, 7, z]} />
         ))}
         <CuboidCollider args={[w / 2 + 1, 0.4, d / 2 + 1]} position={[0, 13.6, cz]} />
@@ -194,7 +198,7 @@ export function ChelseaShell({
           color={warm ? '#42303a' : '#172c49'}
         />
       ))}
-      {[b.top - 0.65, b.bottom + 0.65].map((z) => (
+      {[b.top - 0.65].map((z) => (
         <Box
           key={z}
           position={[0, 6.5, z]}
@@ -202,6 +206,8 @@ export function ChelseaShell({
           color={warm ? '#42303a' : '#172c49'}
         />
       ))}
+      <RoomFront left={b.left - 1} right={b.right + 1} z={b.bottom + 0.5}
+        depth={1} height={13} color={warm ? '#42303a' : '#172c49'} opening={!museum} />
       <Box position={[0, 14, cz]} size={[w + 2, 0.8, d + 2]} color={warm ? '#261923' : '#0d1c33'} />
       <instancedMesh
         args={[undefined, undefined, stones.length]}

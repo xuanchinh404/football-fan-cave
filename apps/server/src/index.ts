@@ -1,5 +1,6 @@
+import { createStore } from './store';
+import { CITY_SEAT_DIRECTION } from '../../../packages/shared/city/layout';
 import { kopSeatFacing } from '../../../packages/shared/liverpool/layout';
-import {CAVES} from '../../../packages/shared/grandHall.ts';
 import './env.ts';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
@@ -23,6 +24,26 @@ import {
   type MapId,
 } from '../../../packages/shared/world.ts';
 import { RateLimiter } from '../../../packages/shared/limits.ts';
+import {
+  CAVE_GATES,
+  type CaveGate,
+  gateBlocksMove,
+  gateNear,
+  gateOpenness,
+  updateGate,
+  type GateState,
+  type GateTiming,
+} from '../../../packages/shared/caveGates';
+import { grandMetres } from '../../../packages/shared/grandHall';
+import {
+  fromWorldPoint,
+  isConnectedZone,
+  caveOffset,
+  toWorldPoint,
+  zoneAtDoor,
+  type ConnectedZone,
+} from '../../../packages/shared/caveConnections';
+import type { Point } from '../../../packages/shared/world';
 const port = Number(process.env.PORT || 3001);
 const origins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(
   ',',
@@ -82,6 +103,8 @@ const rooms = new Map<string, Set<string>>();
 const lastMove = new Map<string, number>();
 const moveBudget = new Map<string, number>();
 const roomOf = new Map<string, string>();
+const gameStore = createStore(io, players, roomOf, rooms);
+const gateTimings = new Map<string, Map<CaveGate['id'], GateTiming>>();
 const movement = new RateLimiter(24, 1000),
   chat = new RateLimiter(3, 5000),
   actions = new RateLimiter(3, 4000),
@@ -90,16 +113,22 @@ function detach(id: string) {
   const room = roomOf.get(id);
   if (room) {
     rooms.get(room)?.delete(id);
-    if (!rooms.get(room)?.size) rooms.delete(room);
+    if (!rooms.get(room)?.size) {
+      rooms.delete(room);
+      gateTimings.delete(room);
+    }
     io.sockets.sockets.get(id)?.leave(room);
   }
   roomOf.delete(id);
 }
 function join(id: string, map: MapId, position = spawn(map)) {
+  gameStore.resetArena(id);
+  const previousRoom = roomOf.get(id);
   detach(id);
+  const key = roomKey(isConnectedZone(map) ? 'plaza' : map);
   let instance = 0;
-  while ((rooms.get(`${roomKey(map)}:${instance}`)?.size || 0) >= 60) instance++;
-  const room = `${roomKey(map)}:${instance}`;
+  while ((rooms.get(`${key}:${instance}`)?.size || 0) >= 60) instance++;
+  const room = `${key}:${instance}`;
   if (!rooms.has(room)) rooms.set(room, new Set());
   rooms.get(room)!.add(id);
   roomOf.set(id, room);
@@ -109,10 +138,73 @@ function join(id: string, map: MapId, position = spawn(map)) {
   lastMove.set(id, Date.now());
   moveBudget.set(id, 40);
   io.to(id).emit('joined', { player: p, room });
-  roomCounts();
+  if (isConnectedZone(map)) {
+    const now = Date.now();
+    for (const gate of CAVE_GATES) io.to(id).emit('gate:state', gateState(gate.id, gateTimings.get(room)?.get(gate.id), now));
+  }
+  if (previousRoom && previousRoom !== room) roomCounts(previousRoom);
+  roomCounts(room);
 }
-function roomCounts() {
-  for (const [room, ids] of rooms) io.to(room).emit('room-count', { room, count: ids.size });
+function gateState(id: CaveGate['id'], timing: GateTiming | undefined, now: number): GateState {
+  return {
+    id, now,
+    timing: timing && { openedAt: timing.openedAt, closeAt: Number.isFinite(timing.closeAt) ? timing.closeAt : null },
+  };
+}
+function refreshGates(room: string, now: number) {
+  const timings = gateTimings.get(room) ?? new Map<CaveGate['id'], GateTiming>();
+  const feet = [...(rooms.get(room) ?? [])].map((id) => {
+    const player = players.get(id)!;
+    return { ...grandMetres(toWorldPoint(player.map, player)), height: (player.height ?? 0) + caveOffset(player.map)[1] };
+  });
+  for (const gate of CAVE_GATES) {
+    const previous = timings.get(gate.id);
+    const next = updateGate(previous, feet.some((p) => gateNear(gate, p)), now);
+    if (next === previous) continue;
+    if (next) timings.set(gate.id, next);
+    else timings.delete(gate.id);
+    io.to(room).emit('gate:state', gateState(gate.id, next, now));
+  }
+  if (timings.size) gateTimings.set(room, timings);
+  else gateTimings.delete(room);
+}
+function roomCounts(room?: string) {
+  for (const [key, ids] of rooms) {
+    if (room && room !== key) continue;
+    const counts = new Map<MapId, number>();
+    for (const id of ids) {
+      const map = players.get(id)!.map;
+      counts.set(map, (counts.get(map) ?? 0) + 1);
+    }
+    for (const id of ids) io.to(id).emit('room-count', { room: key, count: counts.get(players.get(id)!.map) });
+  }
+}
+
+function connectedPath(zone: ConnectedZone, a: Point, b: Point) {
+  const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8));
+  let height = (groundHeight(zone, fromWorldPoint(zone, a)) ?? 0) + caveOffset(zone)[1];
+  let previousZ = grandMetres(a).z;
+  let point = fromWorldPoint(zone, a);
+  for (let i = 1; i <= steps; i++) {
+    const world = { x: a.x + ((b.x - a.x) * i) / steps, y: a.y + ((b.y - a.y) * i) / steps };
+    const { x, z } = grandMetres(world);
+    const nextZone = zoneAtDoor(zone, x, z, height);
+    if (nextZone !== zone) {
+      const gate = CAVE_GATES.find((item) => item.id === (zone === 'plaza' ? nextZone : zone))!;
+      // A move from beside the ramp cannot enter the cave behind its gate.
+      const wasOutside = previousZ >= gate.origin[2];
+      if (wasOutside === (z >= gate.origin[2])) return;
+      zone = nextZone;
+    }
+    previousZ = z;
+    point = fromWorldPoint(zone, world);
+    const ground = groundHeight(zone, point);
+    if (ground === undefined || !walkable(zone, point.x, point.y)) return;
+    const nextHeight = ground + caveOffset(zone)[1];
+    if (Math.abs(nextHeight - height) > 0.25) return;
+    height = nextHeight;
+  }
+  return { zone, point, surface: height - caveOffset(zone)[1] };
 }
 function counts() {
   roomCounts();
@@ -124,6 +216,7 @@ io.use(async(socket,next)=>{
  catch{next(new Error('Phiên đăng nhập không hợp lệ. Hãy đăng nhập lại.'));}
 });
 io.on('connection', (socket) => {
+  gameStore.register(socket);
   const expiryCheck=setInterval(()=>{if(Date.now()>=socket.data.expiresAt){socket.emit('auth:expired');socket.disconnect(true);}},1000);
   socket.on('auth:refresh',async(raw)=>{
    try{const verified=await verifyToken(raw?.accessToken);if(verified.user.id!==socket.data.user.id)throw new Error('IDENTITY_CHANGED');Object.assign(socket.data,verified);}
@@ -161,11 +254,16 @@ io.on('connection', (socket) => {
       moving: false,
     });
     join(socket.id, 'plaza');
+    void gameStore.joined(socket);
     counts();
   });
   socket.on('travel', (target: unknown) => {
     const p = players.get(socket.id);
     if (!p || !validMap(target) || !actions.allow(socket.id)) return;
+    if (isConnectedZone(p.map) && isConnectedZone(target)) {
+      socket.emit('notice', 'Đến gần cổng và đi qua đường hầm để di chuyển.');
+      return;
+    }
     const portal = near(p.map, p);
     if (portal?.kind !== 'portal' || portal.target !== target) {
       socket.emit('notice', 'Hãy đến gần cổng hang để di chuyển.');
@@ -195,9 +293,17 @@ io.on('connection', (socket) => {
     } else if (item.kind === 'seat') {
       if (!p.seated) {
         const reachable = clearPath(p.map, p, item);
-        if (!reachable && p.map === 'liverpool') return;
+        if (!reachable && (p.map === 'liverpool' || p.map === 'city')) return;
+        if (p.map === 'city' && [...(rooms.get(roomOf.get(socket.id)!) ?? [])].some((id) => {
+          const other = players.get(id)!;
+          return other.id !== p.id && other.map === 'city' && other.seated && other.x === item.x && other.y === item.y;
+        })) {
+          socket.emit('notice', 'Chỗ ngồi này đang có người. This seat is occupied.');
+          return;
+        }
         if (reachable) Object.assign(p, { x: item.x, y: item.y });
         if (p.map === 'liverpool') p.direction = kopSeatFacing(item);
+        if (p.map === 'city') p.direction = CITY_SEAT_DIRECTION;
       }
       p.seated = !p.seated;
       p.moving = false;
@@ -214,6 +320,7 @@ io.on('connection', (socket) => {
     const p = players.get(socket.id);
     if (
       !p ||
+      p.seated ||
       !movement.allow(socket.id) ||
       !raw ||
       !Number.isFinite(raw.x) ||
@@ -222,19 +329,41 @@ io.on('connection', (socket) => {
       return;
     const now = Date.now(),
       elapsed = Math.min(0.5, (now - (lastMove.get(socket.id) || now)) / 1000);
-    const distance = Math.hypot(raw.x - p.x, raw.y - p.y),
-      budget = Math.min(80, (moveBudget.get(socket.id) || 0) + RUN_SPEED * elapsed);
-    const surface=groundHeight(p.map,raw);
-    const badHeight=surface===undefined || (raw.height!==undefined && (!Number.isFinite(raw.height) || Math.abs(raw.height-surface)>.45));
-    if (distance > budget + 0.5 || !clearPath(p.map, p, raw) || badHeight) {
-      socket.emit('correct', { x: p.x, y: p.y, height:p.height || 0 });
+    const room = roomOf.get(socket.id)!;
+    const connected = isConnectedZone(p.map);
+    const previous = toWorldPoint(p.map, p);
+    const distance = Math.hypot(raw.x - previous.x, raw.y - previous.y),
+      budget = (moveBudget.get(socket.id) || 0) + RUN_SPEED * elapsed;
+    const path = distance <= budget + 0.5 && (
+      isConnectedZone(p.map)
+        ? connectedPath(p.map, previous, raw)
+        : clearPath(p.map, p, raw)
+          ? { zone: p.map, point: raw, surface: groundHeight(p.map, raw) }
+          : undefined
+    );
+    if (!path || path.surface === undefined ||
+      (raw.height !== undefined && (!Number.isFinite(raw.height) || Math.abs(raw.height - path.surface) > 0.45)) ||
+      (connected && CAVE_GATES.some((gate) =>
+        Math.abs((p.height ?? 0) + caveOffset(p.map)[1] - gate.origin[1]) < 1.4 &&
+        gateBlocksMove(gate, grandMetres(previous), grandMetres(raw),
+          gateOpenness(gateTimings.get(room)?.get(gate.id), now))))) {
+      socket.emit('correct', {
+        x: p.x, y: p.y, height: p.height || 0,
+        ...(connected && raw.zone && raw.zone !== p.map ? { map: p.map } : {}),
+      });
       return;
     }
-    moveBudget.set(socket.id, Math.max(0, budget - distance));
-    if (distance > 1) p.seated = false;
-    p.x = raw.x;
-    p.y = raw.y;
-    p.height=surface;
+    // Keep a bounded burst allowance without discarding movement earned during a slow frame.
+    moveBudget.set(socket.id, Math.min(80, Math.max(0, budget - distance)));
+    const changedZone = p.map !== path.zone;
+    p.map = path.zone;
+    p.x = path.point.x;
+    p.y = path.point.y;
+    p.height = path.surface;
+    if (changedZone) {
+      gameStore.resetArena(socket.id);
+      roomCounts(room);
+    }
     p.direction = Number.isFinite(raw.direction) ? raw.direction : 0;
     p.moving = raw.moving === true;
     p.motion = !p.seated && raw.motion === 'Jump'
@@ -262,8 +391,11 @@ io.on('connection', (socket) => {
       return;
     }
     const recipients = [...(rooms.get(roomOf.get(socket.id)!) || [])].filter(
-      (id) =>
-        channel === 'room' || Math.hypot(players.get(id)!.x - p.x, players.get(id)!.y - p.y) < 600,
+      (id) => {
+        const recipient = players.get(id)!;
+        return recipient.map === p.map &&
+          (channel === 'room' || Math.hypot(recipient.x - p.x, recipient.y - p.y) < 600);
+      },
     );
     io.to(recipients).emit('chat', {
       id: crypto.randomUUID(),
@@ -306,11 +438,20 @@ io.on('connection', (socket) => {
   });
 });
 const timer = setInterval(() => {
+  const now = Date.now();
+  for (const room of rooms.keys()) {
+    if (room.startsWith(`${roomKey('plaza')}:`)) refreshGates(room, now);
+  }
   for (const [id, p] of players) {
     const ids = rooms.get(roomOf.get(id)!);
+    const here = toWorldPoint(p.map, p);
     const visible = [...(ids || [])]
       .map((i) => players.get(i)!)
-      .filter((q) => q && (q.id === id || Math.hypot(q.x - p.x, q.y - p.y) < 1050));
+      .filter((q) => {
+        if (!q) return false;
+        const there = toWorldPoint(q.map, q);
+        return Math.hypot(there.x - here.x, there.y - here.y) < 1050;
+      });
     io.to(id).emit('snapshot', visible);
   }
 }, 100);

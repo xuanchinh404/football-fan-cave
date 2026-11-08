@@ -1,8 +1,9 @@
+import { CityBanner, CityCrest } from './city/CityArchitecture';
 import { playerAvatarFile } from './PlayerAvatar3D';
 import { CAVES } from '../../../../../packages/shared/grandHall';
 import { type Quality } from './GrandHall';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   CapsuleCollider,
@@ -26,6 +27,27 @@ import {
 } from '../../../../../packages/shared/world';
 import { emit, on, type RemoteEvent, type StartEvent } from '../bridge';
 import { Character, Label } from './Models';
+import { CaveGate } from './CaveGate';
+import { enableGateAudio, playGateHinge } from './gateAudio';
+import { LiverpoolAsset } from './liverpool/LiverpoolKit';
+import { BlenderAsset } from './BlenderAsset';
+import { AssetModel } from './AssetModel';
+import { Plaque } from './IndoorKit';
+import {
+  CAVE_GATES,
+  type CaveGate as GateConfig,
+  gateNear,
+  gatePhase,
+  updateGate,
+  type GateState,
+  type GateTiming,
+} from '../../../../../packages/shared/caveGates';
+import {
+  fromWorldPoint,
+  isConnectedZone,
+  caveOffset,
+  zoneAtDoor,
+} from '../../../../../packages/shared/caveConnections';
 import { Environment } from './Environments';
 import { cameraDistances, readCameraSettings, type CameraSettings } from './cameraSettings';
 import {
@@ -35,6 +57,8 @@ import {
   playtestNear,
   toNetwork,
   toScene,
+  worldPosition,
+  zonePosition,
   type SceneId,
 } from './worldLayout';
 
@@ -54,6 +78,7 @@ type Controls = {
   distance: number;
   running: boolean;
   jump: boolean;
+  snapCamera: boolean;
   view: 'default' | 'atlas' | 'entrance' | 'photo';
 };
 type Runtime = {
@@ -73,19 +98,27 @@ type Runtime = {
   cameraHit?: number;
   seated?: boolean;
   effectsOff?: boolean;
+  gates: Map<string, GateTiming>;
+  corrections: number;
+  connected?: boolean;
 };
 const isTyping = () =>
   /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '') ||
   (document.activeElement as HTMLElement)?.isContentEditable;
 
-const defaultPitch = 0.25;
+// Pitch describes the lens direction. Positive pitch looks up.
+const defaultPitch = -0.25;
+const minPitch = THREE.MathUtils.degToRad(-65);
+const maxPitch = THREE.MathUtils.degToRad(70);
 const recenterDelay = 1;
+const cameraRadius = 0.24;
 const cameraCastRotation = { x: 0, y: 0, z: 0, w: 1 };
 
 function setOrbitHeading(controls: Controls, yaw: number) {
   controls.cameraYaw = yaw;
   controls.recenterYaw = null;
   controls.recenterIn = 0;
+  controls.snapCamera = true;
 }
 
 const movementKeys = [
@@ -126,7 +159,7 @@ function movementInput({ keys, joystick }: Controls): Point {
   };
 }
 
-function updateCameraRotation(c: Controls, facing: number, moving: boolean, delta: number) {
+function updateCameraYaw(c: Controls, facing: number, moving: boolean, delta: number) {
   if (!c.enabled || c.blocked || c.dragging || c.view !== 'default') return;
   const forward = c.cameraSettings.autoRotate && c.forwardIntent && moving;
   if (c.recenterYaw === null) {
@@ -138,10 +171,7 @@ function updateCameraRotation(c: Controls, facing: number, moving: boolean, delt
   const turn = Math.atan2(Math.sin(difference), Math.cos(difference));
   const response = isRunning(c) ? 4.8 : 4.2;
   c.cameraYaw += turn * (1 - Math.exp(-response * delta));
-  if (c.recenterYaw !== null) {
-    c.pitch = THREE.MathUtils.damp(c.pitch, defaultPitch, response, delta);
-    if (Math.abs(turn) < 0.002 && Math.abs(c.pitch - defaultPitch) < 0.002) c.recenterYaw = null;
-  }
+  if (c.recenterYaw !== null && Math.abs(turn) < 0.002) c.recenterYaw = null;
 }
 
 const emoteClips: Record<string, string> = {
@@ -202,12 +232,15 @@ export function World3D() {
       distance: cameraDistances[cameraSettings.distance],
       running: false,
       jump: false,
+      snapCamera: false,
       view: 'default',
     },
     collisions: 0,
     grounded: false,
     frames: 0,
     transitionAt: 0,
+    corrections: 0,
+    gates: new Map(),
   });
   const pendingPosition = useRef<Point | null>(null);
   const [revision, setRevision] = useState(0);
@@ -242,24 +275,22 @@ export function World3D() {
         return;
       }
       const p = e.x === undefined ? spawn(e.map) : { x: e.x, y: e.y! };
-      const [x, z] = toScene(e.map, p);
+
       const returning =
         (r.map === 'united' && e.map === 'plaza') ||
         (r.map === 'hall-of-legends' && e.map === 'united') ||
         (r.map === 'chelsea' && e.map === 'plaza') ||
         (r.map === 'chelsea-museum' && e.map === 'chelsea') ||
-        (r.map === 'liverpool' && e.map === 'plaza') ||
         (r.map === 'liverpool-museum' && e.map === 'liverpool') ||
         (r.map === 'arsenal' && e.map === 'plaza') ||
         (r.map === 'arsenal-museum' && e.map === 'arsenal');
       pendingPosition.current = p;
-      r.feet.set(x, groundHeight(e.map, p) || 0, z);
+      r.feet.set(...worldPosition(e.map, p, groundHeight(e.map, p) ?? 0));
       r.map = e.map;
       blur();
       setOrbitHeading(r.controls, returning ? Math.PI : 0);
       r.characterFacing = returning ? 0 : Math.PI;
       r.movementVelocity.set(0, 0, 0);
-      r.controls.pitch = defaultPitch;
       r.controls.view = 'default';
       // Chelsea arrivals are outside the trigger. Only legacy MU arrivals can
       // overlap the portal they came from and need a short transition cooldown.
@@ -281,17 +312,13 @@ export function World3D() {
     }
     function interact() {
       if (!r.controls.enabled || r.controls.blocked || isTyping()) return;
-      const position = toNetwork(r.map, r.feet.x, r.feet.z);
-      emit('movement', {
-        ...position,
-        height: groundHeight(r.map, position) || 0,
-        direction: r.characterFacing,
-        moving: r.moving,
-      });
+      const position = currentZonePoint();
+      syncMovement();
       emit('interact', { map: r.map, position, seated: r.seated });
     }
     function keydown(e: KeyboardEvent) {
       if (isTyping() || r.controls.blocked || !r.controls.enabled) return;
+      enableGateAudio();
       if (movementKeys.includes(e.code) || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
         e.preventDefault();
         r.controls.keys.add(e.code);
@@ -304,7 +331,8 @@ export function World3D() {
       if (e.code === 'KeyB' && !e.repeat) emit('toggle-emotes');
       if (e.code === 'KeyP' && !e.repeat) emit('screenshot');
       if (e.code === 'KeyK' && !e.repeat) emit('open-banter');
-      if (e.code === 'KeyE' && !e.repeat) interact();
+      if (!e.repeat && (e.code === 'KeyE' || (e.code === 'KeyF' && r.map === 'hall-of-legends')))
+        interact();
       if (e.code === 'Enter' && !e.repeat) {
         e.preventDefault();
         emit('focus-chat');
@@ -362,7 +390,8 @@ export function World3D() {
       const c = r.controls;
       const { sensitivity } = c.cameraSettings;
       c.cameraYaw -= dx * 0.006 * sensitivity;
-      c.pitch = THREE.MathUtils.clamp(c.pitch + dy * 0.005 * sensitivity, 0.07, 1.1);
+      if (c.view !== 'atlas')
+        c.pitch = THREE.MathUtils.clamp(c.pitch - dy * 0.005 * sensitivity, minPitch, maxPitch);
       c.recenterIn = recenterDelay;
       drag.x = e.clientX;
       drag.y = e.clientY;
@@ -390,7 +419,34 @@ export function World3D() {
     window.addEventListener('blur', blur);
     document.addEventListener('visibilitychange', blur);
     const off = [
+      on<boolean>('connected', (connected) => {
+        r.connected = connected;
+        if (connected) r.gates.clear();
+      }),
+      on<GateState>('gate-state', ({ id, timing, now }) => {
+        const localNow = Date.now();
+        const previous = gatePhase(r.gates.get(id), localNow);
+        const offset = localNow - now;
+        if (!timing) {
+          r.gates.delete(id);
+          return;
+        }
+        const local = {
+          openedAt: timing.openedAt + offset,
+          closeAt: timing.closeAt === null ? Infinity : timing.closeAt + offset,
+        };
+        r.gates.set(id, local);
+        const gate = CAVE_GATES.find((candidate) => candidate.id === id);
+        if (
+          gate &&
+          (previous === 'CLOSED' || previous === 'CLOSING') &&
+          gatePhase(local, localNow) === 'OPENING' &&
+          gateNear(gate, { x: r.feet.x, z: r.feet.z, height: r.feet.y })
+        )
+          playGateHinge();
+      }),
       on<StartEvent>('start', (e) => {
+        if (e.id !== 'demo') r.connected = true;
         r.profile = e.profile;
         r.self = e.id;
         r.controls.enabled = true;
@@ -401,16 +457,28 @@ export function World3D() {
         blur();
       }),
       on<Point>('joystick', (p) => {
+        if (p.x || p.y) enableGateAudio();
         r.controls.joystick = p;
         updateMovementBasis(r.controls);
       }),
       on<{ map: SceneId; x?: number; y?: number }>('travel', travel),
-      on<Point>('correct', (p) => {
+      on<Point & { map?: SceneId }>('correct', (p) => {
+        r.corrections++;
+        if (p.map && p.map !== r.map && isConnectedZone(p.map) && isConnectedZone(r.map)) {
+          r.map = p.map;
+          setMap(p.map);
+        }
         pendingPosition.current = p;
       }),
       on<RemoteEvent>('remotes', (e) => {
         r.self = e.self;
-        setRemotes(e.players.filter((p) => p.id !== e.self && p.map === r.map));
+        setRemotes(
+          e.players.filter(
+            (p) =>
+              p.id !== e.self &&
+              (p.map === r.map || (isConnectedZone(r.map) && isConnectedZone(p.map))),
+          ),
+        );
       }),
       on<{ id: string; text: string }>('bubble', (e) => {
         if (e.id === r.self || e.id === 'demo') {
@@ -442,7 +510,7 @@ export function World3D() {
       }),
       on<{ seated: boolean; direction?: number }>('seated', (v) => {
         r.seated = v.seated;
-        if (r.map === 'liverpool' && v.seated && v.direction !== undefined)
+        if ((r.map === 'liverpool' || r.map === 'city') && v.seated && v.direction !== undefined)
           r.characterFacing = v.direction;
       }),
       on('jump', () => {
@@ -506,9 +574,29 @@ export function World3D() {
       delete (window as any).__world3d;
     };
   }, [gl, camera, scene]);
+  function currentZonePoint() {
+    const r = runtime.current;
+    const point = toNetwork(isConnectedZone(r.map) ? 'plaza' : r.map, r.feet.x, r.feet.z);
+    return fromWorldPoint(r.map, point);
+  }
+  function syncMovement() {
+    const r = runtime.current;
+    if (pendingPosition.current || r.seated) return;
+    const point = toNetwork(isConnectedZone(r.map) ? 'plaza' : r.map, r.feet.x, r.feet.z);
+    const height = groundHeight(r.map, fromWorldPoint(r.map, point)) ?? 0;
+    emit('movement', {
+      ...point,
+      zone: r.map,
+      height,
+      direction: r.characterFacing,
+      moving: r.moving,
+      motion: !r.grounded ? 'Jump' : r.moving && isRunning(r.controls) ? 'Run' : undefined,
+      airOffset: r.grounded ? undefined : r.feet.y - height - caveOffset(r.map)[1],
+    });
+  }
   function publish(fps: number) {
     const r = runtime.current;
-    const position = toNetwork(r.map, r.feet.x, r.feet.z);
+    const position = currentZonePoint();
     emit('state', {
       map: r.map,
       position,
@@ -524,6 +612,7 @@ export function World3D() {
   const lastState = useRef(0),
     lastSync = useRef(0),
     frameTime = useRef({ total: 0, count: 0, fps: 60 });
+  const cameraDirection = useMemo(() => new THREE.Vector3(), []);
   useFrame((_, delta) => {
     const r = runtime.current,
       now = performance.now();
@@ -535,25 +624,42 @@ export function World3D() {
       frameTime.current.total = 0;
       frameTime.current.count = 0;
     }
+    const gateNow = Date.now();
+    if (isConnectedZone(r.map)) {
+      const zone = zoneAtDoor(r.map, r.feet.x, r.feet.z, r.feet.y);
+      if (zone !== r.map) {
+        r.map = zone;
+        setMap(zone);
+        emit('map-changed', zone);
+        publish(frameTime.current.fps);
+      }
+      if (!r.connected) {
+        for (const gate of CAVE_GATES) {
+          const timing = r.gates.get(gate.id);
+          const occupied =
+            r.controls.enabled && gateNear(gate, { x: r.feet.x, z: r.feet.z, height: r.feet.y });
+          const next = updateGate(timing, occupied, gateNow);
+          if (next === timing) continue;
+          if (next) r.gates.set(gate.id, next);
+          else r.gates.delete(gate.id);
+          if (
+            occupied &&
+            gatePhase(next, gateNow) === 'OPENING' &&
+            (gatePhase(timing, gateNow) === 'CLOSED' || gatePhase(timing, gateNow) === 'CLOSING')
+          )
+            playGateHinge();
+        }
+      }
+    }
     if (now - lastState.current > 100) {
       publish(frameTime.current.fps);
       lastState.current = now;
     }
     if (r.controls.enabled && now - lastSync.current > 75) {
-      const position = toNetwork(r.map, r.feet.x, r.feet.z);
-      const height = groundHeight(r.map, position) ?? 0;
-      emit('movement', {
-        ...position,
-        height,
-        direction: r.characterFacing,
-        moving: r.moving,
-        motion: !r.grounded ? 'Jump' : r.moving && isRunning(r.controls) ? 'Run' : undefined,
-        airOffset: r.grounded ? undefined : r.feet.y - height,
-      });
+      syncMovement();
       lastSync.current = now;
     }
-    // Walking through the centre of the opening is enough; E/the touch interaction also work.
-    const p = toNetwork(r.map, r.feet.x, r.feet.z),
+    const p = currentZonePoint(),
       portal = playtestNear(r.map, p);
     if (
       portal?.kind === 'portal' &&
@@ -564,23 +670,24 @@ export function World3D() {
       r.moving &&
       now - r.transitionAt > 2000
     ) {
-      const [px, pz] = toScene(r.map, portal);
+      const [px, , pz] = worldPosition(r.map, portal, 0);
       if (Math.abs(r.feet.x - px) < 1.3 && Math.abs(r.feet.z - pz) < 0.55) {
         r.transitionAt = now;
-        emit('movement', {
-          ...p,
-          height: groundHeight(r.map, p) || 0,
-          direction: r.characterFacing,
-          moving: true,
-        });
+        syncMovement();
         emit('interact', { map: r.map, position: p });
       }
     }
     // Read-only diagnostics for browser QA. No teleport/movement shortcuts.
+    camera.getWorldDirection(cameraDirection);
+    const [localX, localY, localZ] = zonePosition(r.map, r.feet.x, r.feet.y, r.feet.z);
     (window as any).__world3d = {
       engine: 'three-r3f-rapier',
       map: r.map,
-      position: { x: r.feet.x, y: r.feet.y, z: r.feet.z },
+      position: { x: localX, y: localY, z: localZ },
+      worldPosition: { x: r.feet.x, y: r.feet.y, z: r.feet.z },
+      controllerRevision: revision,
+      sessionId: r.self,
+      corrections: r.corrections,
       network: p,
       camera: {
         x: camera.position.x,
@@ -588,6 +695,8 @@ export function World3D() {
         z: camera.position.z,
         yaw: r.controls.cameraYaw,
         pitch: r.controls.pitch,
+        viewYaw: Math.atan2(-cameraDirection.x, -cameraDirection.z),
+        viewPitch: Math.asin(THREE.MathUtils.clamp(cameraDirection.y, -1, 1)),
       },
       direction: r.characterFacing,
       movementDirection: r.moving ? Math.atan2(r.movementVelocity.x, r.movementVelocity.z) : null,
@@ -599,6 +708,11 @@ export function World3D() {
       },
       moving: r.moving,
       trigger: r.portal,
+      gates: isConnectedZone(r.map)
+        ? Object.fromEntries(
+            CAVE_GATES.map((gate) => [gate.id, gatePhase(r.gates.get(gate.id), gateNow)]),
+          )
+        : {},
       cameraHit: r.cameraHit,
       grounded: r.grounded,
       seated: !!r.seated,
@@ -634,12 +748,38 @@ export function World3D() {
       gl.domElement.dataset.world = JSON.stringify((window as any).__world3d);
     gl.info.reset();
   });
+  const worldScene = isConnectedZone(map) ? 'plaza' : map;
   return (
     <>
-      <PortalTriggers key={`portals-${map}`} map={map} runtime={runtime} />
-      <Environment key={map} map={map} quality={quality} />
+      <PortalTriggers key={`portals-${worldScene}`} map={worldScene} runtime={runtime} />
+      <Environment
+        key={worldScene}
+        map={worldScene}
+        quality={quality}
+        player={() => runtime.current.feet}
+      />
+      {worldScene === 'plaza' &&
+        CAVE_GATES.map((gate) => (
+          <CaveGate
+            key={gate.id}
+            gate={gate}
+            timing={() => runtime.current.gates.get(gate.id)}
+            mark={<GateMark gate={gate} />}
+            flags={
+              gate.id === 'liverpool' && (
+                <LiverpoolAsset
+                  asset="banner"
+                  placements={[-3.55, 3.55].map((x) => ({
+                    position: [x, 4.52, 0.61],
+                    scale: 0.63,
+                  }))}
+                />
+              )
+            }
+          />
+        ))}
       <AvatarController
-        key={`${map}-${revision}`}
+        key={revision}
         map={map}
         runtime={runtime}
         pending={pendingPosition}
@@ -651,7 +791,7 @@ export function World3D() {
         <RemoteCharacter
           key={p.id}
           player={p}
-          map={map}
+          map={p.map as SceneId}
           bubble={remoteBubbles[p.id]}
           gesture={gestures[p.id]}
         />
@@ -665,6 +805,23 @@ export function World3D() {
     </>
   );
 }
+function GateMark({ gate }: { gate: GateConfig }) {
+  if (gate.id === 'city') return <Suspense fallback={null}><CityCrest size={0.7} /></Suspense>;
+  if (gate.id === 'liverpool')
+    return <LiverpoolAsset asset="bird" placements={[{ position: [0, 0, 0], scale: 0.48 }]} />;
+  if (gate.id === 'arsenal')
+    return (
+      <BlenderAsset
+        asset="gunners-emblem"
+        placements={[{ position: [0, 0, 0], scale: 0.42 }]}
+        shadow={false}
+      />
+    );
+  if (gate.id === 'chelsea')
+    return <AssetModel asset="blues-lion" position={[0, -0.35, 0]} scale={0.36} solid={false} />;
+  return <Plaque lines={[gate.titles[1]]} width={1.55} height={0.7} background={gate.color} />;
+}
+
 function AvatarController({
   map,
   runtime,
@@ -706,13 +863,16 @@ function AvatarController({
   const initial = useRef(runtime.current.feet.clone()).current;
   useBeforePhysicsStep(() => {
     const rb = body.current;
-    if (!rb || runtime.current.map !== map) return;
+    if (!rb) return;
     const r = runtime.current,
       c = r.controls,
       dt = 1 / 60;
     if (pending.current) {
-      const [x, z] = toScene(r.map, pending.current);
-      const h = groundHeight(r.map, pending.current!) || 0;
+      const [x, h, z] = worldPosition(
+        r.map,
+        pending.current,
+        groundHeight(r.map, pending.current) ?? 0,
+      );
       pending.current = null;
       rb.setTranslation({ x, y: h + 1.06, z }, true);
       rb.setNextKinematicTranslation({ x, y: h + 1.06, z });
@@ -727,8 +887,7 @@ function AvatarController({
       return;
     }
     if (spawnSteps.current++ < 3) {
-      const h = groundHeight(r.map, toNetwork(r.map, initial.x, initial.z)) ?? initial.y;
-      const stable = { x: initial.x, y: h + 1.06, z: initial.z };
+      const stable = { x: initial.x, y: initial.y + 1.06, z: initial.z };
       rb.setTranslation(stable, true);
       rb.setNextKinematicTranslation(stable);
       velocity.current = 0;
@@ -755,7 +914,7 @@ function AvatarController({
     const cos = Math.cos(basis);
     c.forwardIntent = iz < -0.1;
     if (hasMoveIntent) r.characterFacing = Math.atan2(-sin, -cos);
-    const step = speed * layouts[r.map].scale * dt;
+    const step = speed * layouts[isConnectedZone(r.map) ? 'plaza' : r.map].scale * dt;
     const dx = (ix * cos + iz * sin) * step;
     const dz = (-ix * sin + iz * cos) * step;
     if (c.jump && r.grounded && !c.blocked && c.enabled && !isTyping()) {
@@ -787,25 +946,27 @@ function AvatarController({
       r.collisions++;
     r.moving = moved;
     r.movementVelocity.set(movement.x / dt, 0, movement.z / dt);
-    if (p.y < -5 && performance.now() - blockedAt.current > 1000) {
+    if (p.y < caveOffset(r.map)[1] - 5 && performance.now() - blockedAt.current > 1000) {
       pending.current = spawn(r.map);
       blockedAt.current = performance.now();
     }
   });
   const target = useMemo(() => new THREE.Vector3(), []),
-    followCenter = useMemo(() => new THREE.Vector3(), []),
     desired = useMemo(() => new THREE.Vector3(), []),
     ray = useMemo(() => new THREE.Raycaster(), []),
-    cameraProbe = useMemo(() => new rapier.Ball(0.24), [rapier]);
+    cameraProbe = useMemo(() => new rapier.Ball(cameraRadius), [rapier]);
   const arm = useRef(0);
-  const lastView = useRef('');
+  const orbit = useRef<{ view: Controls['view'] | null; yaw: number; pitch: number }>({
+    view: null,
+    yaw: 0,
+    pitch: defaultPitch,
+  });
   const solids = useRef<THREE.Object3D[]>([]),
     lastScan = useRef(0),
-    lastAnimation = useRef(0),
-    cameraReady = useRef(false);
+    lastAnimation = useRef(0);
   useFrame((_, delta) => {
     const rb = body.current;
-    if (!rb || runtime.current.map !== map) return;
+    if (!rb) return;
     const r = runtime.current,
       c = r.controls,
       p = rb.translation();
@@ -820,8 +981,8 @@ function AvatarController({
       });
       lastAnimation.current = performance.now();
     }
-    updateCameraRotation(c, r.characterFacing, r.moving, delta);
-    // Sample the interpolated avatar, then keep the lag small enough to follow a sprint.
+    updateCameraYaw(c, r.characterFacing, r.moving, delta);
+    // Use the interpolated avatar as the pivot so movement can't tilt the view.
     if (avatar.current) {
       avatar.current.getWorldPosition(target);
       target.y += r.seated ? 1.05 : 1.4;
@@ -829,37 +990,35 @@ function AvatarController({
       target.set(p.x, p.y + 0.38, p.z);
     }
     const atlas = c.view === 'atlas';
-    if (atlas) target.set(0, r.map === 'plaza' ? 5 : 0, r.map === 'plaza' ? -9 : -3);
-    const snap = !cameraReady.current || lastView.current !== c.view;
-    if (snap) followCenter.copy(target);
-    else {
-      followCenter.lerp(target, 1 - Math.exp(-18 * delta));
-      followCenter.sub(target).clampLength(0, 0.45).add(target);
-    }
-    const dist = atlas ? (r.map === 'plaza' ? 125 : 32) : c.distance;
-    const pitch = atlas ? (r.map === 'plaza' ? 0.94 : 0.28) : c.pitch;
-    const horizontal = dist * Math.cos(pitch);
-    desired
-      .set(
-        Math.sin(c.cameraYaw) * horizontal,
-        Math.sin(pitch) * dist,
-        Math.cos(c.cameraYaw) * horizontal,
-      )
-      .add(followCenter);
-    if (atlas && r.map !== 'plaza') {
-      const b = sceneBounds(r.map);
-      desired.x = THREE.MathUtils.clamp(desired.x, b.left + 0.5, b.right - 0.5);
-      desired.z = THREE.MathUtils.clamp(desired.z, b.top + 0.5, b.bottom - 0.5);
-      desired.y = Math.min(10.5, desired.y);
-    }
+    const atlasMap = isConnectedZone(r.map) ? 'plaza' : r.map;
+    if (atlas) target.set(0, atlasMap === 'plaza' ? 5 : 0, atlasMap === 'plaza' ? -9 : -3);
+    const rendered = orbit.current;
+    const snap = c.snapCamera || rendered.view !== c.view;
+    c.snapCamera = false;
+    const dist = atlas ? (atlasMap === 'plaza' ? 125 : 32) : c.distance;
+    const pitch = atlas ? (atlasMap === 'plaza' ? -0.94 : -0.28) : c.pitch;
+    rendered.yaw = snap ? c.cameraYaw : THREE.MathUtils.damp(rendered.yaw, c.cameraYaw, 22, delta);
+    rendered.pitch = snap ? pitch : THREE.MathUtils.damp(rendered.pitch, pitch, 22, delta);
+    const horizontal = Math.cos(rendered.pitch);
+    desired.set(
+      Math.sin(rendered.yaw) * horizontal,
+      -Math.sin(rendered.pitch),
+      Math.cos(rendered.yaw) * horizontal,
+    );
     if (atlas) {
+      desired.multiplyScalar(dist).add(target);
+      if (atlasMap !== 'plaza') {
+        const b = sceneBounds(atlasMap);
+        desired.x = THREE.MathUtils.clamp(desired.x, b.left + 0.5, b.right - 0.5);
+        desired.z = THREE.MathUtils.clamp(desired.z, b.top + 0.5, b.bottom - 0.5);
+        desired.y = Math.min(10.5, desired.y);
+      }
       r.cameraHit = undefined;
       camera.position.copy(desired);
     } else {
-      // Sweep the actual sightline, including follow lag, before placing the camera.
-      const requested = desired.sub(target).length();
-      ray.set(target, desired.normalize());
-      ray.far = snap ? requested : Math.max(requested, arm.current);
+      // Shorten the arm along the rendered sightline without changing its angles.
+      ray.set(target, desired);
+      ray.far = snap ? dist : Math.max(dist, arm.current);
       const physicsHit = world.castShape(
         target,
         cameraCastRotation,
@@ -868,7 +1027,7 @@ function AvatarController({
         0.02,
         ray.far,
         false,
-        rapier.QueryFilterFlags.ONLY_FIXED | rapier.QueryFilterFlags.EXCLUDE_SENSORS,
+        rapier.QueryFilterFlags.EXCLUDE_DYNAMIC | rapier.QueryFilterFlags.EXCLUDE_SENSORS,
         undefined,
         undefined,
         rb,
@@ -882,22 +1041,23 @@ function AvatarController({
         lastScan.current = performance.now();
       }
       const visualHit = ray.intersectObjects(solids.current, false)[0];
-      const limit = Math.min(
-        physicsHit?.time_of_impact ?? Infinity,
-        visualHit ? visualHit.distance - 0.24 : Infinity,
+      const limit = Math.max(
+        0,
+        Math.min(
+          physicsHit?.time_of_impact ?? Infinity,
+          visualHit ? visualHit.distance - cameraRadius : Infinity,
+        ),
       );
       r.cameraHit = Number.isFinite(limit) ? limit : undefined;
-      const safeArm = Math.max(0.06, limit);
-      const goal = Math.min(requested, safeArm);
       arm.current = snap
-        ? goal
-        : Math.min(safeArm, THREE.MathUtils.damp(arm.current, goal, 6, delta));
+        ? Math.min(dist, limit)
+        : Math.min(limit, THREE.MathUtils.damp(arm.current, dist, 6, delta));
       camera.position.copy(target).addScaledVector(ray.ray.direction, arm.current);
     }
-    camera.lookAt(target);
-    if (avatar.current) avatar.current.visible = atlas || arm.current >= 0.75;
-    cameraReady.current = true;
-    lastView.current = c.view;
+    // The look point stays in front of the lens even when the arm retracts to zero.
+    camera.lookAt(atlas ? target : desired.copy(camera.position).sub(ray.ray.direction));
+    if (avatar.current) avatar.current.visible = atlas || arm.current * horizontal >= 0.75;
+    rendered.view = c.view;
   });
   return (
     <RigidBody
@@ -912,12 +1072,17 @@ function AvatarController({
       <group ref={avatar} position={[0, -1.02, 0]}>
         <group
           position={
-            map === 'liverpool' && animation.seated ? seatOffset(animation.direction) : undefined
+            (map === 'liverpool' || map === 'city') && animation.seated ? seatOffset(animation.direction, map) : undefined
           }
         >
           <Character
             color={TEAMS.find((t) => t.id === profile.team)?.color}
-            name={`${profile.nickname} · BẠN`}
+            hideTemplateCrest={isConnectedZone(map) || map === 'liverpool-museum'}
+            name={
+              isConnectedZone(map) || map === 'liverpool-museum' || map === 'hall-of-legends'
+                ? ''
+                : `${profile.nickname} · BẠN`
+            }
             moving={animation.moving}
             direction={animation.direction}
             running={animation.running}
@@ -935,8 +1100,8 @@ function AvatarController({
     </RigidBody>
   );
 }
-function seatOffset(direction: number): [number, number, number] {
-  return [-Math.sin(direction) * 0.55, 0.19, -Math.cos(direction) * 0.55];
+function seatOffset(direction: number, map: SceneId): [number, number, number] {
+  return [-Math.sin(direction) * 0.55, map === 'city' ? 0.2 : 0.19, -Math.cos(direction) * 0.55];
 }
 function Billboard({ text }: { text: string }) {
   const ref = useRef<THREE.Group>(null);
@@ -959,19 +1124,21 @@ function RemoteCharacter({
   gesture?: string;
 }) {
   const ref = useRef<THREE.Group>(null),
-    [x, z] = toScene(map, player);
-  const y = (player.height ?? 0) + (player.airOffset ?? 0) + 0.04;
+    [x, y, z] = worldPosition(map, player, (player.height ?? 0) + (player.airOffset ?? 0) + 0.04);
+  const initial = useRef<[number, number, number]>([x, y, z]).current;
+  const target = useMemo(() => new THREE.Vector3(), []);
   useFrame((_, dt) => {
-    ref.current?.position.lerp(new THREE.Vector3(x, y, z), Math.min(1, dt * 12));
+    ref.current?.position.lerp(target.set(x, y, z), Math.min(1, dt * 12));
   });
   // The legacy direction is now interpreted consistently as atan2(x, z) by 3D clients.
   return (
-    <group ref={ref} position={[x, y, z]}>
+    <group ref={ref} position={initial}>
       <group
-        position={map === 'liverpool' && player.seated ? seatOffset(player.direction) : undefined}
+        position={(map === 'liverpool' || map === 'city') && player.seated ? seatOffset(player.direction, map) : undefined}
       >
         <Character
           color={TEAMS.find((t) => t.id === player.team)?.color}
+          hideTemplateCrest={isConnectedZone(map) || map === 'liverpool-museum'}
           name={player.nickname}
           moving={player.moving}
           direction={player.direction}
@@ -1020,30 +1187,35 @@ function Dust({ map }: { map: SceneId }) {
 /** Sensor-only trigger volumes never obstruct the character controller or camera ray. */
 function PortalTriggers({ map, runtime }: { map: SceneId; runtime: React.RefObject<Runtime> }) {
   const { rapier } = useRapier();
+  const maps: SceneId[] = map === 'plaza' ? [map, ...CAVES.map((cave) => cave.id)] : [map];
   return (
     <RigidBody type="fixed" colliders={false}>
-      {playtestInteractions(map)
-        .filter((p) => p.kind === 'portal' && (map !== 'plaza' || isOpenCave(p.target)))
-        .map((p) => {
-          const [x, z] = toScene(map, p),
-            h = groundHeight(map, p) || 0;
-          return (
-            <CuboidCollider
-              key={p.id}
-              args={[1.3, 2, 0.55]}
-              position={[x, h + 2, z]}
-              sensor
-              activeCollisionTypes={rapier.ActiveCollisionTypes.ALL}
-              onIntersectionEnter={(e) => {
-                if (e.rigidBodyObject?.name === 'player-capsule') runtime.current.portal = p.id;
-              }}
-              onIntersectionExit={(e) => {
-                if (e.rigidBodyObject?.name === 'player-capsule' && runtime.current.portal === p.id)
-                  runtime.current.portal = undefined;
-              }}
-            />
-          );
-        })}
+      {maps.flatMap((zone) =>
+        playtestInteractions(zone)
+          .filter((p) => p.kind === 'portal' && (zone !== 'plaza' || isOpenCave(p.target)))
+          .map((p) => {
+            const [x, h, z] = worldPosition(zone, p, groundHeight(zone, p) ?? 0);
+            return (
+              <CuboidCollider
+                key={p.id}
+                args={[1.3, 2, 0.55]}
+                position={[x, h + 2, z]}
+                sensor
+                activeCollisionTypes={rapier.ActiveCollisionTypes.ALL}
+                onIntersectionEnter={(e) => {
+                  if (e.rigidBodyObject?.name === 'player-capsule') runtime.current.portal = p.id;
+                }}
+                onIntersectionExit={(e) => {
+                  if (
+                    e.rigidBodyObject?.name === 'player-capsule' &&
+                    runtime.current.portal === p.id
+                  )
+                    runtime.current.portal = undefined;
+                }}
+              />
+            );
+          }),
+      )}
     </RigidBody>
   );
 }

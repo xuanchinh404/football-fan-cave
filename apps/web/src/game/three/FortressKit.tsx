@@ -10,6 +10,7 @@ export const WINE = '#411424';
 export function FortressLight({ museum, shadow }: { museum?: boolean; shadow: boolean }) {
   return (
     <>
+      {museum && <>
       <RoomReflections intensity={museum ? 0.7 : 0.44} />
       <color attach="background" args={['#251521']} />
       <fog attach="fog" args={['#34202c', 32, 77]} />
@@ -26,6 +27,7 @@ export function FortressLight({ museum, shadow }: { museum?: boolean; shadow: bo
         shadow-camera-top={26}
         shadow-normalBias={0.06}
       />
+      </>}
       <pointLight position={[0, 7, -10]} color="#ff9a50" intensity={150} distance={24} />
       <pointLight position={[-12, 5, 5]} color="#ffc384" intensity={110} distance={18} />
       {museum && <pointLight position={[8, 6, -6]} color="#ffc98e" intensity={150} distance={20} />}

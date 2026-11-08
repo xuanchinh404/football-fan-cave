@@ -7,6 +7,7 @@ export function ActionBar({
   emojiOpen,
   interact,
   canInteract = false,
+  interactionKey = 'E',
   minigame,
 }: {
   chat: () => void;
@@ -15,6 +16,7 @@ export function ActionBar({
   emojiOpen: boolean;
   interact?: () => void;
   canInteract?: boolean;
+  interactionKey?: string;
   minigame?: () => void;
 }) {
   return (
@@ -49,7 +51,7 @@ export function ActionBar({
             <Footprints size={27} />
           </i>
           <span>Tương tác</span>
-          <kbd>E</kbd>
+          <kbd>{interactionKey}</kbd>
         </button>
       )}
       <button className="banter-action" onClick={shop} aria-label="Cà khịa">

@@ -42,7 +42,7 @@ export function GameCanvas() {
       </GameErrorBoundary>
       <div className="three-controls">
         <b>3D PLAYTEST</b>
-        <span>WASD / Joystick · Kéo / vuốt để xoay 360° · Cuộn để zoom · R đặt lại camera</span>
+        <span>WASD / Joystick · Kéo / vuốt để nhìn quanh · Cuộn để zoom · R căn hướng ngang</span>
       </div>
     </div>
   );

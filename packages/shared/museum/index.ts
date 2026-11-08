@@ -11,6 +11,9 @@ export const leagueTitles = leagueData;
 export const otherTrophies = otherData;
 export const trophies = [...leagueTitles, ...otherTrophies];
 export const managers = managerData;
+export const managerPortraits = managers.filter(
+  (m): m is Manager & { portrait: number } => m.portrait !== undefined,
+);
 export const historyTimeline = historyData;
 export const HALL = layout;
 export const matches = [
@@ -85,18 +88,6 @@ export const exhibits = [
     source: layout.sources.managers,
     type: 'statue',
   },
-];
-export const hallObstacles = [
-  { x: 1672, y: 3690, w: 48, h: 80 },
-  { x: 1880, y: 3690, w: 48, h: 80 }, // exit arch posts
-  ...legends.map((l) => ({ x: l.x - 49, y: l.y - 42, w: 98, h: 42 })),
-  { x: 2930, y: 3360, w: 140, h: 90 }, // library kiosk
-  ...[400, 3050].flatMap((x) => [1450, 2900].map((y) => ({ x: x - 35, y: y - 35, w: 70, h: 70 }))), // columns
-  ...trophies.map((t) => ({ x: t.x - 49, y: t.y - 42, w: 98, h: 42 })),
-  ...managers.map((m) => ({ x: m.x - 54, y: m.y - 85, w: 108, h: 85 })),
-  ...historyTimeline.map((h) => ({ x: h.x - 115, y: h.y - 100, w: 230, h: 100 })),
-  ...matches.map((m) => ({ x: m.x - 110, y: m.y - 100, w: 220, h: 100 })),
-  { x: 450, y: 900, w: 400, h: 110 },
 ];
 const expected: Record<string, number> = {
   league: 20,

@@ -158,3 +158,23 @@
     font-size: 12px;
   }
 }
+
+.mu-history-photo {
+  margin: 0 0 12px;
+}
+.mu-history-photo img {
+  display: block;
+  width: 100%;
+  max-height: 28vh;
+  object-fit: contain;
+  background: #25121c;
+}
+.mu-history-photo figcaption {
+  padding-top: 7px;
+  color: #dac4ab;
+  font-size: 12px;
+}
+.mu-history-photo a,
+.museum-exhibit a {
+  color: #f1c17d;
+}

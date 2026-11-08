@@ -18,7 +18,7 @@ async function samplePerformance(page: Page, label: string) {
 async function enterChelsea(page: Page) {
   await toAvenue(page);
   await axis(page, 'x', 15);
-  await walk(page, 'w', (s) => s.map === 'chelsea');
+  await walk(page, 'w', (s) => s.map === 'chelsea' && s.position.z <= 10);
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
 }
 async function enterMuseum(page: Page, capture = false) {

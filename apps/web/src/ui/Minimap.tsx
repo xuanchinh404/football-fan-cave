@@ -1,9 +1,17 @@
+import { CityMinimap } from './CityMinimap';
+import {
+  CAVE_CONNECTIONS,
+  isCaveZone,
+  isRefuge,
+} from '../../../../packages/shared/caveConnections';
 import { TeamMinimap } from './TeamMinimap';
 import { CaveMinimap } from './CaveMinimap';
 import { MuseumMinimap } from './MuseumMinimap';
 import { layouts, playtestInteractions, type SceneId } from '../game/three/worldLayout';
 import {
   CAVES,
+  caveEntrance,
+  CORRIDOR_HALF_WIDTH,
   GRAND_PLACES,
   GRAND_SURFACES,
   grandMetres,
@@ -22,6 +30,68 @@ export function Minimap({
   onClick?: () => void;
   heading?: number;
 }) {
+  if (map === 'city')
+    return <CityMinimap position={position} heading={heading} large={large} onClick={onClick} />;
+  if (
+    isCaveZone(map) &&
+    map !== 'liverpool' &&
+    (isRefuge(map) || position.y > layouts[map].bounds.b)
+  ) {
+    const cave = CAVES.find((candidate) => candidate.id === map)!;
+    const { origin, offset, scale } = CAVE_CONNECTIONS[map];
+    const bounds = layouts[map].bounds;
+    const left = (bounds.l - origin.x) * scale;
+    const top = (bounds.t - origin.y) * scale;
+    const width = (bounds.r - bounds.l) * scale;
+    const bottom = (bounds.b - origin.y) * scale;
+    const gate = caveEntrance(cave).z - offset[2];
+    const px = (position.x - origin.x) * scale;
+    const pz = (position.y - origin.y) * scale;
+    const contents = (
+      <svg
+        role="img"
+        aria-label={`Bản đồ ${cave.name}`}
+        viewBox={`${left - 3} ${top - 4} ${width + 6} ${gate - top + 8}`}
+      >
+        <rect
+          x={left}
+          y={top}
+          width={width}
+          height={bottom - top}
+          fill="#3e384f"
+          stroke={cave.color}
+        />
+        <rect
+          x={-CORRIDOR_HALF_WIDTH}
+          y={bottom}
+          width={CORRIDOR_HALF_WIDTH * 2}
+          height={gate - bottom}
+          fill="#67505d"
+        />
+        <path
+          d={`M${-CORRIDOR_HALF_WIDTH} ${gate}H${CORRIDOR_HALF_WIDTH}`}
+          stroke={cave.color}
+          strokeWidth="0.8"
+        />
+        <text x="0" y={top + 3.8} textAnchor="middle" fontSize="2.2" fill="#fff1ce">
+          Sảnh Trú Ẩn
+        </text>
+        <circle cx={px} cy={pz} r="1.1" fill="#fff1ce" />
+        <path
+          d="M0 -1.8L-0.8 0.6 0 0.3 0.8 0.6Z"
+          fill="#fff"
+          transform={`translate(${px} ${pz}) rotate(${180 - (heading * 180) / Math.PI})`}
+        />
+      </svg>
+    );
+    return large ? (
+      <div className="map-large">{contents}</div>
+    ) : (
+      <button className="mini-map" onClick={onClick} aria-label="Mở bản đồ lớn">
+        {contents}
+      </button>
+    );
+  }
   if (map === 'liverpool' || map === 'liverpool-museum')
     return (
       <TeamMinimap

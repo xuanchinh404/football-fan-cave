@@ -7,6 +7,8 @@ from math import cos, pi, sin
 from pathlib import Path
 from random import Random
 
+import sys
+
 import bpy
 from mathutils import Vector
 
@@ -34,8 +36,8 @@ def material(name, color, metal=0, roughness=.7, glow=0):
 
 
 stone = [material(f'Volcanic {i}', c) for i, c in enumerate([
-    (.08, .026, .044), (.16, .041, .059), (.25, .057, .075), (.34, .084, .093),
-    (.10, .044, .07), (.22, .078, .103), (.12, .025, .04),
+    (.059, .021, .043), (.106, .028, .050), (.17, .04, .066), (.23, .053, .081),
+    (.077, .034, .071), (.135, .049, .076), (.076, .021, .041),
 ])]
 paving = [material(f'Paving {i}', (v, v*.43, v*.55), .18, .43) for i, v in enumerate([.09,.13,.17,.20,.24])]
 marble = [material(f'Marble {i}', c, .23, .28) for i,c in enumerate([
@@ -61,6 +63,7 @@ ruby = [material('Ruby '+str(i), c, .35, .21, g) for i,(c,g) in enumerate([
 light = material('Amber inlay', (1,.28,.038), .18, .32, 2)
 flame = material('Candle glass', (1,.62,.17), .07, .29, 2.5)
 velvet = material('Curtains', (.28,.014,.04), .04, .84)
+carpet = material('Woven burgundy', (.16,.007,.019), 0, .93)
 
 
 def poly(points, faces, mat, smooth=False):
@@ -141,7 +144,12 @@ def save(name):
         obj = bpy.data.objects.new(mesh.name, mesh)
         collection.objects.link(obj)
         obj.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=str(OUT / (name + '.glb')), use_selection=True, export_format='GLB')
+    export = bpy.ops.export_scene.gltf
+    compression = {'export_meshopt_compression_enable': True} if (
+        'export_meshopt_compression_enable' in export.get_rna_type().properties
+    ) else {}
+    export(filepath=str(OUT / (name + '.glb')), use_selection=True, export_format='GLB',
+           export_animations=False, **compression)
     bpy.ops.object.select_all(action='DESELECT')
     geometry.clear()
     scenes[name] = collection
@@ -464,6 +472,15 @@ def vault(width,z0,z1,height,museum=False):
                 if side>0:
                     faces=[tuple(reversed(face)) for face in faces]
                 poly(points,faces,velvet if museum else rng.choice(stone[:5]))
+    # End caps meet the masonry above both thresholds, where the vault rises
+    # above the top of the straight wall.
+    for z in [z0, z1]:
+        for i in range(32):
+            a,b = i*pi/32,(i+1)*pi/32
+            x0,x1 = width*cos(a),width*cos(b)
+            y0,y1 = spring+height*sin(a),spring+height*sin(b)
+            points = [(x0,spring-.12,z),(x1,spring-.12,z),(x1,y1,z),(x0,y0,z)]
+            poly(points,[(0,1,2,3),(3,2,1,0)],marble[3] if museum else rng.choice(stone[:4]))
     if museum:
         for z in [-17,-6,4,14]:
             for dz in [-.18,.18]:
@@ -487,12 +504,35 @@ def cave():
     for x in [8.9,15.1]:
         masonry(x,-21.1,13.8,7.5,'z')
     masonry(12,-28.2,6.8,7.5)
+    block(12,8.72,-13.8,5.45,4.55,1.02,stone[1],.17)
+    for i in range(5):
+        block(12,6.55+i*.81,-13.25,5.55,.74,.55,stone[i],.19)
+    block(12,6.88,-21.15,6.7,.44,14.1,stone[0],.16)
     masonry(-18.1,-10,7.1,5,'z')
     masonry(-7.9,-10,7.1,5,'z')
     masonry(4.2,15.8,9,8.5)
     masonry(18.6,15.8,2.8,8.5)
     masonry(-10.5,19.25,20,8)
     vault(20.1,-13.9,19.4,8.3)
+    for x,z,h in [(-18.9,-11,9.5),(-17.6,-12.9,10.8),(-7.8,-12.8,9.1),
+                  (-6.7,-13.1,8.3),(7.3,-13,9.4),(17.8,-13,9.6),(19.4,-9.3,11.2)]:
+        outcrop(x,z,h,.78)
+    for x,z,scale in [(-7.1,-12,2.45),(6.75,-11.9,2.55),(-17.15,9.9,2.35),
+                      (-17.45,-6.7,2.35),(18.7,12,2.2),(9.4,12.6,1.6)]:
+        crystal(x,.012,z,scale)
+    lathe(0,0,4.7,[(0,.012),(3.61,.012),(3.68,.022),(3.69,.038),(3.51,.042),(0,.042)],red,64)
+    for r in [3.28,3.57]:
+        ring(0,.048,4.7,r,.043,gold)
+    for i in range(12):
+        a = pi*i/6
+        x,z = 3.42*cos(a),4.7+3.42*sin(a)
+        block(x,.05,z,.13,.024,.13,gold,.02,a)
+    for s in [-1,1]:
+        for i in range(5):
+            a = i*.23
+            x,z=s*(2.3+.48*cos(a)),4.7+(.2+i*.38)
+            oval(x,.052,z,.17,.02,.34,gold,9,4,s*a)
+
     arch(-13,-6.2,3.5,2.72,1.02)
     arch(-13,10.3,3.65,2.6,1.02)
     arch(13,15.8,3.75,3.25,1.02)
@@ -526,14 +566,6 @@ def cave():
     for x in [-19.25,-7.4]:
         for z in [-4,2,11]:
             lantern(x,2.5,z)
-    for x in [10.1,17.1,19]:
-        z=20.5+rng.random()*5
-        lathe(x,-.05,z,[(.21,0),(.15,2.4)],wood,9)
-        for dx,dz in [(-.6,0),(.6,.3),(0,-.6),(0,.65),(0,0)]:
-            oval(x+dx,2.7+rng.random()*.9,z+dz,.85,1.2,.85,rng.choice(leaf),10,6)
-    block(13,-.32,24,18,.5,12,leaf[2],.2)
-    for x,y,z,w,h in [(4,1.5,28,6,2.7),(19,1.7,31,8,4),(9,0,33,14,3.4)]:
-        oval(x,y,z,w,h,4,leaf[1],15,7)
 
 
 def museum():
@@ -552,9 +584,16 @@ def museum():
     vault(22.8,-23,21.6,7,True)
     curtain(0,-15.9,36,4.4,4.6)
     # Raised fabric weave and inlaid flooring remain below the character capsule.
-    block(0,.02,9.6,8,.037,19.9,red,.022)
+    block(0,.02,9.6,8,.037,19.9,carpet,.022)
     for x in [-3.92,-3.77,3.77,3.92]:
         tube([(x,.052,-.32),(x,.052,19.4)],.032,gold)
+    for z in [6.8,13.9]:
+        for x in [-2.12,2.12]:
+            ring(x,.052,z,1.2,.021,bronze)
+            ring(x,.052,z,1.13,.014,gold)
+            for i in range(8):
+                a=i*pi/4
+                block(x+1.02*cos(a),.051,z+1.02*sin(a),.075,.015,.075,gold,.012,a)
     for x in [-5,-4.5,4.5,5]:
         tube([(x,.016,19.1),(x,.016,-1.8)],.022,bronze)
     for z in [13,4.2,-6.5,-17.4]:
@@ -609,6 +648,8 @@ def shirt():
 
 cave()
 save('cave')
+if '--cave-only' in sys.argv:
+    sys.exit(0)
 museum()
 save('museum')
 bird()

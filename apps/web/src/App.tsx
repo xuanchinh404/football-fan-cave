@@ -1,3 +1,6 @@
+import { CITY_COPY, cityInteractionLabel, cityLanguage, cityText, type CitySection } from '../../../packages/shared/city/content';
+import { CITY_SEAT_DIRECTION, cityArea } from '../../../packages/shared/city/layout';
+import { CityCollection, CityHUD, CityMatchBoard } from './ui/CityHUD';
 import { clearPath } from '../../../packages/shared/world';
 import {
   LIVERPOOL_VERIFIED_AT,
@@ -19,9 +22,12 @@ import { ChelseaHUD, ChelseaExhibitPanel } from './ui/ChelseaHUD';
 import { chelseaExhibits, chelseaMatchState } from '../../../packages/shared/chelsea/content';
 import { BLUES_CAVE, BLUES_MUSEUM } from '../../../packages/shared/chelsea/layout';
 import './ui/chelsea-3d.css';
+import { isCaveZone, isRefuge } from '../../../packages/shared/caveConnections';
 import { CAVES, GRAND_PLACES } from '../../../packages/shared/grandHall';
 import { GrandHUD, GrandPanel } from './ui/GrandHUD';
-import { exhibits, HALL } from '../../../packages/shared/museum';
+import { HALL } from '../../../packages/shared/museum';
+import { hallLanguage, hallStations, hallText } from '../../../packages/shared/museum/hall';
+import { RedDevilsExhibitPanel } from './ui/RedDevilsExhibitPanel';
 import { MuseumHUD } from './ui/MuseumHUD';
 import './ui/museum.css';
 import { CAVE_EVENTS, RED_CAVE } from '../../../packages/shared/cave';
@@ -86,6 +92,7 @@ import { ActionBar } from './ui/ActionBar';
 import { AdvanceControl } from './ui/AdvanceControl';
 import { WorldSignposts } from './ui/WorldSignposts';
 type Modal =
+  | 'city-collection'
   | 'exhibit'
   | 'quiz'
   | 'join'
@@ -134,9 +141,10 @@ export default function App({
     ),
     [copied, setCopied] = useState(false);
   const [exhibitId, setExhibitId] = useState('');
+  const [citySection, setCitySection] = useState<CitySection>('overview');
+  const [cityNews, setCityNews] = useState(false);
   const [cameraSettings, setCameraSettings] = useState(readCameraSettings);
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
-  const exhibit = exhibits.find((e) => e.id === exhibitId);
   const kopExhibit = liverpoolExhibits.find((e) => e.id === exhibitId);
   const gunnersExhibit = arsenalExhibits.find((e) => e.id === exhibitId);
   const bluesExhibit = chelseaExhibits.find((e) => e.id === exhibitId);
@@ -171,12 +179,29 @@ export default function App({
         const w = worldRef.current,
           item = playtestInteractions(w.map).find((p) => p.kind === 'exhibit' && p.id === id);
         if (!item || modalRef.current) return;
-        if (Math.hypot(item.x - w.position.x, item.y - w.position.y) > 125) {
-          notice('Đến gần hiện vật rồi nhấn E hoặc bấm vào để đọc.');
+        if (
+          Math.hypot(item.x - w.position.x, item.y - w.position.y) > (item.inspectRadius ?? 125)
+        ) {
+          const english = hallLanguage(document.documentElement.lang) === 'en';
+          notice(w.map === 'hall-of-legends'
+            ? (english ? 'Move closer and press F or tap the exhibit.' : 'Đến gần hiện vật rồi nhấn F hoặc chạm vào để đọc.')
+            : 'Đến gần hiện vật rồi nhấn E hoặc bấm vào để đọc.');
           return;
         }
         setExhibitId(id);
         setModal('exhibit');
+      }),
+      on<string>('city-exhibit', (id) => {
+        if (worldRef.current.map !== 'city' || cityArea(worldRef.current.position) !== 'museum') return;
+        setExhibitId(id);
+        setModal('exhibit');
+      }),
+      on<boolean>('city-board', (news) => {
+        if (worldRef.current.map !== 'city') return;
+        const area = cityArea(worldRef.current.position);
+        if (area !== 'hall' && area !== 'lounge') return;
+        setCityNews(news);
+        setModal('score');
       }),
       on('focus-chat', () => {
         setChatVisible(true);
@@ -227,6 +252,7 @@ export default function App({
         emit('seated', data);
       })
       .on('relocate', (data) => emit('travel', data))
+      .on('gate:state', (data) => emit('gate-state', data))
       .on('chat', chat)
       .on('emoji', emoji)
       .on('notice', notice)
@@ -247,6 +273,7 @@ export default function App({
         'room-count',
         'seated',
         'relocate',
+        'gate:state',
         'chat',
         'emoji',
         'notice',
@@ -281,6 +308,11 @@ export default function App({
   function interactAt(w: Pick<WorldState, 'map' | 'position' | 'seated'>) {
     const p = near(w.map, w.position);
     if (!p) return;
+    if (w.map === 'city' && p.kind === 'score') {
+      setCityNews(p.id === 'city-news');
+      setModal('score');
+      return;
+    }
     if (p.kind === 'exhibit') {
       setExhibitId(p.id);
       setModal('exhibit');
@@ -307,18 +339,18 @@ export default function App({
           ...arrival(w.map, p.target!),
         });
         notice(
-          `Đã đến ${p.target === 'liverpool-museum' ? 'Phòng Truyền Thống Liverpool' : p.target === 'arsenal-museum' ? 'Phòng Truyền Thống Arsenal' : p.target === 'chelsea-museum' ? 'Phòng Truyền Thống Chelsea' : p.target === 'hall-of-legends' ? 'Phòng Hoài Niệm' : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
+          `Đã đến ${p.target === 'liverpool-museum' ? 'Phòng Truyền Thống Liverpool' : p.target === 'arsenal-museum' ? 'Phòng Truyền Thống Arsenal' : p.target === 'chelsea-museum' ? 'Phòng Truyền Thống Chelsea' : p.target === 'hall-of-legends' ? hallText[hallLanguage(document.documentElement.lang)].area : p.target === 'plaza' ? 'quảng trường' : TEAMS.find((t) => t.id === p.target)?.name}.`,
         );
       }
     } else if (p.kind === 'seat') {
-      if (w.map === 'liverpool') {
+      if (w.map === 'liverpool' || w.map === 'city') {
         if (socket.connected) socket.emit('interact', p.id);
         else {
           if (!w.seated && !clearPath(w.map, w.position, p)) return;
           if (!w.seated) emit('correct', p);
-          emit('seated', { seated: !w.seated, direction: kopSeatFacing(p) });
+          emit('seated', { seated: !w.seated, direction: w.map === 'city' ? CITY_SEAT_DIRECTION : kopSeatFacing(p) });
         }
-        notice('Nhấn E hoặc di chuyển để đứng dậy.');
+        if (w.map === 'liverpool') notice('Nhấn E hoặc di chuyển để đứng dậy.');
         return;
       }
       emit('sit', !w.seated);
@@ -359,7 +391,7 @@ export default function App({
         playerId: 'system',
         nickname: 'Người giữ hang',
         team: 'common',
-        text: `Chào ${p.nickname}! Đến gần một cổng hang và nhấn E để khám phá.`,
+        text: `Chào ${p.nickname}! Đi tới cổng đội bạn yêu thích, cửa sẽ tự mở khi bạn đến gần.`,
         time: Date.now(),
         system: true,
       },
@@ -432,7 +464,14 @@ export default function App({
       notice(`Đường dẫn mời bạn: ${window.location.origin}`);
     }
   }
+  const cityRoom = world.map === 'city';
+  const cityLang = cityLanguage(document.documentElement.lang);
+  const cityZone = cityArea(world.position);
   const liverpoolRoom = world.map === 'liverpool' || world.map === 'liverpool-museum';
+  const museumLanguage = hallLanguage(document.documentElement.lang);
+  const muMuseum = world.map === 'hall-of-legends';
+  const muLabels = hallText[museumLanguage];
+  const muStation = muMuseum ? hallStations.find((item) => item.id === world.near?.id) : undefined;
   const arsenalRoom = world.map === 'arsenal' || world.map === 'arsenal-museum';
   const demoMatch =
     world.map === 'liverpool'
@@ -444,20 +483,23 @@ export default function App({
           : undefined;
   const team = TEAMS.find((t) => t.id === profile.team)!,
     area =
-      world.map === 'liverpool-museum'
+      cityRoom
+        ? cityZone === 'hall' ? cityText(cityLang, CITY_COPY.hall)
+          : cityText(cityLang, CITY_COPY[cityZone])
+        : world.map === 'liverpool-museum'
         ? 'Phòng Truyền Thống Liverpool'
         : world.map === 'arsenal-museum'
           ? 'Phòng Truyền Thống Arsenal'
           : world.map === 'chelsea-museum'
             ? 'Phòng Truyền Thống Chelsea'
             : world.map === 'hall-of-legends'
-              ? 'Phòng Hoài Niệm'
+              ? muLabels.area
               : world.map === 'plaza'
                 ? 'Đại Sảnh Chung'
-                : TEAMS.find((t) => t.id === world.map)?.name;
+                : CAVES.find((c) => c.id === world.map)?.name ?? TEAMS.find((t) => t.id === world.map)?.name;
   return (
     <div
-      className={`app-shell ${arsenalRoom || liverpoolRoom ? 'red-cave gunners-cave' : ''} ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' || world.map === 'arsenal-museum' || world.map === 'liverpool-museum' ? 'museum-shell' : ''}`}
+      className={`app-shell ${cityRoom ? 'city-shell' : ''} ${arsenalRoom || liverpoolRoom ? 'red-cave gunners-cave' : ''} ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' || world.map === 'arsenal-museum' || world.map === 'liverpool-museum' ? 'museum-shell' : ''}`}
     >
       <header className="topbar">
         <a
@@ -482,6 +524,8 @@ export default function App({
             onClick={() => {
               if (world.map === 'plaza')
                 notice('Bạn đang ở quảng trường. Di chuyển để khám phá thế giới!');
+              else if (isCaveZone(world.map))
+                notice('Theo đường hầm và đi thẳng qua cửa để về Đại Sảnh Chung.');
               else notice('Đến lối ra phía nam hang và nhấn E để về quảng trường.');
             }}
           >
@@ -539,6 +583,10 @@ export default function App({
             notice={notice}
           />
         )}
+        {playing && cityRoom && <CityHUD lang={cityLang} area={cityZone} open={(section) => {
+          setCitySection(section);
+          setModal('city-collection');
+        }} />}
         {liverpoolRoom && <LiverpoolHUD world={world} openMap={() => setModal('map')} />}
         {arsenalRoom && (
           <ArsenalHUD world={world} openMap={() => setModal('map')} notice={notice} />
@@ -549,6 +597,7 @@ export default function App({
         {world.map === 'hall-of-legends' && (
           <MuseumHUD
             position={world.position}
+            lang={museumLanguage}
             openMap={() => setModal('map')}
             quiz={() => {
               setQuizAnswer(null);
@@ -564,10 +613,10 @@ export default function App({
               {world.position.x < 1250 && world.position.y > 1250 && world.position.y < 1800
                 ? 'Góc Tâm Sự Fan · Trà nóng, có anh em.'
                 : world.position.y < 1480 && world.position.x > 1850 && world.position.x < 2250
-                  ? 'Hành lang Phòng Hoài Niệm · Tiến về ánh đèn vàng'
+                  ? 'Hành lang Phòng Truyền Thống · Tiến về ánh đèn vàng'
                   : 'Sảnh Trú Ẩn · Thua một trận, còn cả hội ở đây.'}
             </strong>
-            <small>← Góc tâm sự · ↑ Phòng Hoài Niệm · ↓ Cổng Ra Hang</small>
+            <small>← Góc tâm sự · ↑ Phòng Truyền Thống · ↓ Cổng Ra Hang</small>
           </div>
         )}
         <button
@@ -662,8 +711,17 @@ export default function App({
         )}
         {world.near && playing && (
           <button className="interaction-prompt" onClick={interact}>
-            <kbd>E</kbd>
-            <span>{world.near.label}</span>
+            <kbd>{muStation ? 'F' : 'E'}</kbd>
+            <span>
+              {cityRoom ? cityInteractionLabel(world.near.id, cityLang, world.seated)
+                : muStation
+                ? `${muLabels.inspect} · ${muStation.title[museumLanguage]}`
+                : muMuseum && world.near.id === 'hall-exit'
+                  ? muLabels.exit
+                  : muMuseum && world.near.id === 'hall-photo' && museumLanguage === 'en'
+                    ? 'Take a photo'
+                    : world.near.label}
+            </span>
             <ChevronRight size={16} />
           </button>
         )}
@@ -673,7 +731,7 @@ export default function App({
               {[
                 {
                   id: 'room',
-                  label: liverpoolRoom
+                  label: cityRoom ? cityText(cityLang, CITY_COPY.hall) : liverpoolRoom
                     ? world.map === 'liverpool'
                       ? 'Hang Liverpool'
                       : 'Truyền Thống'
@@ -687,7 +745,7 @@ export default function App({
                           ? 'Truyền Thống'
                           : world.map === 'united'
                             ? 'Hang Quỷ Đỏ'
-                            : 'Khu vực',
+                            : isRefuge(world.map) ? area : 'Khu vực',
                 },
                 { id: 'nearby', label: 'Gần bạn' },
               ].map(({ id: t, label }) => (
@@ -826,6 +884,7 @@ export default function App({
           emojiOpen={emojiOpen}
           interact={interact}
           canInteract={playing && !!world.near}
+          interactionKey={muStation ? 'F' : 'E'}
           minigame={() => {
             if (world.map === 'plaza' && world.near?.id === 'minigame') setModal('minigame');
             else
@@ -957,6 +1016,8 @@ export default function App({
             <button className="close" onClick={() => setModal(null)} aria-label="Đóng">
               <X size={20} />
             </button>
+            {cityRoom && modal === 'city-collection' && <CityCollection key={citySection} section={citySection} lang={cityLang} />}
+            {cityRoom && modal === 'exhibit' && <CityCollection key={exhibitId} section="overview" id={exhibitId} lang={cityLang} />}
             {modal === 'exhibit' && kopExhibit && (
               <MuseumExhibitPanel
                 key={kopExhibit.id}
@@ -978,22 +1039,13 @@ export default function App({
             {modal === 'exhibit' && bluesExhibit && (
               <ChelseaExhibitPanel key={bluesExhibit.id} exhibit={bluesExhibit} />
             )}
-            {modal === 'exhibit' && !bluesExhibit && exhibit && (
-              <>
-                <div className="eyebrow">HALL OF LEGENDS · {exhibit.type.toUpperCase()}</div>
-                <div className="museum-exhibit-mark">
-                  {exhibit.type === 'trophy' ? '♜' : exhibit.type === 'manager' ? '♟' : '✦'}
-                </div>
-                <h2>{exhibit.heading}</h2>
-                <p className="museum-exhibit">{exhibit.detail}</p>
-                <a className="museum-source" href={exhibit.source} target="_blank" rel="noreferrer">
-                  Nguồn lịch sử ↗
-                </a>
-                <small>Dữ liệu đối chiếu 04/11/2026 · Minh họa cách điệu gốc</small>
-                <button className="primary" onClick={() => setModal(null)}>
-                  Tiếp tục tham quan
-                </button>
-              </>
+            {modal === 'exhibit' && muMuseum && (
+              <RedDevilsExhibitPanel
+                key={exhibitId}
+                id={exhibitId}
+                lang={museumLanguage}
+                close={() => setModal(null)}
+              />
             )}
             {modal === 'quiz' && (
               <>
@@ -1011,7 +1063,7 @@ export default function App({
                   <p role="status">
                     {quizAnswer === 1968
                       ? 'Chính xác! United thắng Benfica 4–1 tại Wembley.'
-                      : 'Chưa đúng. Hãy ghé khu F để tìm câu trả lời.'}
+                      : 'Chưa đúng. Hãy ghé khu lịch sử để tìm câu trả lời.'}
                   </p>
                 )}
               </>
@@ -1099,7 +1151,9 @@ export default function App({
                   heading={world.direction}
                 />
                 <div className="map-legend">
-                  {(liverpoolRoom
+                  {(cityRoom
+                    ? (['hall', 'lounge', 'museum', 'tunnel'] as const).map((id) => ({ id, short: cityText(cityLang, CITY_COPY[id]), color: '#7dd3ff' }))
+                    : liverpoolRoom
                     ? (world.map === 'liverpool' ? KOP_CAVE : KOP_MUSEUM).zones.map((z) => ({
                         ...z,
                         short: z.label,
@@ -1120,12 +1174,14 @@ export default function App({
                             color: '#75b6ff',
                           }))
                         : world.map === 'hall-of-legends'
-                          ? HALL.zones.map((z) => ({ ...z, short: z.label, color: '#e6af61' }))
+                          ? HALL.zones.map((z) => ({ ...z, short: museumLanguage === 'en' ? z.en : z.label, color: '#e6af61' }))
                           : world.map === 'united'
                             ? RED_CAVE.zones
                                 .filter((z) => !['fun', 'event'].includes(z.id))
                                 .map((z) => ({ id: z.id, short: z.label, color: z.color }))
-                            : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
+                            : isRefuge(world.map)
+                              ? [{ id: 'refuge', short: 'Sảnh Trú Ẩn', color: '#e6af61' }, { id: 'exit', short: 'Đường hầm', color: '#c49b77' }]
+                              : CAVES.map((c) => ({ id: c.id, short: c.short, color: c.color }))
                   ).map((t) => (
                     <span key={t.id}>
                       <i style={{ background: t.color }} />
@@ -1168,8 +1224,8 @@ export default function App({
                     <span>
                       <strong>Gõ cửa một hang</strong>
                       <p>
-                        Đi qua giữa cổng Hang Quỷ Đỏ, hoặc đến gần rồi nhấn E / Tương tác. Cổng phía
-                        sau vị trí xuất hiện trong hang đưa bạn trở lại Đại Sảnh Chung.
+                        Cửa các hang tự mở khi bạn đến gần từ cả hai phía. Theo đường hầm để đi
+                        giữa Đại Sảnh Chung và Sảnh Trú Ẩn.
                       </p>
                     </span>
                   </div>
@@ -1321,7 +1377,11 @@ export default function App({
                 </p>
               </>
             )}
-            {modal === 'score' && !demoMatch && (
+            {modal === 'score' && cityRoom && <CityMatchBoard lang={cityLang} news={cityNews} chat={() => {
+              setModal(null);
+              setChatVisible(true);
+            }} />}
+            {modal === 'score' && !demoMatch && !cityRoom && (
               <>
                 <div className="eyebrow">GÓC BÓNG ĐÁ · DỮ LIỆU MINH HỌA</div>
                 <h2>Hết trận, còn câu chuyện.</h2>
@@ -1375,7 +1435,7 @@ export default function App({
                       {
                         title: 'Ngày xưa ta đã từng…',
                         detail:
-                          'Đi vòng bục trung tâm, vào hành lang phía sau để đến Phòng Hoài Niệm. Cúp, huyền thoại và những ký ức vinh quang đang chờ.',
+                          'Đi vòng bục trung tâm, vào hành lang phía sau để đến Phòng Truyền Thống. Cúp, huyền thoại và những ký ức vinh quang đang chờ.',
                       },
                     ]
                   : CAVE_EVENTS

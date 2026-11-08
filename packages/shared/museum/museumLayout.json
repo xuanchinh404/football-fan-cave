@@ -3,56 +3,49 @@
   "height": 4000,
   "spawn": {
     "x": 1800,
-    "y": 3470
+    "y": 2956
   },
   "bounds": {
-    "l": 260,
-    "r": 3400,
-    "t": 590,
-    "b": 3820
+    "l": 680,
+    "r": 2920,
+    "t": 1340,
+    "b": 3260
   },
   "zones": [
     {
       "id": "A",
-      "label": "Đại sảnh trung tâm",
+      "label": "Lối vào",
+      "en": "Entrance",
       "x": 1800,
-      "y": 1490
+      "y": 2956
     },
     {
       "id": "B",
-      "label": "20 chức vô địch quốc gia",
+      "label": "Bộ sưu tập danh hiệu",
+      "en": "Trophy collection",
       "x": 1800,
-      "y": 1150
+      "y": 1540
     },
     {
       "id": "C",
-      "label": "Bộ sưu tập danh hiệu",
+      "label": "Các đời huấn luyện viên",
+      "en": "Managers through the years",
       "x": 1800,
-      "y": 2500
+      "y": 1770
     },
     {
       "id": "D",
-      "label": "Hành lang HLV",
-      "x": 1100,
-      "y": 3500
+      "label": "Tượng Sir Alex Ferguson",
+      "en": "Sir Alex Ferguson statue",
+      "x": 950,
+      "y": 1790
     },
     {
       "id": "E",
-      "label": "Dòng thời gian",
-      "x": 3200,
-      "y": 1500
-    },
-    {
-      "id": "F",
-      "label": "Trận đấu huyền thoại",
-      "x": 2350,
-      "y": 3300
-    },
-    {
-      "id": "G",
-      "label": "Huyền thoại & Góc chụp ảnh",
-      "x": 2350,
-      "y": 3650
+      "label": "Lịch sử câu lạc bộ",
+      "en": "Club history",
+      "x": 2770,
+      "y": 2000
     }
   ],
   "sources": {

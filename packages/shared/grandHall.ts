@@ -21,7 +21,7 @@ export const CAVES = [
     tier: 3,
     color: '#ff2275',
     symbol: 'B',
-    available: false,
+    available: true,
   },
   {
     id: 'psg',
@@ -33,7 +33,7 @@ export const CAVES = [
     tier: 3,
     color: '#3874ff',
     symbol: 'P',
-    available: false,
+    available: true,
   },
   {
     id: 'real',
@@ -45,7 +45,7 @@ export const CAVES = [
     tier: 2,
     color: '#ffe8a1',
     symbol: 'R',
-    available: false,
+    available: true,
   },
   {
     id: 'arsenal',
@@ -97,15 +97,15 @@ export const CAVES = [
   },
   {
     id: 'city',
-    name: 'Hang Citizens',
-    short: 'Hang Citizens',
+    name: 'Hang Man City',
+    short: 'Hang Man City',
     x: 30,
     z: -29,
     height: 7,
     tier: 2,
     color: '#17e1ff',
     symbol: 'M',
-    available: false,
+    available: true,
   },
   {
     id: 'barcelona',
@@ -117,10 +117,21 @@ export const CAVES = [
     tier: 2,
     color: '#d334ff',
     symbol: 'F',
-    available: false,
+    available: true,
   },
 ] as const;
 export type CaveId = (typeof CAVES)[number]['id'];
+export const CORRIDOR_HALF_WIDTH = 3.2;
+export const caveEntrance = (c: (typeof CAVES)[number]) => ({
+  x: c.x,
+  z: c.z + 0.8,
+  height: c.height,
+});
+export const KOP_ENTRANCE = caveEntrance(CAVES.find((c) => c.id === 'liverpool')!);
+export const AVENUE_NORTH = -37;
+export const descentStart = (c: (typeof CAVES)[number]) =>
+  c.tier === 3 ? -58 : caveEntrance(c).z - 2.6;
+const avenueCuts = CAVES.filter((c) => c.tier === 2 && c.id !== 'liverpool');
 export type Surface = {
   id: string;
   x: number;
@@ -131,9 +142,30 @@ export type Surface = {
   north: number;
   kind: 'plaza' | 'terrace' | 'stairs' | 'bridge';
 };
+function avenueSurfaces(): Surface[] {
+  const edges = [
+    -55,
+    ...avenueCuts.flatMap((c) => [c.x - CORRIDOR_HALF_WIDTH, c.x + CORRIDOR_HALF_WIDTH]),
+    55,
+  ];
+  return edges.slice(0, -1).map((left, i) => {
+    const right = edges[i + 1];
+    const north = i % 2 ? descentStart(avenueCuts[(i - 1) / 2]) : AVENUE_NORTH;
+    return {
+      id: `avenue-${i}`,
+      x: (left + right) / 2,
+      z: (north - 22) / 2,
+      w: right - left,
+      d: -22 - north,
+      south: 7,
+      north: 7,
+      kind: 'terrace',
+    };
+  });
+}
 export const GRAND_SURFACES: Surface[] = [
   { id: 'plaza', x: 0, z: 16, w: 110, d: 48, south: 0, north: 0, kind: 'plaza' },
-  { id: 'avenue', x: 0, z: -29.5, w: 110, d: 15, south: 7, north: 7, kind: 'terrace' },
+  ...avenueSurfaces(),
   { id: 'main-stairs', x: 0, z: -15, w: 10, d: 14, south: 0, north: 7, kind: 'stairs' },
   { id: 'west-bridge', x: -41, z: -15, w: 6, d: 14, south: 0, north: 7, kind: 'bridge' },
   { id: 'east-bridge', x: 41, z: -15, w: 6, d: 14, south: 0, north: 7, kind: 'bridge' },
@@ -207,8 +239,22 @@ for (let i = 0; i < 12; i++)
 for (let i = 0; i < 9; i++)
   for (const side of [-1, 1])
     GRAND_CLIFFS.push({ x: side * 59, y: 2 + Math.sin(i) * 2, z: -42 + i * 10, scale: [7, 13, 8] });
-const cliffs = GRAND_CLIFFS.filter((p) => p.z !== -38 || Math.abs(Math.abs(p.x) - 37.5) > 9);
+// Keep the distant ridge beyond the connected chambers and leave clear rock openings at the gates.
+const cliffs = GRAND_CLIFFS.flatMap((p) =>
+  p.z === -38 ? [] : [p.z === -61 ? { ...p, z: -131, y: 15 } : p],
+);
 GRAND_CLIFFS.splice(0, GRAND_CLIFFS.length, ...cliffs);
+export const CAVE_RAILS: GrandSolid[] = avenueCuts.flatMap((c) =>
+  [-1, 1].map((side) => ({
+    id: `${c.id}-excavation-${side}`,
+    x: c.x + side * (CORRIDOR_HALF_WIDTH + 0.15),
+    z: (AVENUE_NORTH + descentStart(c)) / 2,
+    w: 0.3,
+    d: descentStart(c) - AVENUE_NORTH,
+    h: 2.25,
+    base: c.height,
+  })),
+);
 export const GRAND_SOLIDS: GrandSolid[] = [
   { id: 'golden-ball', x: 0, z: 3, w: 6.6, d: 6.6, h: 2.1, base: 0, round: true },
   ...[-1, 1].flatMap((side) => [
@@ -366,28 +412,7 @@ export const GRAND_SOLIDS: GrandSolid[] = [
     h: 3,
     base: 0,
   })),
-  ...CAVES.map((c) => ({
-    id: `${c.id}-rear`,
-    x: c.x,
-    z: c.z - 1.4,
-    w: 7,
-    d: 0.4,
-    h: 8,
-    base: c.height,
-  })),
-  ...CAVES.flatMap((c) => {
-    const united = c.id === 'united';
-    const scale = c.tier === 3 ? 1.2 : 1;
-    return [-1, 1].map((side) => ({
-      id: `${c.id}-pillar-${side}`,
-      x: c.x + side * (united ? 4.585 : 4.35 * scale),
-      z: united ? c.z - 0.06 : c.z,
-      w: united ? 2.53 : 1.1 * scale,
-      d: united ? 2.68 : 2.4 * scale,
-      h: united ? 4.35 : 5.5 * scale,
-      base: c.height,
-    }));
-  }),
+  ...CAVE_RAILS,
 ];
 export function grandWalkable(x: number, z: number, radius = 0.33) {
   if (

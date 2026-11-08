@@ -1,12 +1,33 @@
 import { HALL } from '../../../../packages/shared/museum';
+import { hallText, type HallLanguage } from '../../../../packages/shared/museum/hall';
 import type { Point } from '../../../../packages/shared/world';
+
+const actions = {
+  vi: {
+    menu: 'Hướng dẫn bảo tàng',
+    map: 'Bản đồ khu vực',
+    quiz: 'Đố vui lịch sử',
+    photo: 'Chụp ảnh kỷ niệm',
+    explore: 'F khám phá',
+  },
+  en: {
+    menu: 'Museum guide',
+    map: 'Museum map',
+    quiz: 'History quiz',
+    photo: 'Take a photo',
+    explore: 'F to explore',
+  },
+};
+
 export function MuseumHUD({
   position,
+  lang,
   openMap,
   quiz,
   photo,
 }: {
   position: Point;
+  lang: HallLanguage;
   openMap: () => void;
   quiz: () => void;
   photo: () => void;
@@ -16,23 +37,23 @@ export function MuseumHUD({
       ? a
       : b,
   );
+  const labels = hallText[lang];
+  const text = actions[lang];
   return (
     <>
       <div className="museum-breadcrumb">
-        ⌂ Hang Quỷ Đỏ <span>›</span> Phòng Hoài Niệm
+        ⌂ {labels.cave} <span>›</span> {labels.title}
       </div>
       <div className="museum-location">
-        <span>HALL OF LEGENDS</span>
-        <strong>
-          {zone.id} · {zone.label}
-        </strong>
-        <small>WASD / ↑↓←→ · E khám phá</small>
+        <span>MANCHESTER UNITED</span>
+        <strong>{lang === 'en' ? zone.en : zone.label}</strong>
+        <small>WASD / ↑↓←→ · {text.explore}</small>
       </div>
-      <aside className="museum-actions" aria-label="Hướng dẫn bảo tàng">
-        <button onClick={openMap}>⌖ Bản đồ 7 khu vực</button>
-        <button onClick={quiz}>♜ Đố vui lịch sử</button>
-        <button onClick={photo}>▣ Chụp ảnh kỷ niệm</button>
-        <p>Lối về sảnh ở phía nam ↓</p>
+      <aside className="museum-actions" aria-label={text.menu}>
+        <button onClick={openMap}>⌖ {text.map}</button>
+        <button onClick={quiz}>♜ {text.quiz}</button>
+        <button onClick={photo}>▣ {text.photo}</button>
+        <p>{labels.exitHint} ↓</p>
       </aside>
     </>
   );

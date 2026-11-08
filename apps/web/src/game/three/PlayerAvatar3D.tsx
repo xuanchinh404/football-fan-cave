@@ -6,6 +6,7 @@ import {
   LoopOnce,
   LoopRepeat,
   Mesh,
+  MeshStandardMaterial,
   Vector3,
   type AnimationAction,
 } from 'three';
@@ -43,23 +44,64 @@ const gestureFaces: Record<string, string> = {
   Angry: 'Angry',
   Jump: 'Surprised',
 };
-type Playback = { motion: string; preview?: { name: string; sequence: number }; face?: string };
+type Playback = {
+  motion: string;
+  preview?: { name: string; sequence: number };
+  face?: string;
+  hideTemplateCrest?: boolean;
+};
 const avatarUrl = `/assets/3d/characters/${playerAvatarFile}`;
 const avatarHeight = 1.9;
 
-function ChibiFan({ motion, preview, face }: Playback) {
+function ChibiFan({ motion, preview, face, hideTemplateCrest }: Playback) {
   const { scene, animations } = useLoader(GLTFLoader, avatarUrl, (loader) =>
     loader.setMeshoptDecoder(MeshoptDecoder),
   );
-  const { instance, origin, scale, morphs } = useMemo(() => {
+  const { instance, origin, scale, morphs, kit } = useMemo(() => {
     const instance = clone(scene);
     const morphs: Mesh[] = [];
+    const kit = new Map<MeshStandardMaterial, MeshStandardMaterial>();
     const bounds = new Box3().setFromObject(instance, true);
     const center = bounds.getCenter(new Vector3());
     const height = bounds.max.y - bounds.min.y;
     if (!Number.isFinite(height) || height <= 0) throw new Error('Invalid chibi avatar bounds');
     instance.traverse((node) => {
       if (node instanceof Mesh) {
+        if (
+          hideTemplateCrest &&
+          node.material instanceof MeshStandardMaterial &&
+          node.material.map
+        ) {
+          const original = node.material;
+          let fabric = kit.get(original);
+          if (!fabric) {
+            fabric = original.clone();
+            fabric.customProgramCacheKey = () => 'template-crest-free';
+            fabric.onBeforeCompile = (shader) => {
+              // Sample nearby fabric across the three crest islands in the rigged avatar's atlas.
+              shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <map_fragment>',
+                `
+                #include <map_fragment>
+                #ifdef USE_MAP
+                  vec2 atlas = vMapUv * 1024.0;
+                  vec2 patchA = atlas - vec2(61.0, 38.0);
+                  vec2 patchB = atlas - vec2(267.0, 169.0);
+                  vec2 patchC = atlas - vec2(124.0, 306.0);
+                  diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(map, (vec2(85.0, 39.0) + patchA * 0.22) / 1024.0).rgb,
+                    1.0 - smoothstep(0.83, 1.12, length(patchA / vec2(13.0, 14.0))));
+                  diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(map, (vec2(240.0, 167.0) + patchB * 0.22) / 1024.0).rgb,
+                    1.0 - smoothstep(0.83, 1.12, length(patchB / vec2(14.0, 14.0))));
+                  diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(map, (vec2(143.0, 307.0) + patchC * 0.22) / 1024.0).rgb,
+                    1.0 - smoothstep(0.83, 1.12, length(patchC / vec2(14.0, 15.0))));
+                #endif
+              `,
+              );
+            };
+            kit.set(original, fabric);
+          }
+          node.material = fabric;
+        }
         node.castShadow = true;
         node.receiveShadow = true;
         if (node.morphTargetInfluences) morphs.push(node);
@@ -70,8 +112,10 @@ function ChibiFan({ motion, preview, face }: Playback) {
       origin: new Vector3(-center.x, -bounds.min.y, -center.z),
       scale: avatarHeight / height,
       morphs,
+      kit,
     };
-  }, [scene]);
+  }, [scene, hideTemplateCrest]);
+  useEffect(() => () => kit.forEach((material) => material.dispose()), [kit]);
   const mixer = useMemo(() => new AnimationMixer(instance), [instance]);
   const current = useRef<AnimationAction | null>(null);
   const wasSeated = useRef(false);

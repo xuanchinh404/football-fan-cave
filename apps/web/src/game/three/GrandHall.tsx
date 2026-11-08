@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import {
   CAVES,
+  CAVE_RAILS,
   GRAND_TREES,
   GRAND_LAMPS,
   GRAND_CLIFFS,
@@ -19,6 +20,7 @@ import {
   GRAND_SOLIDS,
   GRAND_SCOREBOARD,
   GRAND_SURFACES,
+  KOP_ENTRANCE,
   grandHeight,
   surfaceHeight,
   type Surface,
@@ -27,7 +29,6 @@ import { AssetModel } from './AssetModel';
 import { Box, Label } from './Models';
 import {
   GoldenBall,
-  RedDevilsGateway,
   SliceLandscape,
   SliceRoute,
   sliceLamp,
@@ -266,91 +267,6 @@ function Waterfall({
           roughness={0.15}
         />
       </mesh>
-    </group>
-  );
-}
-function Portal({ c }: { c: (typeof CAVES)[number] }) {
-  const scale = c.id === 'united' || c.tier === 3 ? 1.2 : 1;
-  const ring = useRef<THREE.Group>(null);
-  const energy = useRef<THREE.ShaderMaterial>(null);
-  useFrame(({ clock }, dt) => {
-    if (energy.current) energy.current.uniforms.time.value = clock.elapsedTime;
-    if (ring.current) ring.current.rotation.z += dt * 0.12;
-  });
-  return (
-    <group
-      name={`cave-${c.id}`}
-      userData={{ caveId: c.id, tier: c.tier }}
-      position={[c.x, c.height, c.z]}
-      scale={scale}
-    >
-      {c.id === 'arsenal' ? (
-        <BlenderAsset
-          asset="gunners-arch"
-          placements={[{ position: [0, 0, 0] }]}
-          cameraSolid
-          fallback={<AssetModel asset="portal-grand" tint={c.color} />}
-        />
-      ) : (
-        <AssetModel asset="portal-grand" tint={c.color} />
-      )}
-
-      <Label
-        text={c.short}
-        position={[0, 8.38, 2.04]}
-        width={9.2}
-        background="#30172f"
-        color="#fff2c5"
-      />
-      <Label
-        text={c.available ? 'EXPLORER · MỞ CỬA' : 'NỘI THẤT · SẮP RA MẮT'}
-        position={[0, 1.15, 1.26]}
-        width={4}
-        background="#221b3c"
-      />
-      <mesh position={[0, 3.5, 1.22]}>
-        <circleGeometry args={[3.5, 64]} />
-        <shaderMaterial
-          ref={energy}
-          side={THREE.DoubleSide}
-          uniforms={{ time: { value: 0 }, tint: { value: new THREE.Color(c.color) } }}
-          vertexShader="varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}"
-          fragmentShader="uniform float time;uniform vec3 tint;varying vec2 v;void main(){vec2 p=v-.5;float r=length(p)*2.;float a=atan(p.y,p.x);float spiral=pow(.5+.5*sin(a*7.+r*19.-time*2.),4.);float ring=pow(.5+.5*sin(r*40.-time*3.),14.);float edge=pow(r,7.);vec3 color=tint*(.15+spiral*.55+ring*.5+edge*2.5);color+=vec3(1.,.85,.55)*pow(max(0.,1.-r),15.)*.5;gl_FragColor=vec4(color,1.);}"
-        />
-      </mesh>
-      <group ref={ring} position={[0, 3.5, 1.32]}>
-        <mesh>
-          <torusGeometry args={[3.6, 0.08, 8, 64]} />
-          <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={4} />
-        </mesh>
-        {Array.from({ length: 18 }, (_, i) => {
-          const a = (i * Math.PI * 2) / 18;
-          return (
-            <mesh
-              key={i}
-              position={[Math.cos(a) * 3.65, Math.sin(a) * 3.65, 0.03]}
-              rotation={[0, 0, a]}
-            >
-              <octahedronGeometry args={[0.16, 0]} />
-              <meshStandardMaterial color="#fff4c6" emissive={c.color} emissiveIntensity={3} />
-            </mesh>
-          );
-        })}
-      </group>
-      <mesh position={[0, 3.2, 0.2]}>
-        <planeGeometry args={[7, 6.2]} />
-        <meshStandardMaterial
-          color={c.color}
-          emissive={c.color}
-          emissiveIntensity={0.45}
-          transparent
-          opacity={0.17}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      <Label text={c.symbol} position={[0, 10.1, 1.4]} width={1.8} background={c.color} />
-      <pointLight color={c.color} position={[0, 3, 3]} intensity={45} distance={12} decay={2} />
     </group>
   );
 }
@@ -780,13 +696,10 @@ export function GrandHall({ quality = 'medium' }: { quality?: Quality }) {
         bridgeFallback={<AssetModel asset="bridge-stone" position={[-41, 0, -15]} />}
         stairFallback={<Steps surface={GRAND_SURFACES.find((s) => s.id === 'main-stairs')!} />}
       />
-      {CAVES.map((c) =>
-        c.id === 'united' ? (
-          <RedDevilsGateway key={c.id} cave={c} quality={quality} />
-        ) : (
-          <Portal key={c.id} c={c} />
-        ),
-      )}
+      {CAVE_RAILS.map((rail) => (
+        <Box key={rail.id} position={[rail.x, rail.base + rail.h / 2, rail.z]}
+          size={[rail.w, rail.h, rail.d]} color="#4b414f" />
+      ))}
       <Buildings quality={quality} />
       <Minigame />
       <Details quality={quality} />
@@ -801,7 +714,8 @@ function TerrainFaces() {
       [-55, -38, -22, 7, -3],
       [-38, 38, -23.2, 7, -3],
       [38, 55, -22, 7, -3],
-      [-50, -16, -47, 15, 6],
+      [-50, KOP_ENTRANCE.x - 4.2, -47, 15, 6],
+      [KOP_ENTRANCE.x - 4.2, -16, -47, 15, 12.9],
       [16, 50, -47, 15, 6],
       [-55, 55, 40, 0, -7],
     ]) {

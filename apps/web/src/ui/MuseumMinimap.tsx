@@ -1,4 +1,5 @@
-import { HALL, hallObstacles } from '../../../../packages/shared/museum';
+import { HALL } from '../../../../packages/shared/museum';
+import { hallLanguage, hallObstacles } from '../../../../packages/shared/museum/hall';
 import type { Point } from '../../../../packages/shared/world';
 export function MuseumMinimap({
   position,
@@ -11,29 +12,26 @@ export function MuseumMinimap({
   onClick?: () => void;
   heading?: number;
 }) {
+  const { l, r, t, b } = HALL.bounds;
+  const english = hallLanguage(document.documentElement.lang) === 'en';
   const svg = (
     <svg
-      viewBox={`0 0 ${HALL.width} ${HALL.height}`}
+      viewBox={`${l - 120} ${t - 120} ${r - l + 240} ${b - t + 240}`}
       role="img"
-      aria-label="Bản đồ bảo tàng bảy khu vực"
+      aria-label={english ? 'Manchester United museum map' : 'Bản đồ Phòng Truyền Thống MU'}
     >
-      <rect width={HALL.width} height={HALL.height} fill="#190d1c" />
+      <rect x={l - 120} y={t - 120} width={r - l + 240} height={b - t + 240} fill="#190d1c" />
       <rect
-        x="260"
-        y="590"
-        width="3140"
-        height="3230"
+        x={l}
+        y={t}
+        width={r - l}
+        height={b - t}
         rx="180"
         fill="#6b283c"
         stroke="#e9ae61"
         strokeWidth="30"
       />
-      <path
-        d="M1800 600V3800M350 1490H3290M350 2800H3290"
-        stroke="#e39b5f"
-        strokeWidth="90"
-        opacity=".35"
-      />
+      <path d={`M1800 ${t + 120}V${b - 40}`} stroke="#e39b5f" strokeWidth="510" opacity=".35" />
       {hallObstacles.map((r, i) => (
         <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill="#f8bc61" opacity=".7" />
       ))}
@@ -45,7 +43,7 @@ export function MuseumMinimap({
           </text>
           {large && (
             <text x={z.x} y={z.y + 160} textAnchor="middle" fontSize="55" fill="#fff4d2">
-              {z.label}
+              {english ? z.en : z.label}
             </text>
           )}
         </g>
@@ -63,7 +61,11 @@ export function MuseumMinimap({
   return large ? (
     <div className="map-large">{svg}</div>
   ) : (
-    <button className="mini-map museum-map" onClick={onClick} aria-label="Mở bản đồ lớn">
+    <button
+      className="mini-map museum-map"
+      onClick={onClick}
+      aria-label={english ? 'Open museum map' : 'Mở bản đồ lớn'}
+    >
       {svg}
       <span className="north">N</span>
     </button>

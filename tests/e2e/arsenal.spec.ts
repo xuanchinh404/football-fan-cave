@@ -15,7 +15,7 @@ async function rotate(page: Page, delta: number) {
 async function enterCave(page: Page) {
   await toAvenue(page);
   await axis(page, 'x', -30);
-  await walk(page, 'w', (s) => s.map === 'arsenal');
+  await walk(page, 'w', (s) => s.map === 'arsenal' && s.position.z <= 11);
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
 }
 async function enterMuseum(page: Page, photos = false) {

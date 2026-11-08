@@ -44,21 +44,21 @@ test('rendered obstacle footprints match every unchanged authoritative obstacle'
     });
   }
 });
-test('playtest only exposes implemented 3D rooms and both usable return portals', () => {
+test('physical cave doors are separate from museum portal interactions', () => {
   assert.deepEqual(
     playtestInteractions('plaza')
       .filter((p) => p.kind === 'portal')
       .map((p) => p.target),
-    CAVES.map((c) => c.id),
+    [],
   );
   assert.deepEqual(
     playtestInteractions('united')
       .filter((p) => p.kind === 'portal')
       .map((p) => p.target),
-    ['hall-of-legends', 'plaza'],
+    ['hall-of-legends'],
   );
-  assert.equal(playtestNear('plaza', PORTALS.find((p) => p.id === 'united')!)?.target, 'united');
-  assert.equal(playtestNear('united', { x: 2048, y: 2750 })?.target, 'plaza');
+  assert.equal(playtestNear('plaza', PORTALS.find((p) => p.id === 'united')!)?.target, undefined);
+  assert.equal(playtestNear('united', { x: 2048, y: 2750 })?.target, undefined);
   assert.equal(playtestNear('plaza', { x: 680, y: 470 }), undefined);
   assert.equal(playtestNear('united', { x: 2048, y: 1100 })?.target, 'hall-of-legends');
   assert.equal(

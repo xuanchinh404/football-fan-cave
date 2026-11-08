@@ -1,0 +1,59 @@
+.city-hud {
+  position: absolute;
+  z-index: 7;
+  inset: 189px 18px auto auto;
+  width: min(224px, 48vw);
+  color: #f4f9ff;
+}
+.city-hud-toggle,
+.city-hud nav button,
+.city-collection-grid button,
+.city-collection-grid a {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #ecf8ff;
+  background: linear-gradient(150deg, #204a76, #0a203c);
+  border: 1px solid #b88a50;
+  border-radius: 7px;
+  font: inherit;
+  font-size: .83rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.city-hud-toggle {
+  width: 100%;
+  padding: 7px 9px;
+  justify-content: space-between;
+  box-shadow: 0 3px 14px #07172786;
+}
+.city-hud-toggle img { width: 28px; height: 28px; }
+.city-hud nav {
+  max-height: 51vh;
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid #a3d8ff52;
+  border-radius: 7px;
+  margin-top: 5px;
+  background: #071b32ed;
+}
+.city-hud nav button { width: 100%; margin: 3px 0; padding: 7px; text-align: left; }
+.city-hud button:hover,
+.city-collection-grid :is(button, a):hover,
+.city-collection-grid button[aria-pressed="true"] { background: #245c8f; border-color: #f5c57e; }
+.city-hud svg { flex: none; color: #ffd38e; }
+.city-collection-grid { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0; }
+.city-collection-grid :is(button, a) { padding: 8px 10px; }
+.city-card { display: flex; align-items: flex-start; gap: 16px; margin: 16px 0; }
+.city-card img { width: min(36%, 160px); border: 1px solid #c29255; border-radius: 5px; }
+.city-card h3 { color: #bbe8ff; margin: 3px 0 7px; }
+.city-collection a { color: #aee2ff; }
+.city-period { color: #ffe09c; font-weight: 700; }
+.city-credits { display: inline-block; margin-top: 10px; font-size: .8rem; }
+.city-seasons { display: flex; flex-wrap: wrap; gap: 5px 13px; padding: 0; list-style: none; }
+.city-map-large svg { max-height: min(44vh, 430px); }
+@media (max-width: 760px) {
+  .city-hud { inset: 177px 8px auto auto; width: min(166px, 43vw); }
+  .city-hud-toggle { font-size: .72rem; padding: 4px 6px; }
+  .city-hud-toggle img { width: 22px; height: 22px; }
+}

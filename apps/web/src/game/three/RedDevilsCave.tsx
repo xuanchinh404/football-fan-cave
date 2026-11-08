@@ -137,7 +137,7 @@ export function RedDevilsCave({ quality }: { quality: Quality }) {
       />
       <CaveGate
         position={[mx, 0, -9.55]}
-        title="LỐI VÀO PHÒNG HOÀI NIỆM"
+        title="LỐI VÀO PHÒNG TRUYỀN THỐNG"
         subtitle="Đi sâu vào hành lang · E để bước vào"
         width={3.75}
       />

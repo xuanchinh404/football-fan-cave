@@ -1,0 +1,77 @@
+{
+  "01-sanh-tru-an": {
+    "fps": 60,
+    "triangles": 556294,
+    "drawCalls": 122
+  },
+  "03-lounge": {
+    "fps": 60,
+    "triangles": 687970,
+    "drawCalls": 133
+  },
+  "02-goc-tam-su": {
+    "fps": 60,
+    "triangles": 548610,
+    "drawCalls": 92
+  },
+  "03b-ngoi-sofa": {
+    "fps": 60,
+    "triangles": 621267,
+    "drawCalls": 123
+  },
+  "04a-loi-vao-hanh-lang": {
+    "fps": 60,
+    "triangles": 479279,
+    "drawCalls": 86
+  },
+  "04-hanh-lang": {
+    "fps": 60,
+    "triangles": 407146,
+    "drawCalls": 76
+  },
+  "06-bao-tang": {
+    "fps": 60,
+    "triangles": 430964,
+    "drawCalls": 447
+  },
+  "07-bill-shankly": {
+    "fps": 60,
+    "triangles": 393782,
+    "drawCalls": 322
+  },
+  "08-day-cup": {
+    "fps": 60,
+    "triangles": 402264,
+    "drawCalls": 355
+  },
+  "10-istanbul": {
+    "fps": 60,
+    "triangles": 384392,
+    "drawCalls": 287
+  },
+  "09-huan-luyen-vien": {
+    "fps": 60,
+    "triangles": 373456,
+    "drawCalls": 236
+  },
+  "11-timeline": {
+    "fps": 60,
+    "triangles": 360558,
+    "drawCalls": 212
+  },
+  "05-cong-ra-hang": {
+    "fps": 60,
+    "triangles": 471041,
+    "drawCalls": 73
+  },
+  "12-mobile-hang": {
+    "fps": 61,
+    "triangles": 207609,
+    "drawCalls": 62
+  },
+  "13-mobile-bao-tang": {
+    "fps": 60,
+    "triangles": 334123,
+    "drawCalls": 188
+  }
+}

@@ -1,4 +1,5 @@
 import { ManagerGallery } from './MuseumKit';
+import { ManagerPortraitBoard } from './ManagerPortraitBoard';
 import { useEffect, useState } from 'react';
 import { AssetModel } from './AssetModel';
 import { Box, Label } from './Models';
@@ -20,6 +21,7 @@ import {
   chelseaMatches,
   managerGroups,
   chelseaManagers,
+  chelseaPortraits,
 } from '../../../../../packages/shared/chelsea/content';
 import { on } from '../bridge';
 import type { WorldState } from '../bridge';
@@ -78,8 +80,8 @@ export function ChelseaMuseum({ quality }: { quality: Quality }) {
           '12 nhóm trưng bày · Nguồn: Chelsea FC · Đối chiếu 05/11/2026',
         ]}
         width={18}
-        height={1.4}
-        position={[0, 7.3, -22.6]}
+        height={0.92}
+        position={[0, 7.8, -22.6]}
       />
       {[-20, 20].map((x) => (
         <BlueBanner key={x} position={[x, 8, -23.6]} />
@@ -99,11 +101,15 @@ export function ChelseaMuseum({ quality }: { quality: Quality }) {
           </Exhibit>
         </group>
       ))}
-      <BluePlaque
-        lines={['CÁC ĐỜI HUẤN LUYỆN VIÊN', '1905 → nay · Bao gồm các nhiệm kỳ tạm quyền']}
-        position={[0, 5.9, -22.6]}
-        width={25}
-        height={1.2}
+      <ManagerPortraitBoard
+        atlas="/art/chelsea-manager-portraits.webp"
+        stations={chelseaPortraits}
+        y={5.55}
+        z={-23.08}
+        scale={1.1}
+        mountDepth={1.8}
+        blue
+        illustrated
       />
       <ManagerGallery
         stations={managerGroups.map((g, i) => ({ ...g, i, position: [g.x, 0, g.z] }))}

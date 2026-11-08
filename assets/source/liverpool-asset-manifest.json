@@ -1,0 +1,330 @@
+{
+  "references": [
+    {
+      "id": "cave",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "id": "museum",
+      "width": 1671,
+      "height": 941
+    }
+  ],
+  "coordinates": "[left, top, right, bottom] in reference-image pixels",
+  "groups": {
+    "A": "Blender architecture",
+    "B": "Image-to-3D candidates built in Blender",
+    "C": "React or Three.js UI"
+  },
+  "blenderSource": "assets/source/liverpool.blend",
+  "generator": "tools/blender/liverpool.py",
+  "trellis": {
+    "endpoint": "https://huggingface.co/spaces/microsoft/TRELLIS.2",
+    "schema": "checked",
+    "gpuJob": "not submitted"
+  },
+  "assets": [
+    {
+      "id": "refuge-paving-and-stairs",
+      "reference": "cave",
+      "bounds": [
+        468,
+        518,
+        1204,
+        866
+      ],
+      "group": "A",
+      "paths": [
+        "apps/web/public/models/liverpool/cave.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "volcanic-wall-and-vault",
+      "reference": "cave",
+      "bounds": [
+        284,
+        56,
+        1388,
+        282
+      ],
+      "group": "A",
+      "paths": [
+        "apps/web/public/models/liverpool/cave.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "fan-nook-arch",
+      "reference": "cave",
+      "bounds": [
+        284,
+        263,
+        602,
+        546
+      ],
+      "group": "A",
+      "paths": [
+        "apps/web/public/models/liverpool/cave.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "heritage-corridor",
+      "reference": "cave",
+      "bounds": [
+        1104,
+        263,
+        1438,
+        527
+      ],
+      "group": "A",
+      "paths": [
+        "apps/web/public/models/liverpool/cave.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "exit-and-vegetation",
+      "reference": "cave",
+      "bounds": [
+        1304,
+        489,
+        1655,
+        800
+      ],
+      "group": "A",
+      "paths": [
+        "apps/web/public/models/liverpool/cave.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "museum-masonry-and-carpet",
+      "reference": "museum",
+      "bounds": [
+        251,
+        66,
+        1420,
+        837
+      ],
+      "group": "A",
+      "paths": [
+        "apps/web/public/models/liverpool/museum.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "plinths-and-istanbul-screen",
+      "reference": "museum",
+      "bounds": [
+        234,
+        480,
+        1654,
+        706
+      ],
+      "group": "A",
+      "paths": [
+        "apps/web/public/models/liverpool/museum.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "liver-bird-and-pennants",
+      "reference": "cave",
+      "bounds": [
+        736,
+        442,
+        920,
+        574
+      ],
+      "group": "B",
+      "paths": [
+        "apps/web/public/models/liverpool/bird.glb",
+        "apps/web/public/models/liverpool/banner.glb"
+      ],
+      "status": "blender-exported",
+      "note": "Original heraldic sculpt and cloth."
+    },
+    {
+      "id": "ruby-crystals-and-lanterns",
+      "reference": "cave",
+      "bounds": [
+        1137,
+        113,
+        1354,
+        339
+      ],
+      "group": "B",
+      "paths": [
+        "apps/web/public/models/liverpool/cave.glb"
+      ],
+      "status": "blender-exported",
+      "note": "Batched with cave architecture."
+    },
+    {
+      "id": "upholstery-and-tea-table",
+      "reference": "cave",
+      "bounds": [
+        167,
+        678,
+        552,
+        856
+      ],
+      "group": "B",
+      "paths": [
+        "apps/web/public/models/liverpool/sofa.glb",
+        "apps/web/public/models/liverpool/sofa-plum.glb",
+        "apps/web/public/models/liverpool/table.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "shankly-sculpture",
+      "reference": "museum",
+      "bounds": [
+        234,
+        226,
+        468,
+        630
+      ],
+      "group": "B",
+      "paths": [
+        "apps/web/public/models/liverpool/shankly.glb"
+      ],
+      "status": "blender-exported",
+      "note": "Stylized bronze likeness."
+    },
+    {
+      "id": "trophy-silhouettes",
+      "reference": "museum",
+      "bounds": [
+        485,
+        376,
+        1320,
+        583
+      ],
+      "group": "B",
+      "paths": [
+        "apps/web/public/models/liverpool/cup-league.glb",
+        "apps/web/public/models/liverpool/cup-europe.glb",
+        "apps/web/public/models/liverpool/cup-fa.glb",
+        "apps/web/public/models/liverpool/cup-league-cup.glb",
+        "apps/web/public/models/liverpool/cup-uefa.glb",
+        "apps/web/public/models/liverpool/cup-super.glb",
+        "apps/web/public/models/liverpool/cup-world.glb",
+        "apps/web/public/models/liverpool/cup-shield.glb"
+      ],
+      "status": "blender-exported",
+      "note": "Original interpretive models."
+    },
+    {
+      "id": "coach-portraits",
+      "reference": "museum",
+      "bounds": [
+        401,
+        226,
+        1370,
+        376
+      ],
+      "group": "B",
+      "paths": [
+        "apps/web/public/models/liverpool/coach-0.glb",
+        "apps/web/public/models/liverpool/coach-1.glb",
+        "apps/web/public/models/liverpool/coach-2.glb",
+        "apps/web/public/models/liverpool/coach-3.glb",
+        "apps/web/public/models/liverpool/coach-4.glb",
+        "apps/web/public/models/liverpool/coach-5.glb",
+        "apps/web/public/models/liverpool/coach-6.glb",
+        "apps/web/public/models/liverpool/coach-7.glb",
+        "apps/web/public/models/liverpool/coach-8.glb",
+        "apps/web/public/models/liverpool/coach-9.glb"
+      ],
+      "status": "blender-exported",
+      "note": "Stylized sculpted portraits."
+    },
+    {
+      "id": "legend-shirts",
+      "reference": "museum",
+      "bounds": [
+        1069,
+        621,
+        1337,
+        725
+      ],
+      "group": "B",
+      "paths": [
+        "apps/web/public/models/liverpool/shirt.glb"
+      ],
+      "status": "blender-exported"
+    },
+    {
+      "id": "match-board",
+      "reference": "cave",
+      "bounds": [
+        669,
+        292,
+        1003,
+        452
+      ],
+      "group": "C",
+      "paths": [],
+      "status": "react",
+      "note": "DEMO state without an unverified score."
+    },
+    {
+      "id": "player-profile-chat",
+      "reference": "cave",
+      "bounds": [
+        0,
+        56,
+        291,
+        574
+      ],
+      "group": "C",
+      "paths": [],
+      "status": "react"
+    },
+    {
+      "id": "minimap",
+      "reference": "cave",
+      "bounds": [
+        1388,
+        47,
+        1665,
+        329
+      ],
+      "group": "C",
+      "paths": [],
+      "status": "react"
+    },
+    {
+      "id": "controls",
+      "reference": "cave",
+      "bounds": [
+        33,
+        696,
+        1639,
+        932
+      ],
+      "group": "C",
+      "paths": [],
+      "status": "react"
+    },
+    {
+      "id": "exhibit-menu-cases-and-timeline",
+      "reference": "museum",
+      "bounds": [
+        0,
+        216,
+        1638,
+        932
+      ],
+      "group": "C",
+      "paths": [],
+      "status": "react",
+      "note": "Interactive physical exhibits with React detail panels."
+    }
+  ]
+}

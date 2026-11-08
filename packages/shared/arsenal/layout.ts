@@ -124,7 +124,6 @@ export const ARSENAL_MUSEUM = {
   exit: gunnersWire(0, 20.4),
   obstacles: [
     ...ARSENAL_CUP_SPOTS.map((p) => footprint(p.x, p.z, 2.9, 2.1, 3.85)),
-    ...ARSENAL_COACH_SPOTS.map((p) => footprint(p.x, p.z, 2.7, 1.2, 4)),
     ...ARSENAL_LEGEND_SPOTS.map((p) => footprint(p.x, p.z, 1.8, 1.8, 3.2)),
     ...ARSENAL_HISTORY_SPOTS.map((p) => footprint(p.x, p.z, 1.65, 1.65, 3.3)),
     ...ARSENAL_MATCH_SPOTS.map((p) => footprint(p.x, p.z, 4.2, 1.4, 3)),

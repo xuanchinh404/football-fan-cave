@@ -3,6 +3,10 @@ const authBase = `http://127.0.0.1:${process.env.FFC_TEST_AUTH_PORT || 3100}`;
 export type State = {
   map: string;
   position: { x: number; y: number; z: number };
+  worldPosition: { x: number; y: number; z: number };
+  controllerRevision: number;
+  sessionId: string;
+  corrections: number;
   camera: { x: number; y: number; z: number; yaw: number; pitch: number };
   triangles: number;
   grounded: boolean;
@@ -15,6 +19,7 @@ export type State = {
   drawCalls: number;
   view: string;
   cameraHit?: number;
+  gates?: Record<string, 'CLOSED' | 'OPENING' | 'OPEN' | 'CLOSING'>;
 };
 export async function state(page: Page): Promise<State> {
   return page.evaluate(() => (window as any).__world3d || {});

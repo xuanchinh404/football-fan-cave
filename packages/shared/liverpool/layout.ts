@@ -1,3 +1,5 @@
+import { AVENUE_NORTH, KOP_ENTRANCE } from '../grandHall';
+
 export const LIVERPOOL_SCALE = 0.025;
 export const LIVERPOOL_ORIGIN = { x: 2000, y: 2000 };
 export const liverpoolWire = (x: number, z: number) => ({
@@ -29,9 +31,40 @@ export const KOP_STAIRS = Array.from({ length: 5 }, (_, i) => ({
   height: (i + 1) * 0.16,
 }));
 export const KOP_DAIS = { z: -9.25, width: 7.6, depth: 5.5, height: 0.8 };
+const stairDepth = 0.34;
+const stairCount = 32;
+const door = 33.5;
+const landingStart = door + AVENUE_NORTH - KOP_ENTRANCE.z;
+export const KOP_TUNNEL = {
+  x: 13,
+  start: 14.9,
+  end: door,
+  width: 7.5,
+  stairStart: landingStart - stairCount * stairDepth,
+  landingStart,
+  stepDepth: stairDepth,
+  rise: 0.25,
+  steps: stairCount,
+  door,
+  arrival: 30.7,
+} as const;
+export const KOP_EXIT_STAIRS = Array.from({ length: KOP_TUNNEL.steps }, (_, i) => ({
+  z: KOP_TUNNEL.stairStart + (i + 0.5) * KOP_TUNNEL.stepDepth,
+  depth: KOP_TUNNEL.stepDepth,
+  height: (i + 1) * KOP_TUNNEL.rise,
+}));
+export function insideLiverpoolFootprint(p: { x: number; y: number }) {
+  const x = (p.x - LIVERPOOL_ORIGIN.x) * LIVERPOOL_SCALE;
+  const z = (p.y - LIVERPOOL_ORIGIN.y) * LIVERPOOL_SCALE;
+  return z <= KOP_TUNNEL.start + 1.6 || Math.abs(x - KOP_TUNNEL.x) < KOP_TUNNEL.width / 2 - 0.28;
+}
 export function liverpoolGround(p: { x: number; y: number }) {
   const x = (p.x - LIVERPOOL_ORIGIN.x) * LIVERPOOL_SCALE;
   const z = (p.y - LIVERPOOL_ORIGIN.y) * LIVERPOOL_SCALE;
+  if (Math.abs(x - KOP_TUNNEL.x) <= KOP_TUNNEL.width / 2 && z >= KOP_TUNNEL.stairStart)
+    return (
+      Math.min(KOP_TUNNEL.steps, (z - KOP_TUNNEL.stairStart) / KOP_TUNNEL.stepDepth) * KOP_TUNNEL.rise
+    );
   if (Math.abs(x) > 3.8 || z > -4 || z < -12) return 0;
   return KOP_STAIRS.find((step) => z >= step.z - 0.25)?.height ?? KOP_DAIS.height;
 }
@@ -46,10 +79,10 @@ export const KOP_TABLES = [
   { x: -13, z: 5.6 },
 ];
 export const KOP_CAVE = {
-  bounds: bounds(-20, 20, -28, 19),
-  spawn: liverpoolWire(0, 11),
+  bounds: bounds(-20, 20, -28, KOP_TUNNEL.end),
+  spawn: liverpoolWire(KOP_TUNNEL.x, KOP_TUNNEL.arrival),
   entry: liverpoolWire(12, -26.2),
-  exit: liverpoolWire(13, 15.8),
+  exit: liverpoolWire(KOP_TUNNEL.x, KOP_TUNNEL.door - 1.25),
   returnFromMuseum: liverpoolWire(12, -22.8),
   score: liverpoolWire(0, -8.2),
   seats: KOP_SOFA_SPOTS.flatMap(({ x, z, side }) =>
@@ -69,8 +102,10 @@ export const KOP_CAVE = {
     ...[-16.5, -9.5].map((x) => solid(x, -6.2, 1.15, 1.05, 4.3)),
     ...[-16.65, -9.35].map((x) => solid(x, 10.3, 1.15, 1.05, 4.3)),
     ...[9.25, 16.75].map((x) => solid(x, 15.8, 1.15, 1.1, 4.4)),
-    solid(4.2, 15.8, 9, 1.2, 9),
+    solid(-5.65, 15.8, 28.7, 1.2, 9),
     solid(18.6, 15.8, 2.8, 1.2, 9),
+
+    ...[-1, 1].map((side) => solid(KOP_TUNNEL.x + side * 3.25, (KOP_TUNNEL.stairStart + landingStart) / 2, 0.4, stairCount * stairDepth, 7)),
     ...[-4.06, 4.06].map((x) => solid(x, -8, 0.48, 8.1, 1.7)),
     solid(0, -11, 4.2, 1.55, 5),
     ...KOP_SOFA_SPOTS.map(({ x, z, side }) =>
@@ -83,7 +118,7 @@ export const KOP_CAVE = {
     zone('support', 'Góc Tâm Sự', -13, -8),
     zone('lounge', 'Lounge Fan', -13, 5),
     zone('heritage', 'Phòng Truyền Thống', 12, -20),
-    zone('exit', 'Ra Hang', 13, 15.8),
+    zone('exit', 'Đường hầm ra hang', 13, 24.5),
   ],
 };
 
@@ -104,7 +139,6 @@ export const KOP_MUSEUM = {
   exit: liverpoolWire(0, 20.2),
   obstacles: [
     ...KOP_CUPS.map(({ x, z }) => solid(x, z, 2.9, 2.1, 3.85)),
-    ...KOP_COACHES.map(({ x, z }) => solid(x, z, 2.65, 1.15, 3.5)),
     ...KOP_LEGENDS.map(({ x, z }) => solid(x, z, 1.52, 2.12, 3.25)),
     ...KOP_TIMELINE.map(({ x, z }) => solid(x, z, 2.95, 1.15, 2.9)),
     ...KOP_COLUMNS.map(({ x, z }) => solid(x, z, 1.2, 1.2, 10)),
