@@ -10,7 +10,7 @@
     "dev": "concurrently -k -n WEB,SERVER -c cyan,magenta \"npm run dev -w apps/web\" \"npm run dev -w apps/server\"",
     "build": "npm run build -w apps/web && npm run build -w apps/server",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "playwright test tests/e2e/world3d.spec.ts tests/e2e/chelsea.spec.ts tests/e2e/arsenal.spec.ts tests/e2e/avatar-animation.spec.ts tests/e2e/liverpool.spec.ts tests/e2e/city.spec.ts tests/e2e/cave-connections.spec.ts",
+    "test:e2e": "playwright test tests/e2e/world3d.spec.ts tests/e2e/chelsea.spec.ts tests/e2e/arsenal.spec.ts tests/e2e/avatar-animation.spec.ts tests/e2e/liverpool.spec.ts tests/e2e/city.spec.ts tests/e2e/barcelona.spec.ts tests/e2e/real-madrid.spec.ts tests/e2e/cave-connections.spec.ts",
     "test:playtest-offline": "playwright test --config playwright.offline.config.ts",
     "start": "npm run start -w apps/server",
     "format": "prettier --write --ignore-unknown apps packages tests docs assets *.ts *.json *.yml *.md",

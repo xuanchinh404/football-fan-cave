@@ -1,13 +1,16 @@
+import { CAVE_GATES, gateNear } from '../packages/shared/caveGates';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CAVE_CONNECTIONS, fromWorldPoint, toWorldPoint } from '../packages/shared/caveConnections';
-import { CITY_BLOCKS, CITY_SEATS, cityArea, cityWire } from '../packages/shared/city/layout';
+import { CITY_BLOCKS, CITY_HALL, CITY_SEATS, cityArea, cityWire } from '../packages/shared/city/layout';
 import { cityHonours, cityInteractions } from '../packages/shared/city/content';
 import { clearPath, groundHeight, walkable } from '../packages/shared/world';
 
 test('City tunnel, stairs and museum share the world transform and walkable floor', () => {
   const room = CAVE_CONNECTIONS.city;
   assert.equal(room.roomMouth, room.offset[2]);
+  // The west wall of City overlaps United in plan, but the rooms are stacked.
+  assert.ok(room.offset[1] + CITY_HALL.ceiling < CAVE_CONNECTIONS.united.offset[1] - 1);
   const route = [
     cityWire(0, room.rampEnd - room.offset[2] + 0.5),
     cityWire(0, 3), cityWire(0, -7), cityWire(0, -24),
@@ -37,4 +40,13 @@ test('City exhibits and sofa prompts sit on reachable approaches to solid displa
     assert.ok(clearPath('city', cityWire(-7.25, -18.9), seat));
   }
   assert.equal(cityHonours.length, new Set(cityHonours.map(({ id }) => id)).size);
+});
+
+
+test('City gate detects an inside approach along the edge of the tunnel', () => {
+  const gate = CAVE_GATES.find(({ id }) => id === 'city')!;
+  const [x, height, z] = gate.origin;
+  assert.ok(gateNear(gate, { x: x - 2.8, z: z - 2.9, height: height - 0.25 }));
+  assert.equal(gateNear(gate, { x: x - 2.8, z: z + 2.9, height }), false);
+  assert.equal(gateNear(gate, { x, z: z - 4, height }), false);
 });

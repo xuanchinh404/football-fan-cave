@@ -101,6 +101,11 @@ begin
     held := coalesce((s.inventory->>sku)::int, 0);
     case p_command
       when 'buy' then
+        if not exists (
+          select 1 from auth.users u where u.id = p_user and u.is_anonymous is false
+            and (u.email_confirmed_at is not null or u.phone_confirmed_at is not null
+              or exists (select 1 from auth.identities i where i.user_id = u.id and i.provider in ('google','facebook')))
+        ) then raise exception 'LINK_REQUIRED'; end if;
         if price is null or price <= 0 or currency not in ('xu','kc')
           or quantity not between 1 and (p_rules->>'maxOrder')::int then
           raise exception 'INVALID_REQUEST';
@@ -178,7 +183,8 @@ begin
 
     for entry in select * from jsonb_each_text(grants) loop
       held := coalesce((s.inventory->>entry.key)::int, 0);
-      if p_command = 'buy' and held > 0 and not (p_rules->'stackableGrants' ? entry.key) then
+      if p_command = 'buy' and held + entry.value::int * quantity > 1
+        and not (p_rules->'stackableGrants' ? entry.key) then
         raise exception 'ALREADY_OWNED';
       end if;
       if p_command = 'buy' and held + entry.value::int * quantity > 999 then
@@ -197,6 +203,14 @@ begin
       insert into public.game_store_receipts(user_id,request_id,command,payload,recipient)
         values (p_user,p_request,p_command,p_input,target) returning * into receipt;
     end if;
+    if p_command = 'claim' and not bootstrap then
+      update public.wallets set balance = balance + 100, diamonds = diamonds + 10,
+        updated_at = now() where user_id = p_user;
+      insert into public.wallet_ledger(user_id,delta,reason,reference_id,idempotency_key,currency)
+        values
+        (p_user,100,'store_daily',receipt.id,'store-daily-xu:' || receipt.id,'xu'),
+        (p_user,10,'store_daily',receipt.id,'store-daily-kc:' || receipt.id,'kc');
+    end if;
     if p_command = 'buy' then
       insert into public.wallet_ledger(user_id,delta,reason,reference_id,idempotency_key,currency)
         values (p_user,-price * quantity,'store_purchase',receipt.id,'store-buy:' || receipt.id,currency);
@@ -209,9 +223,10 @@ begin
     'inventory',s.inventory,'equipped',s.equipped,'quick',s.quick,'furniture',s.furniture,
     'preferences',s.preferences,'canClaim',s.reward_day is null or s.reward_day < today,
     'revision',s.revision,'transactionId',receipt.id,'replay',replay,
+    'giftAnimate', coalesce(r.preferences->>'effects' = 'true' and s.preferences->>'effects' = 'true', false),
     'history', coalesce((select jsonb_agg(to_jsonb(h)) from (
-      select id, delta::text, currency, reason, reference_id as "transactionId", created_at as "at"
-      from public.wallet_ledger where user_id = p_user order by created_at desc limit 25
+      select id, delta::text, ledger.currency, reason, reference_id as "transactionId", created_at as "at"
+      from public.wallet_ledger as ledger where user_id = p_user order by created_at desc limit 25
     ) h),'[]'::jsonb)
   );
 end;
@@ -220,3 +235,13 @@ $$;
 revoke all on function public.game_store_command(uuid,text,uuid,jsonb,jsonb)
   from public, anon, authenticated;
 grant execute on function public.game_store_command(uuid,text,uuid,jsonb,jsonb) to service_role;
+
+create or replace function public.read_wallet() returns jsonb language sql stable security invoker set search_path = '' as $$
+ select jsonb_build_object(
+  'balance', (select balance::text from public.wallets where user_id = auth.uid()),
+  'diamonds', (select diamonds::text from public.wallets where user_id = auth.uid()),
+  'ledger', coalesce((select jsonb_agg(to_jsonb(x)) from (select id,delta::text,currency,reason,created_at from public.wallet_ledger where user_id = auth.uid() order by created_at desc limit 100) x),'[]'::jsonb),
+  'purchases', coalesce((select jsonb_agg(to_jsonb(x)) from (select id,item_id,status,expires_at from public.purchases where user_id = auth.uid() order by created_at desc limit 100) x),'[]'::jsonb),
+  'items', coalesce((select jsonb_agg(to_jsonb(x)) from (select id,name,price_coins::text from public.shop_items where is_active order by price_coins) x),'[]'::jsonb)
+ );
+$$;

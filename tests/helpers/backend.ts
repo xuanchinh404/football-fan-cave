@@ -1,13 +1,13 @@
 import { spawn } from 'node:child_process';
 import { setTimeout } from 'node:timers/promises';
-export async function startTestBackend(authUrl: string, port: number) {
+export async function startTestBackend(authUrl: string, port: number, store = false) {
   const child = spawn(process.execPath, ['--import', 'tsx', 'apps/server/src/index.ts'], {
     env: {
       ...process.env,
       PORT: String(port),
       SUPABASE_URL: authUrl,
       SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
-      SUPABASE_SERVICE_ROLE_KEY: '',
+      SUPABASE_SERVICE_ROLE_KEY: store ? 'fixture-store-service-role' : '',
       CORS_ORIGINS: 'http://localhost:5174,http://127.0.0.1:5174,http://localhost:5184,http://127.0.0.1:5184',
     },
     stdio: ['ignore', 'pipe', 'pipe'],

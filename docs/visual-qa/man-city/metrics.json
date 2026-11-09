@@ -1,0 +1,27 @@
+{
+  "01-san-tru-an": {
+    "fps": 60,
+    "drawCalls": 1634,
+    "triangles": 1166371
+  },
+  "02-goc-tam-su": {
+    "fps": 60,
+    "drawCalls": 1423,
+    "triangles": 1133546
+  },
+  "03-phong-truyen-thong": {
+    "fps": 60,
+    "drawCalls": 1496,
+    "triangles": 1189208
+  },
+  "04-cup-va-tuong-pep": {
+    "fps": 60,
+    "drawCalls": 1416,
+    "triangles": 1186760
+  },
+  "05-mobile-multiplayer": {
+    "fps": 40,
+    "drawCalls": 236,
+    "triangles": 112243
+  }
+}

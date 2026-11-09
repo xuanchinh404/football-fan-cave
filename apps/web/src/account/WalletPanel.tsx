@@ -62,6 +62,7 @@ export function WalletPanel({
         >
           Nạp xu
         </button>
+        {data?.diamonds && <p>💎 {formatCoins(data.diamonds)} KC</p>}
         <p className="wallet-note">
           Gói dự kiến: 10.000đ → 100 xu · 20.000đ → 200 xu
           <br />
@@ -110,7 +111,7 @@ export function WalletPanel({
               <span>
                 {l.reason} · {new Date(l.created_at).toLocaleString('vi-VN')}
               </span>
-              <b>{formatCoins(l.delta)} xu</b>
+              <b>{formatCoins(l.delta)} {l.currency === 'kc' ? 'KC' : 'Xu'}</b>
             </div>
           ))
         )}

@@ -1,3 +1,7 @@
+import { Crest as BarcelonaCrest, Banner as BarcelonaBanner } from './barcelona/BarcelonaArchitecture';
+import { MadridCrest, MadridFlag } from './real/RealArchitecture';
+import { StoreWorldEffects } from '../../store/StoreWorldEffects';
+import type { Loadout } from '../../../../../packages/shared/store/state';
 import { CityBanner, CityCrest } from './city/CityArchitecture';
 import { playerAvatarFile } from './PlayerAvatar3D';
 import { CAVES } from '../../../../../packages/shared/grandHall';
@@ -246,24 +250,39 @@ export function World3D() {
   const [revision, setRevision] = useState(0);
   const [quality, setQuality] = useState<Quality>(window.innerWidth < 700 ? 'low' : 'medium');
   const [effectsOff, setEffectsOff] = useState(false);
+  const [loadout, setLoadout] = useState<Loadout>({});
+  const [showOtherEffects, setShowOtherEffects] = useState(true);
+  const [throws, setThrows] = useState<Record<string, { facing: number; hand?: string }>>({});
+  function activeLoadout(id: string, current?: Loadout): Loadout | undefined {
+    return throws[id] ? { ...current, hand: throws[id].hand } : current;
+  }
   const [gestures, setGestures] = useState<Record<string, string>>({});
   useEffect(() => {
     let bubbleTimer: ReturnType<typeof setTimeout>;
     const gestureTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const releaseTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    function cancelGesture(id: string) {
+      clearTimeout(gestureTimers.get(id));
+      gestureTimers.delete(id);
+      clearTimeout(releaseTimers.get(id));
+      releaseTimers.delete(id);
+      setThrows((previous) => {
+        if (!previous[id]) return previous;
+        const next = { ...previous };
+        delete next[id];
+        return next;
+      });
+      setGestures((previous) => {
+        if (!previous[id]) return previous;
+        const next = { ...previous };
+        delete next[id];
+        return next;
+      });
+    }
     function gesture(id: string, clip: string) {
       clearTimeout(gestureTimers.get(id));
       setGestures((previous) => ({ ...previous, [id]: clip }));
-      gestureTimers.set(
-        id,
-        setTimeout(() => {
-          gestureTimers.delete(id);
-          setGestures((previous) => {
-            const next = { ...previous };
-            delete next[id];
-            return next;
-          });
-        }, 2100),
-      );
+      gestureTimers.set(id, setTimeout(() => cancelGesture(id), clip === 'Throw' ? 550 : 2100));
     }
     const r = runtime.current;
     function travel(e: { map: SceneId; x?: number; y?: number }) {
@@ -306,6 +325,9 @@ export function World3D() {
       gestureTimers.forEach(clearTimeout);
       gestureTimers.clear();
       setGestures({});
+      releaseTimers.forEach(clearTimeout);
+      releaseTimers.clear();
+      setThrows({});
       setBubble('');
       emit('map-changed', e.map);
       publish(60);
@@ -316,12 +338,19 @@ export function World3D() {
       syncMovement();
       emit('interact', { map: r.map, position, seated: r.seated });
     }
+    function throwItem() {
+      if (!r.controls.enabled || r.controls.blocked || r.map !== 'plaza' || r.seated || isTyping()) return;
+      syncMovement();
+      const aim = camera.getWorldDirection(new THREE.Vector3());
+      emit('store-aim', [aim.x, aim.y, aim.z]);
+    }
     function keydown(e: KeyboardEvent) {
       if (isTyping() || r.controls.blocked || !r.controls.enabled) return;
       enableGateAudio();
       if (movementKeys.includes(e.code) || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
         e.preventDefault();
         r.controls.keys.add(e.code);
+        if (movementKeys.includes(e.code) && !e.repeat) cancelGesture('local');
         updateMovementBasis(r.controls);
       }
       if (e.code === 'Space' && !e.repeat) {
@@ -331,8 +360,10 @@ export function World3D() {
       if (e.code === 'KeyB' && !e.repeat) emit('toggle-emotes');
       if (e.code === 'KeyP' && !e.repeat) emit('screenshot');
       if (e.code === 'KeyK' && !e.repeat) emit('open-banter');
-      if (!e.repeat && (e.code === 'KeyE' || (e.code === 'KeyF' && r.map === 'hall-of-legends')))
+      if (!e.repeat && (e.code === 'KeyE' || (e.code === 'KeyF' && (r.map === 'hall-of-legends' || r.map === 'real' || r.map === 'barcelona' || playtestNear(r.map, currentZonePoint())?.kind === 'shop'))))
         interact();
+      if (!e.repeat && /^Digit[1-5]$/.test(e.code)) emit('store-quick', Number(e.code.at(-1)));
+      if (!e.repeat && e.code === 'KeyQ') throwItem();
       if (e.code === 'Enter' && !e.repeat) {
         e.preventDefault();
         emit('focus-chat');
@@ -457,7 +488,10 @@ export function World3D() {
         blur();
       }),
       on<Point>('joystick', (p) => {
-        if (p.x || p.y) enableGateAudio();
+        if (p.x || p.y) {
+          enableGateAudio();
+          if (!r.controls.joystick.x && !r.controls.joystick.y) cancelGesture('local');
+        }
         r.controls.joystick = p;
         updateMovementBasis(r.controls);
       }),
@@ -510,7 +544,7 @@ export function World3D() {
       }),
       on<{ seated: boolean; direction?: number }>('seated', (v) => {
         r.seated = v.seated;
-        if ((r.map === 'liverpool' || r.map === 'city') && v.seated && v.direction !== undefined)
+        if ((r.map === 'liverpool' || r.map === 'city' || r.map === 'real' || r.map === 'barcelona') && v.seated && v.direction !== undefined)
           r.characterFacing = v.direction;
       }),
       on('jump', () => {
@@ -530,6 +564,21 @@ export function World3D() {
         if (settings.distance !== c.cameraSettings.distance)
           c.distance = cameraDistances[settings.distance];
         c.cameraSettings = settings;
+      }),
+      on('store-throw', throwItem),
+      on<Loadout>('store-loadout', setLoadout),
+      on<boolean>('store-effects-preference', setShowOtherEffects),
+      on<{ id: string; clip: string; facing?: number; sku?: string; release?: number }>('store-gesture', ({ id, clip, facing, sku, release }) => {
+        const key = id === r.self ? 'local' : id;
+        cancelGesture(key);
+        if (facing !== undefined) {
+          setThrows((previous) => ({ ...previous, [key]: { facing, hand: sku } }));
+          releaseTimers.set(key, setTimeout(() => {
+            releaseTimers.delete(key);
+            setThrows((previous) => previous[key] ? { ...previous, [key]: { facing } } : previous);
+          }, release ?? 180));
+        }
+        gesture(key, clip);
       }),
       on<string>('gesture', (clip) => gesture('local', clip)),
       on<{ id: string; value: string }>('avatar-emote', ({ id, value }) => {
@@ -559,6 +608,7 @@ export function World3D() {
     return () => {
       off.forEach((f) => f());
       gestureTimers.forEach(clearTimeout);
+      releaseTimers.forEach(clearTimeout);
       clearTimeout(bubbleTimer);
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('keyup', keyup);
@@ -749,35 +799,49 @@ export function World3D() {
     gl.info.reset();
   });
   const worldScene = isConnectedZone(map) ? 'plaza' : map;
+  // Network snapshots update avatars frequently. Keep the static scene and gate
+  // geometry stable while their frame callbacks read the latest player and door state.
+  const environment = useMemo(
+    () => (
+      <>
+        <PortalTriggers key={`portals-${worldScene}`} map={worldScene} runtime={runtime} />
+        <Environment
+          key={worldScene}
+          map={worldScene}
+          quality={quality}
+          player={() => runtime.current.feet}
+        />
+        {worldScene === 'plaza' &&
+          CAVE_GATES.map((gate) => (
+            <CaveGate
+              key={gate.id}
+              gate={gate}
+              timing={() => runtime.current.gates.get(gate.id)}
+              mark={<GateMark gate={gate} />}
+              flags={
+                gate.id === 'city' ? [-3.55, 3.55].map((x) => (
+                  <CityBanner key={x} position={[x, 4.42, 0.64]} width={0.96} height={2.17} />
+                )) : gate.id === 'barcelona' ? <Suspense fallback={null}>
+                  {[-1, 1].map((side) => <BarcelonaBanner key={side} position={[side * 3.55, 4.45, 0.68]} width={1.18} height={2.35} />)}
+                </Suspense> : gate.id === 'real' ? [-1, 1].map((side) => <MadridFlag key={side} position={[side * 3.55, 4.3, 0.66]} scale={0.62} />) : gate.id === 'liverpool' && (
+                  <LiverpoolAsset
+                    asset="banner"
+                    placements={[-3.55, 3.55].map((x) => ({
+                      position: [x, 4.52, 0.61],
+                      scale: 0.63,
+                    }))}
+                  />
+                )
+              }
+            />
+          ))}
+      </>
+    ),
+    [worldScene, quality, runtime],
+  );
   return (
     <>
-      <PortalTriggers key={`portals-${worldScene}`} map={worldScene} runtime={runtime} />
-      <Environment
-        key={worldScene}
-        map={worldScene}
-        quality={quality}
-        player={() => runtime.current.feet}
-      />
-      {worldScene === 'plaza' &&
-        CAVE_GATES.map((gate) => (
-          <CaveGate
-            key={gate.id}
-            gate={gate}
-            timing={() => runtime.current.gates.get(gate.id)}
-            mark={<GateMark gate={gate} />}
-            flags={
-              gate.id === 'liverpool' && (
-                <LiverpoolAsset
-                  asset="banner"
-                  placements={[-3.55, 3.55].map((x) => ({
-                    position: [x, 4.52, 0.61],
-                    scale: 0.63,
-                  }))}
-                />
-              )
-            }
-          />
-        ))}
+      {environment}
       <AvatarController
         key={revision}
         map={map}
@@ -786,6 +850,8 @@ export function World3D() {
         profile={profile}
         bubble={bubble}
         gesture={gestures.local}
+        loadout={activeLoadout('local', loadout)}
+        throwDirection={throws.local?.facing}
       />
       {remotes.map((p) => (
         <RemoteCharacter
@@ -794,8 +860,18 @@ export function World3D() {
           map={p.map as SceneId}
           bubble={remoteBubbles[p.id]}
           gesture={gestures[p.id]}
+          loadout={activeLoadout(p.id, p.loadout)}
+          throwDirection={throws[p.id]?.facing}
+          storeEffects={showOtherEffects && !effectsOff}
         />
       ))}
+      <StoreWorldEffects plaza={map === 'plaza'} effects={showOtherEffects && !effectsOff}
+        location={() => runtime.current.feet.toArray()}
+        locate={(id) => {
+          const p = remotes.find((entry) => entry.id === id);
+          return p && worldPosition(p.map as SceneId, p, (p.height ?? 0) + (p.airOffset ?? 0));
+        }}
+      />
       {quality !== 'low' && !effectsOff && <Dust map={map} />}
       {quality === 'high' && (
         <EffectComposer multisampling={0}>
@@ -806,6 +882,8 @@ export function World3D() {
   );
 }
 function GateMark({ gate }: { gate: GateConfig }) {
+  if (gate.id === 'barcelona') return <Suspense fallback={null}><BarcelonaCrest size={1.02} /></Suspense>;
+  if (gate.id === 'real') return <MadridCrest scale={0.47} />;
   if (gate.id === 'city') return <Suspense fallback={null}><CityCrest size={0.7} /></Suspense>;
   if (gate.id === 'liverpool')
     return <LiverpoolAsset asset="bird" placements={[{ position: [0, 0, 0], scale: 0.48 }]} />;
@@ -829,6 +907,8 @@ function AvatarController({
   profile,
   bubble,
   gesture,
+  loadout,
+  throwDirection,
 }: {
   map: SceneId;
   runtime: React.RefObject<Runtime>;
@@ -836,6 +916,8 @@ function AvatarController({
   profile: Profile;
   bubble: string;
   gesture?: string;
+  loadout?: Loadout;
+  throwDirection?: number;
 }) {
   const body = useRef<RapierRigidBody>(null);
   const avatar = useRef<THREE.Group>(null);
@@ -858,6 +940,7 @@ function AvatarController({
   }, [world]);
   useEffect(() => () => world.removeCharacterController(controller), [world, controller]);
   const spawnSteps = useRef(0);
+  const locomotion = useRef({ at: performance.now(), credit: 1 / 60 });
   const velocity = useRef(0),
     blockedAt = useRef(0);
   const initial = useRef(runtime.current.feet.clone()).current;
@@ -914,7 +997,15 @@ function AvatarController({
     const cos = Math.cos(basis);
     c.forwardIntent = iz < -0.1;
     if (hasMoveIntent) r.characterFacing = Math.atan2(-sin, -cos);
-    const step = speed * layouts[isConnectedZone(r.map) ? 'plaza' : r.map].scale * dt;
+    // Limit horizontal catch-up after a blocked render. Rapier can step several times
+    // in one frame, but the server receives one position for the whole frame.
+    const now = performance.now();
+    const clock = locomotion.current;
+    clock.credit = Math.min(0.1, clock.credit + (now - clock.at) / 1000);
+    clock.at = now;
+    const movementTime = Math.min(dt, clock.credit);
+    clock.credit -= movementTime;
+    const step = speed * layouts[isConnectedZone(r.map) ? 'plaza' : r.map].scale * movementTime;
     const dx = (ix * cos + iz * sin) * step;
     const dz = (-ix * sin + iz * cos) * step;
     if (c.jump && r.grounded && !c.blocked && c.enabled && !isTyping()) {
@@ -944,8 +1035,11 @@ function AvatarController({
     const desired = Math.hypot(dx, dz);
     if (desired > 0.01 && Math.hypot(movement.x - dx, movement.z - dz) > desired * 0.3)
       r.collisions++;
-    r.moving = moved;
-    r.movementVelocity.set(movement.x / dt, 0, movement.z / dt);
+    if (movementTime > 0.001 || !hasMoveIntent) {
+      r.moving = moved;
+      const sampleTime = Math.max(movementTime, 0.001);
+      r.movementVelocity.set(movement.x / sampleTime, 0, movement.z / sampleTime);
+    }
     if (p.y < caveOffset(r.map)[1] - 5 && performance.now() - blockedAt.current > 1000) {
       pending.current = spawn(r.map);
       blockedAt.current = performance.now();
@@ -1072,7 +1166,7 @@ function AvatarController({
       <group ref={avatar} position={[0, -1.02, 0]}>
         <group
           position={
-            (map === 'liverpool' || map === 'city') && animation.seated ? seatOffset(animation.direction, map) : undefined
+            (map === 'liverpool' || map === 'city' || map === 'real' || map === 'barcelona') && animation.seated ? seatOffset(animation.direction, map) : undefined
           }
         >
           <Character
@@ -1084,11 +1178,12 @@ function AvatarController({
                 : `${profile.nickname} · BẠN`
             }
             moving={animation.moving}
-            direction={animation.direction}
+            direction={throwDirection ?? animation.direction}
             running={animation.running}
             jumping={animation.jumping}
             seated={animation.seated}
             gesture={gesture}
+            loadout={loadout}
           />
         </group>
         {bubble && <Billboard text={bubble} />}
@@ -1101,7 +1196,7 @@ function AvatarController({
   );
 }
 function seatOffset(direction: number, map: SceneId): [number, number, number] {
-  return [-Math.sin(direction) * 0.55, map === 'city' ? 0.2 : 0.19, -Math.cos(direction) * 0.55];
+  return [-Math.sin(direction) * 0.55, map === 'real' ? 0.16 : (map === 'city' || map === 'barcelona') ? 0.2 : 0.19, -Math.cos(direction) * 0.55];
 }
 function Billboard({ text }: { text: string }) {
   const ref = useRef<THREE.Group>(null);
@@ -1117,11 +1212,17 @@ function RemoteCharacter({
   map,
   bubble,
   gesture,
+  throwDirection,
+  storeEffects,
+  loadout,
 }: {
   player: Player;
   map: SceneId;
   bubble?: string;
   gesture?: string;
+  throwDirection?: number;
+  storeEffects?: boolean;
+  loadout?: Loadout;
 }) {
   const ref = useRef<THREE.Group>(null),
     [x, y, z] = worldPosition(map, player, (player.height ?? 0) + (player.airOffset ?? 0) + 0.04);
@@ -1134,18 +1235,20 @@ function RemoteCharacter({
   return (
     <group ref={ref} position={initial}>
       <group
-        position={(map === 'liverpool' || map === 'city') && player.seated ? seatOffset(player.direction, map) : undefined}
+        position={(map === 'liverpool' || map === 'city' || map === 'real' || map === 'barcelona') && player.seated ? seatOffset(player.direction, map) : undefined}
       >
         <Character
           color={TEAMS.find((t) => t.id === player.team)?.color}
           hideTemplateCrest={isConnectedZone(map) || map === 'liverpool-museum'}
           name={player.nickname}
           moving={player.moving}
-          direction={player.direction}
+          direction={throwDirection ?? player.direction}
           running={player.motion === 'Run'}
           jumping={player.motion === 'Jump'}
           seated={player.seated}
           gesture={gesture}
+          loadout={loadout}
+          storeEffects={storeEffects}
         />
       </group>
       {bubble && <Billboard text={bubble} />}

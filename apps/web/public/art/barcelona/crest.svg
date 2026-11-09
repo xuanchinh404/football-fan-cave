@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="412" viewBox="0 0 100 103">
+  <defs><clipPath id="shield"><path d="M10 8Q28 16 50 5Q72 16 90 8L97 23Q84 37 93 55Q96 81 65 91L50 99L35 91Q4 81 7 55Q16 37 3 23Z"/></clipPath></defs>
+  <g clip-path="url(#shield)">
+    <path fill="#ffd55e" d="M0 0h100v103H0z"/>
+    <path fill="#fff4d7" d="M0 8h49v38H0z"/>
+    <path fill="#b11239" d="M20 8h9v38h-9zM0 25h49v9H0zM54 8h5v38h-5zM64 8h5v38h-5zM74 8h5v38h-5zM84 8h5v38h-5z"/>
+    <path fill="#122c78" d="M0 57h100v45H0z"/>
+    <path fill="#a51447" d="M16 57h14v43H16zM43 57h14v43H43zM70 57h14v43H70z"/>
+    <path d="M0 44h100v15H0z" fill="#ffcc42" stroke="#542721" stroke-width="2"/>
+    <circle cx="50" cy="77" r="11.5" fill="#ffc444" stroke="#552c24" stroke-width="1.6"/>
+    <path d="M42 69q10 0 12 8t-5 12M39 79q8 1 11-6m1-7q-1 12 10 14" fill="none" stroke="#6b3a25" stroke-width="1.5"/>
+    <text x="50" y="55.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="11" letter-spacing="2" fill="#281725">FCB</text>
+  </g>
+  <path d="M10 8Q28 16 50 5Q72 16 90 8L97 23Q84 37 93 55Q96 81 65 91L50 99L35 91Q4 81 7 55Q16 37 3 23Z" fill="none" stroke="#261926" stroke-width="5"/>
+  <path d="M10 8Q28 16 50 5Q72 16 90 8L97 23Q84 37 93 55Q96 81 65 91L50 99L35 91Q4 81 7 55Q16 37 3 23Z" fill="none" stroke="#ffce53" stroke-width="2.4"/>
+</svg>

@@ -76,9 +76,9 @@ export function CityHeritageHall({ lang }: { lang: CityLanguage }) {
       <CitySign position={[0, 5.54, 0.16]} width={6.82} height={0.77} lines={[cityText(lang, CITY_COPY.hall)]} />
     </group>
     <CityArch position={[0, 0, -21.31]} radius={8.72} spring={0.59} thickness={0.67} />
-    <CitySign position={[0, 7.58, -21.18]} width={15.8} height={1.36} maxFontSize={90}
+    <CitySign position={[0, 7.67, -20.9]} width={14.4} height={1.82} maxFontSize={90}
       lines={[cityText(lang, CITY_COPY.museum).toUpperCase(), 'MANCHESTER CITY HERITAGE HALL']} />
-    <Suspense fallback={null}><CityCrest size={1.77} position={[0, 9.46, -21.12]} /></Suspense>
+    <Suspense fallback={null}><CityCrest size={1.77} position={[0, 9.62, -20.9]} /></Suspense>
     {[-1, 1].map((side) => <group key={side}>
       <CityBanner position={[side * 10.7, 6.39, -21.34]} height={3.15} />
       <CityCrystal position={[side * 12.55, 0, -19.8]} scale={0.93} rotation={side} />
@@ -88,7 +88,7 @@ export function CityHeritageHall({ lang }: { lang: CityLanguage }) {
         <CityLantern position={[side * 13.07, 4.68, z]} />
       </group>)}
     </group>)}
-    <CitySign position={[0, 6.46, -21.22]} width={9.4} height={0.45}
+    <CitySign position={[0, 6.42, -20.96]} width={8.25} height={0.51}
       lines={[cityText(lang, CITY_SECTIONS.managers).toUpperCase()]} />
     {cityManagers.slice(0, 4).map((entry, i) => <CityFrame key={entry.id}
       entry={entry} lang={lang} position={[(i - 1.5) * 3.1, 5.13, -21.15]} width={2.68} height={1.64} />)}

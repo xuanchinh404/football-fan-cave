@@ -1,3 +1,16 @@
+import { useBarcaLanguage } from './game/three/barcelona/useBarcaLanguage';
+import { BARCA_COPY, bt, type BarcaSection } from '../../../packages/shared/barcelona/content';
+import { BARCA_SEAT_DIRECTION, barcaArea } from '../../../packages/shared/barcelona/layout';
+import { BarcelonaCollection, BarcelonaHUD, BarcelonaMatchBoard, barcaInteractionLabel, barcaMapAreas } from './ui/BarcelonaHUD';
+import { RealCollection, RealHUD, RealMap, realPrompt } from './ui/RealMadrid';
+import { realCopy, realLanguage, realText, type RealSection } from '../../../packages/shared/real/content';
+import { REAL_SEAT_DIRECTION, realArea } from '../../../packages/shared/real/layout';
+import { StorePanel } from './store/StorePanel';
+import { StoreHUD } from './store/StoreHUD';
+import { useStore } from './store/useStore';
+import { product, stalls } from '../../../packages/shared/store/catalog';
+import { inArena, type XYZ } from '../../../packages/shared/store/physics';
+import { grandMetres } from '../../../packages/shared/grandHall';
 import { CITY_COPY, cityInteractionLabel, cityLanguage, cityText, type CitySection } from '../../../packages/shared/city/content';
 import { CITY_SEAT_DIRECTION, cityArea } from '../../../packages/shared/city/layout';
 import { CityCollection, CityHUD, CityMatchBoard } from './ui/CityHUD';
@@ -92,6 +105,8 @@ import { ActionBar } from './ui/ActionBar';
 import { AdvanceControl } from './ui/AdvanceControl';
 import { WorldSignposts } from './ui/WorldSignposts';
 type Modal =
+  | 'real-collection'
+  | 'barca-collection'
   | 'city-collection'
   | 'exhibit'
   | 'quiz'
@@ -99,6 +114,7 @@ type Modal =
   | 'map'
   | 'help'
   | 'shop'
+  | 'inventory'
   | 'support'
   | 'score'
   | 'event'
@@ -141,6 +157,13 @@ export default function App({
     ),
     [copied, setCopied] = useState(false);
   const [exhibitId, setExhibitId] = useState('');
+  const [realSection, setRealSection] = useState<RealSection>('overview');
+  function openRealSection(section: RealSection) {
+    setRealSection(section);
+    setModal('real-collection');
+  }
+  const [barcaSection, setBarcaSection] = useState<BarcaSection>('overview');
+  const [barcaNews, setBarcaNews] = useState(false);
   const [citySection, setCitySection] = useState<CitySection>('overview');
   const [cityNews, setCityNews] = useState(false);
   const [cameraSettings, setCameraSettings] = useState(readCameraSettings);
@@ -154,7 +177,6 @@ export default function App({
     worldRef = useRef(world),
     modalRef = useRef(modal),
     lastChat = useRef(0),
-    lastPreview = useRef(0),
     toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
     self = useRef('demo');
   worldRef.current = world;
@@ -164,6 +186,41 @@ export default function App({
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), 4500);
   }
+  const [storeLanguage, setStoreLanguage] = useState(() => Number(localStorage.getItem('hang-store-language') === 'en' || (!localStorage.getItem('hang-store-language') && document.documentElement.lang === 'en')));
+  const [storeStall, setStoreStall] = useState('');
+  const [storeEmotes, setStoreEmotes] = useState(false);
+  const store = useStore(playing, storeLanguage, notice);
+  const { x: hallX, z: hallZ } = grandMetres(world.position);
+  const inBanterArena = world.map === 'plaza' && inArena(hallX, hallZ);
+  const closeStore = () => setModal(null);
+  function openStore(stall = '') {
+    setStoreStall(stall);
+    setModal('shop');
+  }
+  function openBag(emotes = false) {
+    setStoreEmotes(emotes);
+    setModal('inventory');
+  }
+  function quickSlot(index: number) {
+    const item = product(store.state?.quick[index]);
+    if (item && store.state?.inventory[item.id]) {
+      void store.run({ command: item.slot ? 'equip' : 'use', sku: item.id });
+    }
+  }
+  useEffect(() => {
+    const offQuick = on<number>('store-quick', quickSlot);
+    const offArena = on('store-arena-interact', () => store.run({ command: 'arena', optIn: !store.optedIn }));
+    const offThrow = on<XYZ>('store-aim', (aim) => {
+      const item = product(store.state?.equipped.hand);
+      if (item?.action === 'throw' && !modalRef.current) {
+        void store.run({ command: 'throw', sku: item.id, aim });
+      }
+    });
+    return () => { offQuick(); offThrow(); offArena(); };
+  }, [store.state, store.run, store.optedIn]);
+  useEffect(() => {
+    if (!inBanterArena && store.optedIn) store.clearOptIn(false);
+  }, [inBanterArena, store.optedIn, store.clearOptIn]);
   useEffect(() => {
     const off = [
       on<WorldState>('state', setWorld),
@@ -174,7 +231,7 @@ export default function App({
       on<string>('notice', notice),
       on<Pick<WorldState, 'map' | 'position' | 'seated'>>('interact', (state) => interactAt(state)),
       on('toggle-emotes', () => setEmojiOpen((v) => !v)),
-      on('open-banter', () => setModal('shop')),
+      on('open-banter', () => openStore()),
       on<string>('inspect', (id) => {
         const w = worldRef.current,
           item = playtestInteractions(w.map).find((p) => p.kind === 'exhibit' && p.id === id);
@@ -190,6 +247,18 @@ export default function App({
         }
         setExhibitId(id);
         setModal('exhibit');
+      }),
+      on<string>('barca-exhibit', (id) => {
+        const w = worldRef.current;
+        if (w.map !== 'barcelona' || barcaArea(w.position) !== 'museum' || modalRef.current) return;
+        setExhibitId(id);
+        setModal('exhibit');
+      }),
+      on<boolean>('barca-board', (news) => {
+        const w = worldRef.current;
+        if (w.map !== 'barcelona' || !['hall', 'lounge'].includes(barcaArea(w.position)) || modalRef.current) return;
+        setBarcaNews(news);
+        setModal('score');
       }),
       on<string>('city-exhibit', (id) => {
         if (worldRef.current.map !== 'city' || cityArea(worldRef.current.position) !== 'museum') return;
@@ -308,6 +377,11 @@ export default function App({
   function interactAt(w: Pick<WorldState, 'map' | 'position' | 'seated'>) {
     const p = near(w.map, w.position);
     if (!p) return;
+    if (w.map === 'barcelona' && p.kind === 'score') {
+      setBarcaNews(p.id === 'barca-news');
+      setModal('score');
+      return;
+    }
     if (w.map === 'city' && p.kind === 'score') {
       setCityNews(p.id === 'city-news');
       setModal('score');
@@ -318,7 +392,17 @@ export default function App({
       setModal('exhibit');
       return;
     }
-    if (p.kind === 'wallet' || (w.map === 'plaza' && p.kind === 'shop')) {
+    if (p.kind === 'shop') {
+      openStore(stalls.find((stall) => stall.id === p.id)?.id);
+      return;
+    }
+    if (p.id === 'arena') {
+      if (inArena(grandMetres(w.position).x, grandMetres(w.position).z)) {
+        emit('store-arena-interact');
+      } else notice('Bước vào đấu trường để chọn tham gia.');
+      return;
+    }
+    if (p.kind === 'wallet') {
       openWallet();
       return;
     }
@@ -343,12 +427,12 @@ export default function App({
         );
       }
     } else if (p.kind === 'seat') {
-      if (w.map === 'liverpool' || w.map === 'city') {
+      if (w.map === 'liverpool' || w.map === 'city' || w.map === 'real' || w.map === 'barcelona') {
         if (socket.connected) socket.emit('interact', p.id);
         else {
           if (!w.seated && !clearPath(w.map, w.position, p)) return;
           if (!w.seated) emit('correct', p);
-          emit('seated', { seated: !w.seated, direction: w.map === 'city' ? CITY_SEAT_DIRECTION : kopSeatFacing(p) });
+          emit('seated', { seated: !w.seated, direction: w.map === 'barcelona' ? BARCA_SEAT_DIRECTION : w.map === 'real' ? REAL_SEAT_DIRECTION : w.map === 'city' ? CITY_SEAT_DIRECTION : kopSeatFacing(p) });
         }
         if (w.map === 'liverpool') notice('Nhấn E hoặc di chuyển để đứng dậy.');
         return;
@@ -440,20 +524,6 @@ export default function App({
     else emit('bubble', { id: 'demo', text: value });
     setEmojiOpen(false);
   }
-  function preview(kind: string) {
-    if (!playing) {
-      setModal('join');
-      return;
-    }
-    if (Date.now() - lastPreview.current < 4000) {
-      notice('Đợi 4 giây giữa các lần xem thử hiệu ứng.');
-      return;
-    }
-    lastPreview.current = Date.now();
-    setModal(null);
-    emit('effect', kind);
-    notice('Hiệu ứng xem thử trên thiết bị của bạn · Không phát sinh thanh toán.');
-  }
   async function invite() {
     try {
       await navigator.clipboard.writeText(window.location.origin);
@@ -464,6 +534,11 @@ export default function App({
       notice(`Đường dẫn mời bạn: ${window.location.origin}`);
     }
   }
+  const realRoom = world.map === 'real';
+  const realLang = realLanguage(document.documentElement.lang);
+  const barcaRoom = world.map === 'barcelona';
+  const barcaLang = useBarcaLanguage();
+  const barcaZone = barcaArea(world.position);
   const cityRoom = world.map === 'city';
   const cityLang = cityLanguage(document.documentElement.lang);
   const cityZone = cityArea(world.position);
@@ -483,7 +558,10 @@ export default function App({
           : undefined;
   const team = TEAMS.find((t) => t.id === profile.team)!,
     area =
-      cityRoom
+      barcaRoom ? (barcaZone === 'hall' ? (barcaLang === 'vi' ? 'Hang Barcelona · Sảnh Trú Ẩn' : 'Barcelona Cave · Refuge Hall') : bt(barcaLang, BARCA_COPY[barcaZone]))
+        : realRoom
+        ? realText(realLang, realCopy.title) + ' · ' + realText(realLang, realCopy[realArea(world.position)])
+        : cityRoom
         ? cityZone === 'hall' ? cityText(cityLang, CITY_COPY.hall)
           : cityText(cityLang, CITY_COPY[cityZone])
         : world.map === 'liverpool-museum'
@@ -499,7 +577,7 @@ export default function App({
                 : CAVES.find((c) => c.id === world.map)?.name ?? TEAMS.find((t) => t.id === world.map)?.name;
   return (
     <div
-      className={`app-shell ${cityRoom ? 'city-shell' : ''} ${arsenalRoom || liverpoolRoom ? 'red-cave gunners-cave' : ''} ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' || world.map === 'arsenal-museum' || world.map === 'liverpool-museum' ? 'museum-shell' : ''}`}
+      className={`app-shell ${barcaRoom ? 'barca-shell' : ''} ${realRoom ? 'real-shell' : ''} ${cityRoom ? 'city-shell' : ''} ${arsenalRoom || liverpoolRoom ? 'red-cave gunners-cave' : ''} ${world.map === 'chelsea' || world.map === 'chelsea-museum' ? 'red-cave blues-cave' : ''} ${world.map === 'united' || world.map === 'hall-of-legends' ? 'red-cave' : ''} ${world.map === 'hall-of-legends' || world.map === 'chelsea-museum' || world.map === 'arsenal-museum' || world.map === 'liverpool-museum' ? 'museum-shell' : ''}`}
     >
       <header className="topbar">
         <a
@@ -553,9 +631,9 @@ export default function App({
           </div>
         </nav>
         <div className="header-actions">
-          <button className="shop-nav" onClick={() => setModal('shop')}>
+          <button className="shop-nav" onClick={() => openStore()}>
             <Megaphone size={17} />
-            <span>Quầy Cà Khịa</span>
+            <span>{storeLanguage ? 'Shop Street' : 'Phố Cửa Hàng'}</span>
             <i>MỚI</i>
           </button>
           <button
@@ -574,15 +652,27 @@ export default function App({
       </header>
       <main className="playfield">
         <GameCanvas />
+        {playing && !modal && <StoreHUD state={store.state} lang={storeLanguage}
+          arena={inBanterArena} optedIn={store.optedIn} canThrow={world.map === 'plaza' && !world.seated}
+          open={() => openBag()} emotes={() => openBag(true)} quick={quickSlot}
+          toggleArena={() => store.run({ command: 'arena', optIn: !store.optedIn })}
+          throwItem={() => emit('store-throw')}
+        />}
         {playing && (
           <GrandHUD
             profile={profile}
             world={world}
             openWallet={openWallet}
+            openInventory={() => openBag()}
             settings={() => setModal('settings')}
             notice={notice}
           />
         )}
+        {playing && realRoom && <RealHUD lang={realLang} position={world.position} open={openRealSection} openMap={() => setModal('map')} />}
+        {playing && barcaRoom && <BarcelonaHUD lang={barcaLang} area={barcaZone} wallet={store.state?.wallet} openWallet={openWallet} open={(section) => {
+          setBarcaSection(section);
+          setModal('barca-collection');
+        }} />}
         {playing && cityRoom && <CityHUD lang={cityLang} area={cityZone} open={(section) => {
           setCitySection(section);
           setModal('city-collection');
@@ -711,16 +801,16 @@ export default function App({
         )}
         {world.near && playing && (
           <button className="interaction-prompt" onClick={interact}>
-            <kbd>{muStation ? 'F' : 'E'}</kbd>
+            <kbd>{barcaRoom || realRoom || muStation || world.near?.kind === 'shop' ? 'F' : 'E'}</kbd>
             <span>
-              {cityRoom ? cityInteractionLabel(world.near.id, cityLang, world.seated)
+              {barcaRoom ? barcaInteractionLabel(world.near, barcaLang, world.seated) : realRoom ? realPrompt(world.near.id, world.near.label, realLang, !!world.seated) : cityRoom ? cityInteractionLabel(world.near.id, cityLang, world.seated)
                 : muStation
                 ? `${muLabels.inspect} · ${muStation.title[museumLanguage]}`
                 : muMuseum && world.near.id === 'hall-exit'
                   ? muLabels.exit
                   : muMuseum && world.near.id === 'hall-photo' && museumLanguage === 'en'
                     ? 'Take a photo'
-                    : world.near.label}
+                    : storeLanguage && world.near.kind === 'shop' ? stalls.find((stall) => stall.id === world.near?.id)?.name[1] ?? world.near.label : world.near.label}
             </span>
             <ChevronRight size={16} />
           </button>
@@ -731,7 +821,7 @@ export default function App({
               {[
                 {
                   id: 'room',
-                  label: cityRoom ? cityText(cityLang, CITY_COPY.hall) : liverpoolRoom
+                  label: barcaRoom ? bt(barcaLang, BARCA_COPY.cave) : cityRoom ? cityText(cityLang, CITY_COPY.hall) : liverpoolRoom
                     ? world.map === 'liverpool'
                       ? 'Hang Liverpool'
                       : 'Truyền Thống'
@@ -880,18 +970,18 @@ export default function App({
             setTimeout(() => input.current?.focus(), 20);
           }}
           emoji={() => setEmojiOpen((v) => !v)}
-          shop={() => setModal('shop')}
+          shop={() => openStore()}
           emojiOpen={emojiOpen}
           interact={interact}
           canInteract={playing && !!world.near}
-          interactionKey={muStation ? 'F' : 'E'}
+          interactionKey={barcaRoom || realRoom || muStation || world.near?.kind === 'shop' ? 'F' : 'E'}
           minigame={() => {
             if (world.map === 'plaza' && world.near?.id === 'minigame') setModal('minigame');
             else
               notice('Đến Sân Minigame phía trước bên phải quảng trường, tới gần bóng rồi nhấn E.');
           }}
         />
-        {playing && <WorldSignposts open={() => setModal('shop')} />}
+        {playing && <WorldSignposts open={() => openStore()} />}
         {emojiOpen && (
           <div className="emoji-menu panel">
             <div>
@@ -994,7 +1084,20 @@ export default function App({
           </section>
         </div>
       )}
-      {modal && (
+      {(modal === 'shop' || modal === 'inventory') && <StorePanel
+        key={modal}
+        stall={modal === 'shop' ? storeStall : undefined}
+        inventory={modal === 'inventory'}
+        emotes={modal === 'inventory' && storeEmotes}
+        lang={storeLanguage}
+        teamColor={TEAMS.find((team) => team.id === profile.team)?.color}
+        state={store.state} busy={store.busy} run={store.run} close={closeStore} notice={notice}
+        setLanguage={(language) => {
+          localStorage.setItem('hang-store-language', language ? 'en' : 'vi');
+          setStoreLanguage(language);
+        }}
+      />}
+      {modal && modal !== 'shop' && modal !== 'inventory' && (
         <div
           className="modal-backdrop"
           onMouseDown={(e) => {
@@ -1002,20 +1105,22 @@ export default function App({
           }}
         >
           <section
-            className={`modal ${modal === 'map' ? 'wide' : ''}`}
+            className={`modal ${modal === 'map' || (realRoom && (modal === 'real-collection' || modal === 'exhibit')) ? 'wide' : ''}`}
             role="dialog"
             aria-modal="true"
             aria-label={
               modal === 'join'
                 ? 'Tạo nhân vật'
-                : modal === 'shop'
-                  ? 'Quầy Cà Khịa'
-                  : 'Thông tin game'
+                : 'Thông tin game'
             }
           >
             <button className="close" onClick={() => setModal(null)} aria-label="Đóng">
               <X size={20} />
             </button>
+            {realRoom && modal === 'real-collection' && <RealCollection key={realSection} section={realSection} lang={realLang} open={openRealSection} />}
+            {realRoom && modal === 'exhibit' && <RealCollection key={exhibitId} section="overview" id={exhibitId} lang={realLang} open={openRealSection} />}
+            {barcaRoom && modal === 'barca-collection' && <BarcelonaCollection key={barcaSection} section={barcaSection} lang={barcaLang} />}
+            {barcaRoom && modal === 'exhibit' && <BarcelonaCollection key={exhibitId} section="overview" id={exhibitId} lang={barcaLang} />}
             {cityRoom && modal === 'city-collection' && <CityCollection key={citySection} section={citySection} lang={cityLang} />}
             {cityRoom && modal === 'exhibit' && <CityCollection key={exhibitId} section="overview" id={exhibitId} lang={cityLang} />}
             {modal === 'exhibit' && kopExhibit && (
@@ -1136,13 +1241,14 @@ export default function App({
                 </small>
               </>
             )}
-            {modal === 'map' && (
+            {modal === 'map' && realRoom && <RealMap lang={realLang} position={world.position} expanded />}
+            {modal === 'map' && !realRoom && (
               <>
                 <div className="eyebrow">LA BÀN CỦA NGƯỜI HÂM MỘ</div>
                 <h2>Mỗi hang, một câu chuyện.</h2>
                 <p>
-                  Đi đến một cổng phát sáng và nhấn <kbd>E</kbd> để vào hang. Chấm sáng là vị trí
-                  của bạn.
+                  Đi đến cổng của đội bạn yêu thích. Cửa sẽ tự mở khi bạn đến gần. Chấm sáng là
+                  vị trí của bạn.
                 </p>
                 <Minimap
                   large
@@ -1151,7 +1257,9 @@ export default function App({
                   heading={world.direction}
                 />
                 <div className="map-legend">
-                  {(cityRoom
+                  {(barcaRoom
+                    ? barcaMapAreas.map((id) => ({ id, short: bt(barcaLang, BARCA_COPY[id]), color: '#e6ad58' }))
+                    : cityRoom
                     ? (['hall', 'lounge', 'museum', 'tunnel'] as const).map((id) => ({ id, short: cityText(cityLang, CITY_COPY[id]), color: '#7dd3ff' }))
                     : liverpoolRoom
                     ? (world.map === 'liverpool' ? KOP_CAVE : KOP_MUSEUM).zones.map((z) => ({
@@ -1257,67 +1365,6 @@ export default function App({
                 </button>
               </>
             )}
-            {modal === 'shop' && (
-              <>
-                <div className="modal-symbol orange">
-                  <Megaphone size={30} />
-                </div>
-                <div className="eyebrow">THÊM GIA VỊ CHO TRẬN ĐẤU</div>
-                <h2>Cà khịa vui thôi!</h2>
-                <p>Đam mê hết mình, trêu nhau có chừng mực.</p>
-                <div className="preview-badge">
-                  <EyeOff size={14} /> CHẾ ĐỘ XEM THỬ · KHÔNG THANH TOÁN
-                </div>
-                <div className="effects-list">
-                  {[
-                    {
-                      id: 'tomato',
-                      emoji: '🍅',
-                      name: 'Mưa cà chua',
-                      desc: 'Một cơn mưa đậm vị bóng đá.',
-                      price: '3.000đ',
-                    },
-                    {
-                      id: 'speaker',
-                      emoji: '📣',
-                      name: 'Loa cà khịa',
-                      desc: 'Phong độ là nhất thời!',
-                      price: '5.000đ',
-                    },
-                    {
-                      id: 'banner',
-                      emoji: '🏳️',
-                      name: 'Banner hẹn mùa sau',
-                      desc: 'Thông điệp có sẵn, đã giới hạn nội dung.',
-                      price: '10.000đ',
-                    },
-                    {
-                      id: 'confetti',
-                      emoji: '🎉',
-                      name: 'Pháo giấy ăn mừng',
-                      desc: 'Chung vui một khoảnh khắc.',
-                      price: 'Miễn phí',
-                    },
-                  ].map((e) => (
-                    <div className="effect-item" key={e.id}>
-                      <span>{e.emoji}</span>
-                      <div>
-                        <strong>{e.name}</strong>
-                        <p>{e.desc}</p>
-                        <small>{e.price === 'Miễn phí' ? e.price : `Giá dự kiến ${e.price}`}</small>
-                      </div>
-                      <button onClick={() => preview(e.id)}>
-                        Xem thử <ArrowUpRight size={13} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <small className="footnote">
-                  Hiệu ứng chỉ hiển thị trên thiết bị của bạn. Giãn cách 4 giây. Chưa mở bán; thanh
-                  toán chỉ được kích hoạt khi có backend xác thực.
-                </small>
-              </>
-            )}
             {modal === 'support' && (
               <>
                 <div className="modal-symbol">
@@ -1377,11 +1424,19 @@ export default function App({
                 </p>
               </>
             )}
+            {modal === 'score' && barcaRoom && <BarcelonaMatchBoard lang={barcaLang} news={barcaNews} chat={() => {
+              setModal(null); setChatVisible(true);
+            }} />}
             {modal === 'score' && cityRoom && <CityMatchBoard lang={cityLang} news={cityNews} chat={() => {
               setModal(null);
               setChatVisible(true);
             }} />}
-            {modal === 'score' && !demoMatch && !cityRoom && (
+            {modal === 'score' && realRoom && <article className="real-collection">
+              <div className="eyebrow">REAL MADRID</div>
+              <h2>{realText(realLang, realCopy.score)}</h2>
+              <p>{realText(realLang, realCopy.waiting)}</p>
+            </article>}
+            {modal === 'score' && !demoMatch && !barcaRoom && !cityRoom && !realRoom && (
               <>
                 <div className="eyebrow">GÓC BÓNG ĐÁ · DỮ LIỆU MINH HỌA</div>
                 <h2>Hết trận, còn câu chuyện.</h2>

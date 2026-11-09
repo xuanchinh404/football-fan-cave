@@ -1,10 +1,13 @@
-import { Suspense } from 'react';
+import { Suspense, useLayoutEffect, useMemo, useRef } from 'react';
+import { useLoader } from '@react-three/fiber';
+import { InstancedMesh, Mesh, MeshStandardMaterial, Object3D } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CuboidCollider, TrimeshCollider } from '@react-three/rapier';
 import { CITY_COPY, cityGallery, cityLanguage, cityText } from '../../../../../../packages/shared/city/content';
 import { CITY_BLOCKS, CITY_HALL, CITY_LINK, CITY_STAIR } from '../../../../../../packages/shared/city/layout';
 import { CORRIDOR_HALF_WIDTH } from '../../../../../../packages/shared/grandHall';
 import { emit } from '../../bridge';
-import { AssetModel } from '../AssetModel';
+import { AssetBoundary } from '../BlenderAsset';
 import type { V3 } from '../IndoorKit';
 import {
   CityArch, CityBanner, CityBox, CityCarpet, CityCrest, CityCrystal, CityFixed, CityFloor, CityLantern,
@@ -65,6 +68,35 @@ function CityPot({ position, scale = 1 }: { position: V3; scale?: number }) {
   </group>;
 }
 
+function CityIvy({ position, rotation = 0 }: { position: V3; rotation?: number }) {
+  const leaves = useRef<InstancedMesh>(null);
+  const leaf = useMemo(() => new Object3D(), []);
+  useLayoutEffect(() => {
+    if (!leaves.current) return;
+    for (let i = 0; i < 24; i++) {
+      const drift = Math.sin(i * 0.4) * 0.21;
+      leaf.position.set(drift + (i % 2 ? 0.18 : -0.18), -i * 0.113, 0.05 * Math.sin(i));
+      leaf.rotation.set(0.21, 0.23 * Math.sin(i), i % 2 ? -0.59 : 0.63);
+      leaf.scale.set(0.145, 0.29 - (i / 24) * 0.1, 0.085);
+      leaf.updateMatrix();
+      leaves.current.setMatrixAt(i, leaf.matrix);
+    }
+    leaves.current.instanceMatrix.needsUpdate = true;
+    leaves.current.computeBoundingSphere();
+  }, [leaf]);
+  return (
+    <instancedMesh
+      ref={leaves}
+      args={[undefined, undefined, 24]}
+      position={position}
+      rotation={[0, rotation, 0]}
+    >
+      <icosahedronGeometry args={[1, 0]} />
+      <meshStandardMaterial color="#3b775e" roughness={0.87} flatShading />
+    </instancedMesh>
+  );
+}
+
 function CityLounge({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
   return <group name="city-fan-lounge">
     <CityCarpet position={[-10.9, 0.021, -20.1]} width={7.9} depth={8.8} />
@@ -77,6 +109,7 @@ function CityLounge({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
     <group onClick={(event) => { if (event.delta < 5) emit('city-board', true); }}>
       <CitySign position={[-11, 1.27, -23.95]} lines={[cityText(lang, CITY_COPY.news)]} width={4.85} height={0.64} />
     </group>
+    <CityIvy position={[-13.15, 5.2, -25.15]} />
     <CityPot position={[-14.25, 0, -22.6]} />
     <CityPot position={[-7.45, 0, -23.5]} />
     <CityLantern position={[-14, 3.13, -24.2]} />
@@ -114,10 +147,28 @@ function CityLounge({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
   </group>;
 }
 
+const lionStone = new MeshStandardMaterial({ color: '#95adc1', roughness: 0.86 });
+
+function CityStoneLion({ position, yaw }: { position: V3; yaw: number }) {
+  const { scene } = useLoader(GLTFLoader, '/models/blues-lion.glb');
+  const statue = useMemo(() => {
+    const model = scene.clone();
+    model.traverse((object) => {
+      if (object instanceof Mesh && object.material.name === 'BluesGold')
+        object.material = lionStone;
+    });
+    return model;
+  }, [scene]);
+  return <primitive object={statue} position={position} scale={0.82} rotation={[0, yaw, 0]} />;
+}
+
 function CityFeature({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
   return <group>
     <CityStair />
     <CityCarpet position={[0, 0.018, -8.65]} width={7.75} depth={14.1} />
+    <group position={[0, 0.048, -10.55]} rotation={[-Math.PI / 2, 0, 0]} scale={[1, 1, 0.06]}>
+      <Suspense fallback={null}><CityCrest size={3.7} /></Suspense>
+    </group>
     <CityArch position={[0, 0, -27.15]} radius={5.7} spring={4.78} thickness={0.83} />
     <CityBox position={[0, 3.28, -27.56]} size={[8.4, 4.05, 0.52]} color={navy} />
     <group position={[0, 3.4, -27.13]}>
@@ -141,10 +192,11 @@ function CityFeature({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
     {[-1, 1].map((side) => <group key={side}>
       <CityBanner position={[side * 7.1, 6.88, -26.98]} height={3.9} />
       <CityBox position={[side * 4.83, 5.65, -26.67]} size={[1.62, 0.47, 1.58]} color={gold} metal={0.58} />
-      <Suspense fallback={null}>
-        <AssetModel asset="blues-lion" position={[side * 4.85, 5.89, -26.64]} scale={0.82}
-          rotation={[0, side * -0.55, 0]} solid={false} />
-      </Suspense>
+      <AssetBoundary asset="city-stone-lion" fallback={null}>
+        <Suspense fallback={null}>
+          <CityStoneLion position={[side * 4.85, 5.89, -26.64]} yaw={side * -0.55} />
+        </Suspense>
+      </AssetBoundary>
       <CityLantern position={[side * 5.8, 3.35, -26.55]} scale={1.25} />
       <CityBox position={[side * 5.87, 0.47, -24.6]} size={[1.42, 0.94, 1.42]} color={navy} />
       <CityBox position={[side * 5.87, 0.95, -24.6]} size={[1.49, 0.13, 1.49]} color={gold} metal={0.55} />
@@ -155,13 +207,13 @@ function CityFeature({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
 }
 
 function CityMainHall({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
-  const { left, right, north, south } = CITY_HALL;
+  const { left, right, north, south, ceiling } = CITY_HALL;
   const hallWidth = right - left, depth = south - north;
   return <group name="city-refuge-hall">
     <CityFloor width={hallWidth} depth={depth} />
     <CityVault width={hallWidth} depth={depth} spring={5.8} rise={6.6} ribs={[-1.5, -8, -14.5, -21.2, -27.2]} rocky />
-    <CityWall position={[0, 0, north + 0.09]} width={hallWidth} height={12.8} />
-    <CityWall position={[0, 0, south + 0.04]} width={hallWidth} height={12.8}
+    <CityWall position={[0, 0, north + 0.09]} width={hallWidth} height={ceiling} />
+    <CityWall position={[0, 0, south + 0.04]} width={hallWidth} height={ceiling}
       gap={{ center: 0, width: CORRIDOR_HALF_WIDTH * 2 }} yaw={Math.PI} />
     <CityWall position={[left + 0.03, 0, -depth / 2]} width={depth} height={6.02} yaw={Math.PI / 2} />
     <CityWall position={[right - 0.03, 0, -depth / 2]} width={depth} height={6.02} yaw={-Math.PI / 2}
@@ -185,6 +237,8 @@ function CityMainHall({ lang }: { lang: ReturnType<typeof cityLanguage> }) {
         <CityCrystal position={[side * 13.65, 0, z - 0.9]} scale={i === 2 ? 1.16 : 0.9} rotation={z} />
         <CityCrystal position={[side * 14.65, 4.65, z - 2]} scale={0.61} rotation={z} />
       </group>))}
+    <CityIvy position={[14.43, 5.38, -11.12]} rotation={-Math.PI / 2} />
+    <CityIvy position={[14.45, 5.61, -18.96]} rotation={-Math.PI / 2} />
     <CityPot position={[12.6, 0, -10.7]} scale={1.15} />
     <CityPot position={[12.6, 0, -19.3]} scale={1.15} />
     <pointLight position={[9.6, 4.4, -14.2]} color="#ffcc84" intensity={61} distance={17} decay={2} />

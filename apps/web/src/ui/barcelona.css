@@ -1,0 +1,212 @@
+.barca-hud {
+  position: absolute;
+  z-index: 7;
+  inset: 88px auto auto 23px;
+  width: min(164px, 42vw);
+  color: #fff3d2;
+}
+.barca-hud-toggle,
+.barca-hud nav button,
+.barca-collection :is(button, select, input, .barca-toolbar a) {
+  color: #fff3d2;
+  background: linear-gradient(155deg, #192a56, #201932);
+  border: 1px solid #bc894b;
+  border-radius: 6px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 0.84rem;
+}
+.barca-hud-toggle,
+.barca-hud nav button,
+.barca-collection :is(button, select) {
+  cursor: pointer;
+}
+.barca-hud-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+}
+.barca-hud-toggle img {
+  width: 23px;
+  height: 23px;
+  flex: none;
+}
+.barca-hud-toggle span {
+  flex: 1;
+  min-width: 0;
+}
+.barca-hud-toggle strong,
+.barca-hud-toggle small {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barca-hud-toggle strong {
+  font-size: 0.77rem;
+}
+.barca-hud-toggle small {
+  display: block;
+  color: #e7b9bb;
+  margin-top: 2px;
+}
+.barca-hud nav {
+  padding: 5px;
+  margin-top: 5px;
+  max-height: 48vh;
+  overflow: auto;
+  background: #151325e8;
+  border-radius: 7px;
+}
+.barca-hud nav button {
+  width: 100%;
+  margin: 2px 0;
+  text-align: left;
+}
+.barca-wallet {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.barca-wallet svg {
+  color: #ffd47d;
+}
+.barca-language {
+  display: flex;
+  gap: 4px;
+}
+.barca-hud button:hover,
+.barca-hud button[aria-pressed='true'],
+.barca-collection button:hover,
+.barca-collection button[aria-pressed='true'] {
+  background: linear-gradient(155deg, #8a2d52, #382347);
+  border-color: #f3bd6b;
+}
+.barca-collection {
+  color: #f8f3ed;
+}
+.barca-collection h3 {
+  color: #ffe3a5;
+  margin: 0 0 0.35rem;
+}
+.barca-collection a {
+  color: #ffd58f;
+}
+.barca-toolbar,
+.barca-terms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 9px 0;
+}
+.barca-toolbar a {
+  text-decoration: none;
+}
+.barca-search {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.barca-search label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+}
+.barca-search input {
+  width: 100%;
+}
+.barca-kicker {
+  color: #f2cb83;
+  font-weight: 700;
+}
+.barca-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 6px;
+  max-height: 34vh;
+  overflow: auto;
+  margin: 8px 0;
+  padding: 1px;
+}
+.barca-list button {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+.barca-list span {
+  font-size: 0.72rem;
+  color: #edbcc4;
+}
+.barca-profile {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 11px;
+  border: 1px solid #9c724e;
+  border-radius: 8px;
+  background: #1b1b38;
+}
+.barca-profile img {
+  width: min(34%, 150px);
+  border-radius: 5px;
+}
+.barca-profile p {
+  margin: 5px 0;
+}
+.barca-seasons {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  padding: 0;
+  margin: 6px 0;
+  font-size: 0.8rem;
+}
+.barca-map-large svg {
+  max-height: min(48vh, 460px);
+}
+@media (max-width: 760px) {
+  .barca-hud {
+    inset: 56px 120px auto auto;
+  }
+  .barca-hud-toggle {
+    padding: 5px;
+    font-size: 0.73rem;
+  }
+  .barca-hud-toggle img {
+    width: 22px;
+    height: 22px;
+  }
+  .barca-list {
+    max-height: 26vh;
+  }
+}
+
+@media (min-width: 901px) {
+  .barca-shell .grand-sidebar > button:first-of-type {
+    margin-top: 51px;
+  }
+  .app-shell.barca-shell:has(.three-canvas) .area-card {
+    transform: translateY(50px);
+  }
+}
+@media (min-width: 761px) and (max-width: 900px) {
+  .barca-hud {
+    inset: 142px auto auto 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .barca-hud {
+    inset: 161px 8px auto auto;
+    width: min(150px, 42vw);
+  }
+  .app-shell.barca-shell:has(.three-canvas) .chat-panel {
+    max-width: calc(100vw - min(150px, 42vw) - 20px);
+  }
+}

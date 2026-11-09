@@ -2,11 +2,13 @@
 
 Tám cổng còn lại dùng cơ chế cửa vật lý đã kiểm thử ở Liverpool. Đại Sảnh, cửa, đường hầm và sảnh trú ẩn nằm trong cùng world Three.js/Rapier. Cửa giữ nguyên cao độ từng tầng. Sáu tuyến mới tầng hai đi qua các đoạn dốc dưới sân, còn tuyến Bayern và PSG nối tiếp sân tầng ba.
 
+- Lối lên Bayern và PSG dùng mặt dốc với bốn bậc đá ở đầu trên. Sáu hầm tầng hai được rút ngắn theo khoảng trống giữa các sảnh. Hai sảnh MU và Man City vẫn nằm sâu hơn để có đủ khoảng cách với các sảnh phía trên.
 - MU, Arsenal và Chelsea giữ các sảnh đã có. Phần vách ở lối ra nối trực tiếp với đường hầm mới. Phòng Truyền Thống vẫn dùng lối riêng ở cuối sảnh.
 - Bayern, PSG, Real Madrid và Barcelona có sảnh trú ẩn mới, với bảng tên, cờ và bảng màu theo đội. Đường hầm Manchester City nối thẳng tới sảnh Blue Moon và hành lang Phòng Truyền Thống cùng world.
 - Cửa đôi tự mở trong khoảng 3,9 m. Collider xoay cùng cánh cửa. Cửa giữ mở khi có người trong vùng và bắt đầu đóng sau 2,5 giây kể từ lúc vùng cửa trống.
 - Các hang và Đại Sảnh dùng một hệ tọa độ di chuyển, một controller và cùng instance Socket.IO. Máy chủ xác thực mặt sàn, ngưỡng và trạng thái từng cửa. Chat và minimap cập nhật theo vùng.
-- Nội thất chi tiết của MU, Chelsea, Arsenal và Manchester City được tải theo khoảng cách. Các đoạn nối và cửa dùng hình học nhẹ. Liverpool giữ đường hầm và bộ nội thất hiện có.
+- Nội thất chi tiết của MU, Chelsea, Arsenal và Manchester City được tải theo khoảng cách và cao độ. Các đoạn nối và cửa dùng hình học nhẹ. Liverpool giữ đường hầm và bộ nội thất hiện có.
+- Bản tin cập nhật người chơi giữ nguyên hình học của sảnh và cửa. Khi một khung hình bị nghẽn, controller giới hạn quãng đường chạy bù để máy chủ vẫn nhận được các bước di chuyển hợp lệ.
 
 ## File triển khai
 
@@ -21,6 +23,7 @@ Tám cổng còn lại dùng cơ chế cửa vật lý đã kiểm thử ở Liv
 
 ## Kiểm thử
 
-- Web và server build thành công. `npm test` qua 45 bài.
+- Web và server build thành công. Bản kiểm thử riêng cho hệ thống hang qua 47 bài với `npm test`.
 - `npx playwright test tests/e2e/cave-connections.spec.ts` kiểm tra lối đi khứ hồi qua từng cổng, cửa đóng lại khi trống, camera, controller và phiên Socket.IO. Bộ kiểm thử cũng có hai máy khách đi ngược chiều qua cửa Arsenal và joystick cảm ứng trên màn hình 390×844.
+- Video `eight-caves-tour.mp4` ghi lại một lượt chơi khứ hồi qua Real Madrid, Arsenal, Manchester United, Chelsea, Manchester City, Barcelona, PSG và Bayern Munich. Cả lượt giữ nguyên phiên Socket.IO và controller, với 0 lần máy chủ hiệu chỉnh vị trí.
 - Đặt `FFC_CAVE_TOUR` tới thư mục đầu ra để bật bài quay một lượt đi qua tám tuyến mới.

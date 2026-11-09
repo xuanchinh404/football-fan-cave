@@ -1,0 +1,42 @@
+{
+  "01-san-tru-an": {
+    "fps": 60,
+    "drawCalls": 419,
+    "triangles": 117089
+  },
+  "02-goc-tam-su": {
+    "fps": 60,
+    "drawCalls": 329,
+    "triangles": 114235
+  },
+  "03-phong-truyen-thong": {
+    "fps": 60,
+    "drawCalls": 410,
+    "triangles": 84829
+  },
+  "07-tuong-pep": {
+    "fps": 60,
+    "drawCalls": 255,
+    "triangles": 80455
+  },
+  "04-buc-tuong-hlv": {
+    "fps": 60,
+    "drawCalls": 234,
+    "triangles": 78101
+  },
+  "05-buc-tuong-hlv-giai-doan-khac": {
+    "fps": 58,
+    "drawCalls": 242,
+    "triangles": 78157
+  },
+  "06-day-cup": {
+    "fps": 58,
+    "drawCalls": 241,
+    "triangles": 78155
+  },
+  "08-mobile": {
+    "fps": 60,
+    "drawCalls": 274,
+    "triangles": 77375
+  }
+}

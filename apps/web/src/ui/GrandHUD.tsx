@@ -21,12 +21,14 @@ export function GrandHUD({
   profile,
   world,
   openWallet,
+  openInventory,
   settings,
   notice,
 }: {
   profile: Profile;
   world: WorldState;
   openWallet: () => void;
+  openInventory: () => void;
   settings: () => void;
   notice: (s: string) => void;
 }) {
@@ -62,7 +64,7 @@ export function GrandHUD({
           [UserRound, 'Hồ sơ', openWallet],
           [Wallet, 'Ví xu', openWallet],
           [ScrollText, 'Nhiệm vụ', () => notice('Nhiệm vụ chưa phát hành.')],
-          [Package, 'Vật phẩm', openWallet],
+          [Package, 'Vật phẩm', openInventory],
           [
             Users,
             'Bạn bè',

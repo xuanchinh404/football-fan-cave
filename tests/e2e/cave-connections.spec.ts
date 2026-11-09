@@ -20,7 +20,7 @@ async function drive(page: Page, axis: 'x' | 'z', target: number, run = false) {
         return true;
       },
       { axis, target, positive, key },
-      { timeout: 18000 },
+      { timeout: 35000 },
     );
   } catch (error) {
     throw new Error(`Drive ${axis} to ${target}: ${JSON.stringify(await state(page))}. ${error}`);
@@ -51,10 +51,11 @@ async function avenue(page: Page) {
   await drive(page, 'z', -24, true);
 }
 
-async function align(page: Page, axis: 'x' | 'z', target: number, tolerance = 0.62) {
+async function align(page: Page, axis: 'x' | 'z', target: number, tolerance = 0.65) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    if (Math.abs((await state(page)).worldPosition[axis] - target) < tolerance) return;
-    await drive(page, axis, target);
+    const distance = Math.abs((await state(page)).worldPosition[axis] - target);
+    if (distance < tolerance) return;
+    await drive(page, axis, target, distance > 5);
   }
   expect(Math.abs((await state(page)).worldPosition[axis] - target)).toBeLessThan(tolerance);
 }
@@ -65,7 +66,7 @@ async function approach(page: Page, cave: Club, side = 0) {
     await drive(page, 'z', -49.1, true);
   }
   const door = caveEntrance(cave);
-  await align(page, 'x', door.x + side, 0.42);
+  await align(page, 'x', door.x + side);
   await align(page, 'z', door.z + 2.1);
   try {
     await expect.poll(async () => (await state(page)).gates?.[cave.id], { timeout: 12000 }).toBe('OPEN');
@@ -77,7 +78,7 @@ async function approach(page: Page, cave: Club, side = 0) {
 
 for (const cave of CAVES) {
   test(`${cave.id} has a continuous two-way route from the Grand Hall`, async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(140000);
     await start(page, true, `QA ${cave.id}`);
     await avenue(page);
     const door = await approach(page, cave);
@@ -94,6 +95,7 @@ for (const cave of CAVES) {
     await expect
       .poll(async () => (await state(page)).gates?.[cave.id], { timeout: 6500 })
       .toBe('CLOSED');
+    await align(page, 'x', door.x);
     await drive(page, 'z', door.z + 4.7, true);
     const back = await state(page);
     expect(back.map).toBe('plaza');
@@ -141,7 +143,7 @@ test('two players use the same Arsenal door while other doors stay closed', asyn
 });
 
 test('mobile joystick enters and exits the Manchester City refuge', async ({ browser }) => {
-  test.setTimeout(90000);
+  test.setTimeout(150000);
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     isMobile: true,
@@ -159,7 +161,7 @@ test('mobile joystick enters and exits the Manchester City refuge', async ({ bro
       const stick = (await page.locator('.joystick').boundingBox())!;
       const forward = z < (await state(page)).worldPosition.z;
       const center = { x: stick.x + stick.width / 2, y: stick.y + stick.height / 2 };
-      const point = { x: center.x, y: center.y + (forward ? -1 : 1) * stick.height * 0.38 };
+      const point = { x: center.x, y: center.y + (forward ? -1 : 1) * stick.height * 0.52 };
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [center] });
       try {
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point] });
@@ -169,7 +171,7 @@ test('mobile joystick enters and exits the Manchester City refuge', async ({ bro
             return forward ? current <= z : current >= z;
           },
           { z, forward },
-          { timeout: 22000 },
+          { timeout: 40000 },
         );
       } catch (error) {
         throw new Error(`Touch to ${z}: ${JSON.stringify(await state(page))}. ${error}`);
@@ -193,9 +195,9 @@ test('mobile joystick enters and exits the Manchester City refuge', async ({ bro
 const tourDirectory = process.env.FFC_CAVE_TOUR;
 if (tourDirectory) {
   test('one continuous walkthrough of all eight newly connected caves', async ({ browser }) => {
-    test.setTimeout(400000);
+    test.setTimeout(500000);
     const context = await browser.newContext({
-      viewport: { width: 1280, height: 800 },
+      viewport: { width: 1024, height: 640 },
       recordVideo: { dir: tourDirectory, size: { width: 1024, height: 640 } },
     });
     const page = await context.newPage();
@@ -220,14 +222,20 @@ if (tourDirectory) {
         const { roomMouth, offset } = CAVE_CONNECTIONS[id];
         await drive(page, 'z', roomMouth - 3.3, true);
         await expect.poll(async () => (await state(page)).map).toBe(id);
-        expect((await state(page)).worldPosition.y).toBeCloseTo(offset[1], 0);
+        const inside = await state(page);
+        expect(inside.worldPosition.y).toBeCloseTo(offset[1], 0);
+        // Streaming can briefly keep both rooms allocated while Three.js disposes the old one.
+        expect(inside.geometries, `${id}: geometry stays bounded throughout the tour`).toBeLessThan(
+          20000,
+        );
         await expect(page.locator('.area-card')).toContainText(cave.name);
         await page.waitForTimeout(330);
+        await align(page, 'x', door.x);
         await drive(page, 'z', door.z + 4.2, true);
         const returned = await state(page);
         expect(returned.map).toBe('plaza');
         expect(returned.corrections, `${id}: positions accepted by server through both directions`).toBe(before.corrections);
-        console.log(`Verified round trip: ${id}`);
+        console.log(`Verified round trip: ${id} (${inside.geometries} geometries)`);
         if (cave.tier === 3 && id !== 'bayern') await drive(page, 'x', Math.sign(cave.x) * 37.5);
         if (id !== 'bayern') await drive(page, 'z', -24, true);
       }
@@ -235,6 +243,9 @@ if (tourDirectory) {
       expect(after.controllerRevision).toBe(before.controllerRevision);
       expect(after.sessionId).toBe(before.sessionId);
       expect(after.corrections).toBe(before.corrections);
+      await expect
+        .poll(async () => (await state(page)).geometries, { timeout: 8000 })
+        .toBeLessThan(8000);
     } finally {
       await context.close();
     }

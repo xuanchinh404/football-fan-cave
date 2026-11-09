@@ -1,5 +1,6 @@
 node_modules/
-apps/web/dist/
+apps/web/dist*/
+dist/
 .env
 .env.*
 !.env.example
@@ -9,4 +10,3 @@ test-results/
 __pycache__/
 *.pyc
 
-apps/web/dist-grand-test/

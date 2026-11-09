@@ -1,4 +1,4 @@
-import { caveEntrance, CAVES, type CaveId } from './grandHall';
+import { caveEntrance, CAVES, CORRIDOR_HALF_WIDTH, type CaveId } from './grandHall';
 
 type Planar = { x: number; z: number };
 
@@ -105,7 +105,8 @@ function local(gate: CaveGate, p: Planar) {
 
 export function gateNear(gate: CaveGate, p: Planar & { height: number }) {
   const { x, z } = local(gate, p);
-  return Math.abs(p.height - gate.origin[1]) < 1 && Math.hypot(x, z) <= 3.9;
+  const insideCityMouth = gate.id === 'city' && z < 0 && z >= -3.9 && Math.abs(x) < CORRIDOR_HALF_WIDTH;
+  return Math.abs(p.height - gate.origin[1]) < 1 && (insideCityMouth || Math.hypot(x, z) <= 3.9);
 }
 
 export function gateBlocksMove(gate: CaveGate, from: Planar, to: Planar, openness: number) {

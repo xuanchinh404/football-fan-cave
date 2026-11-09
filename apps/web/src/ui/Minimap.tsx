@@ -1,3 +1,4 @@
+import { BarcelonaMinimap } from './BarcelonaMinimap';
 import { CityMinimap } from './CityMinimap';
 import {
   CAVE_CONNECTIONS,
@@ -30,6 +31,8 @@ export function Minimap({
   onClick?: () => void;
   heading?: number;
 }) {
+  if (map === 'barcelona')
+    return <BarcelonaMinimap position={position} heading={heading} large={large} onClick={onClick} />;
   if (map === 'city')
     return <CityMinimap position={position} heading={heading} large={large} onClick={onClick} />;
   if (

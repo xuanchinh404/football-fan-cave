@@ -1,7 +1,8 @@
 import type { Point, Rect } from '../world';
 
 export const CITY_WIRE = { origin: { x: 2000, y: 2000 }, scale: 0.025 };
-export const CITY_FLOOR = -33;
+// Leave the entire vaulted ceiling below the neighbouring United cave.
+export const CITY_FLOOR = -51;
 export const cityWire = (x: number, z: number): Point => ({
   x: CITY_WIRE.origin.x + x / CITY_WIRE.scale,
   y: CITY_WIRE.origin.y + z / CITY_WIRE.scale,
@@ -11,7 +12,7 @@ export const cityMetres = (p: Point) => ({
   z: (p.y - CITY_WIRE.origin.y) * CITY_WIRE.scale,
 });
 
-export const CITY_HALL = { left: -15, right: 15, north: -28, south: 0 };
+export const CITY_HALL = { left: -15, right: 15, north: -28, south: 0, ceiling: 13.15 };
 export const CITY_LINK = { left: 15, right: 20, north: -18.4, south: -11.6 };
 export const CITY_MUSEUM = { left: 20, right: 42, north: -29, south: -1 };
 export const CITY_MUSEUM_AXIS = -15;

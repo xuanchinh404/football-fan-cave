@@ -1,3 +1,5 @@
+import { REAL_FLOOR, REAL_WIRE, REAL_BOUNDS } from './real/layout';
+import { BARCA_FLOOR, BARCA_WIRE } from './barcelona/layout';
 import { CITY_FLOOR, CITY_WIRE } from './city/layout';
 import { ARSENAL_CAVE, ARSENAL_ORIGIN, ARSENAL_SCALE } from './arsenal/layout';
 import { RED_CAVE } from './cave';
@@ -17,7 +19,7 @@ import type { MapId, Point } from './world';
 export const UNITED_WIRE = { origin: { x: 2048, y: 2180 }, scale: 0.0125 };
 export const REFUGE_WIRE = { origin: { x: 2000, y: 2000 }, scale: 0.025 };
 export const REFUGE_BOUNDS = { l: 1760, r: 2240, t: 1520, b: 2160 };
-export type RefugeId = Exclude<CaveId, 'liverpool' | 'united' | 'arsenal' | 'chelsea' | 'city'>;
+export type RefugeId = Exclude<CaveId, 'liverpool' | 'united' | 'arsenal' | 'chelsea' | 'city' | 'barcelona' | 'real'>;
 export type ConnectedZone = 'plaza' | CaveId;
 export const isCaveZone = (map: unknown): map is CaveId => CAVES.some((cave) => cave.id === map);
 export const isConnectedZone = (map: MapId): map is ConnectedZone =>
@@ -28,25 +30,35 @@ export const isRefuge = (map: MapId): map is RefugeId =>
   map !== 'arsenal' &&
   map !== 'chelsea' &&
   map !== 'liverpool' &&
-  map !== 'city';
+  map !== 'city' &&
+  map !== 'barcelona' &&
+  map !== 'real';
 
 const legacyRooms = {
-  city: { ...CITY_WIRE, bottom: CITY_WIRE.origin.y, floor: CITY_FLOOR, runout: 5 },
+  real: { ...REAL_WIRE, bottom: REAL_BOUNDS.b, floor: REAL_FLOOR, runout: 4 },
+  barcelona: { ...BARCA_WIRE, bottom: BARCA_WIRE.origin.y, floor: BARCA_FLOOR, runout: 2 },
+  // Wide halls overlap in plan, so keep their roofs clear of the floor above.
+  city: { ...CITY_WIRE, bottom: CITY_WIRE.origin.y, floor: CITY_FLOOR, runout: 3 },
   arsenal: {
     origin: ARSENAL_ORIGIN,
     scale: ARSENAL_SCALE,
     bottom: ARSENAL_CAVE.bounds.b,
-    floor: -18,
-    runout: 12,
+    floor: -17,
+    runout: 10,
   },
   chelsea: {
     origin: CHELSEA_ORIGIN,
     scale: CHELSEA_SCALE,
     bottom: BLUES_CAVE.bounds.b,
-    floor: -18,
-    runout: 16,
+    floor: -15,
+    runout: 8,
   },
-  united: { ...UNITED_WIRE, bottom: RED_CAVE.bounds.b, floor: -36, runout: 2 },
+  united: { ...UNITED_WIRE, bottom: RED_CAVE.bounds.b, floor: -32, runout: 2 },
+};
+
+const refugeFloors: Record<RefugeId, number> = {
+  bayern: 13.6,
+  psg: 13.6,
 };
 
 export type CaveConnection = {
@@ -87,7 +99,7 @@ export const CAVE_CONNECTIONS = Object.fromEntries(
         : {
             ...REFUGE_WIRE,
             bottom: REFUGE_BOUNDS.b,
-            floor: cave.tier === 3 ? 13.6 : -12,
+            floor: refugeFloors[cave.id as RefugeId],
             runout: 2,
           };
     const rampStart = descentStart(cave);

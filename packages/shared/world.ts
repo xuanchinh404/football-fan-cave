@@ -1,3 +1,6 @@
+import { realGround, realInteractions, realWalkable, realWire } from './real/layout';
+import { BARCA_OBSTACLES, barcaGround, barcaWalkable, barcaWire } from './barcelona/layout';
+import { barcaInteractions } from './barcelona/content';
 import type { Loadout } from './store/state';
 import { CITY_OBSTACLES, cityGround, cityWalkable, cityWire } from './city/layout';
 import { cityInteractions } from './city/content';
@@ -151,7 +154,9 @@ export const isOpenCave = (map: MapId | undefined) =>
   CAVES.some((cave) => cave.id === map && cave.available);
 export type Rect = { x: number; y: number; w: number; h: number };
 export function interactions(map: MapId): Interaction[] {
+  if (map === 'real') return realInteractions;
   if (map === 'city') return cityInteractions;
+  if (map === 'barcelona') return barcaInteractions;
   if (isRefuge(map)) return [];
   if (map === 'liverpool-museum')
     return [
@@ -377,7 +382,9 @@ export function interactions(map: MapId): Interaction[] {
       ];
 }
 export function spawn(map: MapId): Point {
+  if (map === 'real') return realWire(0, 0);
   if (map === 'city') return cityWire(0, -4);
+  if (map === 'barcelona') return barcaWire(0, -4);
   if (isRefuge(map)) return { ...REFUGE_WIRE.origin };
   if (map === 'liverpool') return KOP_CAVE.spawn;
   if (map === 'liverpool-museum') return KOP_MUSEUM.spawn;
@@ -395,6 +402,7 @@ export function spawn(map: MapId): Point {
 }
 export function obstacles(map: MapId): Rect[] {
   if (map === 'city') return CITY_OBSTACLES;
+  if (map === 'barcelona') return BARCA_OBSTACLES;
   if (isRefuge(map)) {
     const { origin, scale } = REFUGE_WIRE;
     return [-4.9, 4.9].map((x) => ({
@@ -429,7 +437,9 @@ export function walkable(map: MapId, x: number, y: number) {
     return grandWalkable(p.x, p.z);
   }
   if (isCaveZone(map) && corridorSurface(map, { x, y }) !== undefined) return true;
+  if (map === 'real') return realWalkable({ x, y });
   if (map === 'city') return cityWalkable({ x, y });
+  if (map === 'barcelona') return barcaWalkable({ x, y });
   if (map === 'liverpool' && !insideLiverpoolFootprint({ x, y })) return false;
   const b =
     isRefuge(map) ? REFUGE_BOUNDS : map === 'liverpool'
@@ -561,7 +571,9 @@ export function groundHeight(map: MapId, p: Point) {
     const corridor = corridorSurface(map, p);
     if (corridor !== undefined) return corridor;
   }
+  if (map === 'real') return realGround(p);
   if (map === 'city') return cityGround(p);
+  if (map === 'barcelona') return barcaGround(p);
   if (map === 'liverpool') return liverpoolGround(p);
   if (map === 'chelsea') return bluesGround(p);
   if (map === 'arsenal') return arsenalGround(p);

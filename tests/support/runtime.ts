@@ -1,7 +1,8 @@
 import { startAuthFixture } from '../helpers/auth-fixture';
 import { startTestBackend } from '../helpers/backend';
-const fixture = await startAuthFixture(Number(process.env.FFC_TEST_AUTH_PORT || 3100));
-const child = await startTestBackend(fixture.url, Number(process.env.FFC_TEST_API_PORT || 3101));
+const store = process.env.FFC_TEST_STORE === '1';
+const fixture = await startAuthFixture(Number(process.env.FFC_TEST_AUTH_PORT || 3100), store);
+const child = await startTestBackend(fixture.url, Number(process.env.FFC_TEST_API_PORT || 3101), store);
 const close = () => {
   child.kill();
   void fixture.close().then(() => process.exit(0));

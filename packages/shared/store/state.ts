@@ -14,11 +14,31 @@ export type StoreState = {
   revision: number;
   transactionId: string | null;
   replay: boolean;
-  history: { id: string; delta: string; currency: Currency; reason: string; transactionId: string; at: string }[];
+  giftAnimate?: boolean;
+  history: {
+    id: string;
+    delta: string;
+    currency: Currency;
+    reason: string;
+    transactionId: string;
+    at: string;
+  }[];
 };
 
-export type Command = 'load' | 'claim' | 'buy' | 'equip' | 'quick' | 'use' | 'throw' | 'gift'
-  | 'preferences' | 'place' | 'remove' | 'arena' | 'recipients';
+export type Command =
+  | 'load'
+  | 'claim'
+  | 'buy'
+  | 'equip'
+  | 'quick'
+  | 'use'
+  | 'throw'
+  | 'gift'
+  | 'preferences'
+  | 'place'
+  | 'remove'
+  | 'arena'
+  | 'recipients';
 export type StoreRequest = {
   command: Command;
   id?: string;
@@ -44,12 +64,25 @@ export function furnitureRadius(item: Product) {
   if (['pitch', 'rug', 'cabinet', 'table'].includes(item.visual)) return 0.9;
   return 0.55;
 }
-export function validPlacement(item: Product, placement: StoreRequest['placement']): Placement | undefined {
+export function validPlacement(
+  item: Product,
+  placement: StoreRequest['placement'],
+): Placement | undefined {
   if (!placement) return;
-  const { x, z, turn } = placement;
+  const { turn } = placement;
+  if (![placement.x, placement.z].every(Number.isFinite)) return;
+  const x = Math.round(placement.x * 10) / 10;
+  const z = Math.round(placement.z * 10) / 10;
   const radius = furnitureRadius(item);
-  if (![x, z, turn].every(Number.isFinite) || !Number.isInteger(turn) || turn < 0 || turn > 3
-    || Math.abs(x) > roomSize.x - radius || Math.abs(z) > roomSize.z - radius
-    || (z > 1.6 && Math.abs(x) < radius + 0.9)) return;
-  return { x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, turn, radius };
+  if (
+    ![x, z, turn].every(Number.isFinite) ||
+    !Number.isInteger(turn) ||
+    turn < 0 ||
+    turn > 3 ||
+    Math.abs(x) > roomSize.x - radius ||
+    Math.abs(z) > roomSize.z - radius ||
+    (z > 1.6 && Math.abs(x) < radius + 0.9)
+  )
+    return;
+  return { x, z, turn, radius };
 }

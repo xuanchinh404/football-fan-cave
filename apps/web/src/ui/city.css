@@ -57,3 +57,13 @@
   .city-hud-toggle { font-size: .72rem; padding: 4px 6px; }
   .city-hud-toggle img { width: 22px; height: 22px; }
 }
+@media (max-height: 520px) and (orientation: landscape) {
+  .city-shell .jump-control {
+    right: 89px;
+    bottom: 82px;
+    width: 43px;
+    height: 46px;
+  }
+  .city-shell .jump-control kbd { display: none; }
+  .city-hud nav { max-height: min(51vh, calc(100dvh - 248px)); }
+}

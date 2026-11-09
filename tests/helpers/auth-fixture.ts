@@ -1,8 +1,10 @@
+import { createStoreDatabase } from './store-database';
 // Test-only Supabase HTTP stand-in. This is never imported by application code.
 // These contracts exercise SDK integration, not real OAuth or email delivery.
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
-export async function startAuthFixture(port = 0) {
+export async function startAuthFixture(port = 0, store = false) {
+  const database = store ? await createStoreDatabase() : undefined;
   const users = new Map<string, any>(),
     profiles = new Map<string, any>();
   function session(email?: string, anonymous = false) {
@@ -107,6 +109,27 @@ export async function startAuthFixture(port = 0) {
       send({});
       return;
     }
+    if (url.pathname === '/rest/v1/rpc/game_store_command' && database
+      && req.headers.apikey === 'fixture-store-service-role') {
+      const account = users.get(input.p_user);
+      if (!account) { send({ message: 'UNKNOWN_ACCOUNT' }, 400); return; }
+      try {
+        await database.query('insert into auth.users(id,is_anonymous,email_confirmed_at) values ($1,$2,$3) on conflict do nothing',
+          [account.id, account.is_anonymous, account.email_confirmed_at ?? null]);
+        const state = await database.transaction(async (tx) => {
+          await tx.exec('set local role service_role');
+          const result = await tx.query<{ state: unknown }>(
+            'select public.game_store_command($1,$2,$3,$4,$5) as state',
+            [input.p_user, input.p_command, input.p_request, input.p_input, input.p_rules],
+          );
+          return result.rows[0].state;
+        });
+        send(state);
+      } catch (error) {
+        send({ message: (error as Error).message, code: 'P0001' }, 400);
+      }
+      return;
+    }
     if (!user) {
       send({ code: 'bad_jwt', msg: 'Invalid JWT' }, 401);
       return;
@@ -136,8 +159,10 @@ export async function startAuthFixture(port = 0) {
   const address = server.address() as { port: number };
   return {
     url: `http://127.0.0.1:${address.port}`,
-    close: () =>
-      new Promise<void>((resolve, reject) => server.close((e) => (e ? reject(e) : resolve()))),
+    async close() {
+      await new Promise<void>((resolve, reject) => server.close((e) => (e ? reject(e) : resolve())));
+      await database?.close();
+    },
     session,
     profiles,
   };

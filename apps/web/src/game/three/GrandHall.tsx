@@ -1,3 +1,6 @@
+import { BARCA_HALL, BARCA_MUSEUM } from '../../../../../packages/shared/barcelona/layout';
+import { CAVE_CONNECTIONS } from '../../../../../packages/shared/caveConnections';
+import { StoreStreet } from '../../store/StoreStreet';
 import { BlenderAsset } from './BlenderAsset';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { useEffect, useMemo, useRef } from 'react';
@@ -164,7 +167,29 @@ function Ground() {
     </>
   );
 }
-function SkyAndLighting({ quality }: { quality: Quality }) {
+function SkyAndLighting({ quality, player, hideExterior }: {
+  quality: Quality; player?: () => THREE.Vector3; hideExterior: boolean;
+}) {
+  const sun = useRef<THREE.DirectionalLight>(null);
+  const fill = useRef<THREE.DirectionalLight>(null);
+  const sky = useRef<THREE.HemisphereLight>(null);
+  useFrame((_, dt) => {
+    const feet = player?.();
+    if (!feet || !sun.current || !fill.current || !sky.current) return;
+    const [x, y, z] = CAVE_CONNECTIONS.real.offset;
+    const inside = feet.y < y + 7 && feet.x > x - 17 && feet.x < x + 47 &&
+      feet.z > z - 30 && feet.z < z + 13;
+    const [bx, by, bz] = CAVE_CONNECTIONS.barcelona.offset;
+    const inBarca = feet.y >= by - 0.15 && feet.y < by + 4 && feet.x > bx + BARCA_HALL.left &&
+      feet.x < bx + BARCA_MUSEUM.right && feet.z > bz + BARCA_MUSEUM.north && feet.z < bz;
+    const barcaShade = inBarca ? (feet.x > bx + BARCA_HALL.right ? 1 : Math.min(1, (bz - feet.z) / 7)) : 0;
+    const ambient = inside ? 0.66 : THREE.MathUtils.lerp(1.24, 1.54, barcaShade);
+    const daylight = inside ? 0.38 : THREE.MathUtils.lerp(2.85, 0.62, barcaShade);
+    const reflected = inside ? 0.45 : THREE.MathUtils.lerp(0.95, 0.32, barcaShade);
+    sun.current.intensity = THREE.MathUtils.damp(sun.current.intensity, daylight, 9, dt);
+    fill.current.intensity = THREE.MathUtils.damp(fill.current.intensity, reflected, 9, dt);
+    sky.current.intensity = THREE.MathUtils.damp(sky.current.intensity, ambient, 9, dt);
+  });
   const { gl, scene } = useThree();
   useEffect(() => {
     const generator = new THREE.PMREMGenerator(gl);
@@ -183,12 +208,13 @@ function SkyAndLighting({ quality }: { quality: Quality }) {
     <>
       <color attach="background" args={['#aaa6c4']} />
       <fog attach="fog" args={['#a5a3c6', 54, 176]} />
-      <hemisphereLight args={['#d5dbff', '#705257', 1.24]} />
+      <hemisphereLight ref={sky} args={['#d5dbff', '#705257', 1.24]} />
       <directionalLight
+        ref={sun}
         position={[-37, 42, 27]}
         color="#ffdfb5"
         intensity={2.85}
-        castShadow={quality !== 'low'}
+        castShadow={quality !== 'low' && !hideExterior}
         shadow-mapSize={quality === 'high' ? [2048, 2048] : [1024, 1024]}
         shadow-camera-left={-65}
         shadow-camera-right={65}
@@ -198,7 +224,7 @@ function SkyAndLighting({ quality }: { quality: Quality }) {
         shadow-bias={-0.00015}
         shadow-normalBias={0.06}
       />
-      <directionalLight position={[40, 20, -40]} color="#a0acff" intensity={0.95} />
+      <directionalLight ref={fill} position={[40, 20, -40]} color="#a0acff" intensity={0.95} />
       <mesh>
         <sphereGeometry args={[240, 32, 20]} />
         <shaderMaterial
@@ -317,17 +343,19 @@ function Landscape({ quality }: { quality: Quality }) {
         <AssetModel key={s.id} asset="bridge-wood" position={[s.x, 0, s.z]} />
       ))}
       {GRAND_SURFACES.filter((s) => s.kind === 'stairs' && s.id !== 'main-stairs').map((s) => (
-        <Steps key={s.id} surface={s} />
+        <Steps key={s.id} surface={s} crestSteps={4} />
       ))}
       <Flowers quality={quality} />
     </>
   );
 }
-function Steps({ surface: s }: { surface: Surface }) {
+function Steps({ surface: s, crestSteps }: { surface: Surface; crestSteps?: number }) {
   const count = Math.round((s.north - s.south) / 0.16);
+  const visible = Math.min(crestSteps ?? count, count);
   return (
     <group>
-      {Array.from({ length: count }, (_, i) => {
+      {Array.from({ length: visible }, (_, index) => {
+        const i = count - visible + index;
         const z = s.z + s.d / 2 - ((i + 0.5) * s.d) / count,
           y = surfaceHeight(s, z);
         return (
@@ -464,25 +492,7 @@ function Buildings({ quality }: { quality: Quality }) {
         </mesh>
         <Label text="ĐỀN DỰ ĐOÁN" position={[0, 5, 3.6]} width={8} />
       </group>
-      {[
-        [-24, 19, 'TRANG PHỤC'],
-        [-14, 19, 'HIỆU ỨNG'],
-        [31, 14, 'NẠP XU'],
-        [41, 14, 'CÀ KHỊA'],
-        [48, 5, 'VIP'],
-      ].map(([x, z, name], i) => (
-        <group key={i} position={[Number(x), 0, Number(z)]}>
-          <AssetModel asset="market-stall" tint={i % 2 ? '#184c86' : '#b51d40'} />
-          <Label text={String(name)} position={[0, 3.2, 2.07]} width={4.6} />
-          <AssetModel
-            asset="fan-chibi"
-            position={[0, 0, -0.4]}
-            scale={0.8}
-            animation="Idle"
-            solid={false}
-          />
-        </group>
-      ))}
+      <StoreStreet />
       {[
         [18, 28],
         [25, 29],
@@ -683,26 +693,30 @@ function Details({ quality }: { quality: Quality }) {
     </>
   );
 }
-export function GrandHall({ quality = 'medium' }: { quality?: Quality }) {
+export function GrandHall({ quality = 'medium', player, hideExterior = false }: {
+  quality?: Quality; player?: () => THREE.Vector3; hideExterior?: boolean;
+}) {
   return (
     <group name="grand-hall-three-tiers">
-      <SkyAndLighting quality={quality} />
-      <Ground />
-      <TerrainFaces />
-      <Landscape quality={quality} />
-      <SliceLandscape quality={quality} />
-      <SliceRoute
-        quality={quality}
-        bridgeFallback={<AssetModel asset="bridge-stone" position={[-41, 0, -15]} />}
-        stairFallback={<Steps surface={GRAND_SURFACES.find((s) => s.id === 'main-stairs')!} />}
-      />
-      {CAVE_RAILS.map((rail) => (
-        <Box key={rail.id} position={[rail.x, rail.base + rail.h / 2, rail.z]}
-          size={[rail.w, rail.h, rail.d]} color="#4b414f" />
-      ))}
-      <Buildings quality={quality} />
-      <Minigame />
-      <Details quality={quality} />
+      <SkyAndLighting quality={quality} player={player} hideExterior={hideExterior} />
+      <group visible={!hideExterior}>
+        <Ground />
+        <TerrainFaces />
+        <Landscape quality={quality} />
+        <SliceLandscape quality={quality} />
+        <SliceRoute
+          quality={quality}
+          bridgeFallback={<AssetModel asset="bridge-stone" position={[-41, 0, -15]} />}
+          stairFallback={<Steps surface={GRAND_SURFACES.find((s) => s.id === 'main-stairs')!} />}
+        />
+        {CAVE_RAILS.map((rail) => (
+          <Box key={rail.id} position={[rail.x, rail.base + rail.h / 2, rail.z]}
+            size={[rail.w, rail.h, rail.d]} color="#4b414f" />
+        ))}
+        <Buildings quality={quality} />
+        <Minigame />
+        <Details quality={quality} />
+      </group>
     </group>
   );
 }

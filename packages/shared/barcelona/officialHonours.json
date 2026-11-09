@@ -1,0 +1,205 @@
+[
+  {
+    "name": "Champions League",
+    "seasons": ["1991-92", "2005-06", "2008-09", "2010-11", "2014-15"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/6b835b71-b1ec-457a-b62d-3c7934532867/Champions-League.png?width=360&height=225"
+  },
+  {
+    "name": "FIFA Club World Cup",
+    "seasons": ["2009-10", "2011-12", "2015-16"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/153a8ede-f302-4f7f-855e-ef9c40373811/Fifa-Club-World-Cup.png?width=360&height=225"
+  },
+  {
+    "name": "European Cup Winners' Cup",
+    "seasons": ["1978-79", "1981-82", "1988-89", "1996-97"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/cdeb09f0-0fd2-4901-b6d0-8285c44b94cb/Recopa-d-Europa.jpg?width=360&height=225"
+  },
+  {
+    "name": "Fairs Cup",
+    "seasons": ["1957-58", "1959-60", "1965-66"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/20fa91f3-19d4-46b8-82f2-fec29cdb1a5c/Copa-de-Fires.jpg?width=360&height=225"
+  },
+  {
+    "name": "Fairs Super Cup",
+    "seasons": ["1971-72"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/20fa91f3-19d4-46b8-82f2-fec29cdb1a5c/Copa-de-Fires.jpg?width=360&height=225"
+  },
+  {
+    "name": "European Super Cup",
+    "seasons": ["1992-93", "1997-98", "2009-10", "2011-12", "2015-16"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/23c15d0c-f179-48a3-89b3-473ec2f750e1/European-Super-Cup.png?width=360&height=225"
+  },
+  {
+    "name": "Latin Cup",
+    "seasons": ["1948-49", "1951-52"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/63466e56-bc3f-47ff-a9a4-391c64ae428c/Copa-Llatina.jpg?width=360&height=225"
+  },
+  {
+    "name": "Pyrenees Cup",
+    "seasons": ["1909-10", "1910-11", "1911-12", "1912-13"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/b454335a-62d4-4876-8fb8-ddf73abaa5c0/Trophy-Silhouette.png?width=360&height=225"
+  },
+  {
+    "name": "Spanish League Championship",
+    "seasons": [
+      "1928-29",
+      "1944-45",
+      "1947-48",
+      "1948-49",
+      "1951-52",
+      "1952-53",
+      "1958-59",
+      "1959-60",
+      "1973-74",
+      "1984-85",
+      "1990-91",
+      "1991-92",
+      "1992-93",
+      "1993-94",
+      "1997-98",
+      "1998-99",
+      "2004-05",
+      "2005-06",
+      "2008-09",
+      "2009-10",
+      "2010-11",
+      "2012-13",
+      "2014-15",
+      "2015-16",
+      "2017-18",
+      "2018-19",
+      "2022-23",
+      "2024-25",
+      "2025-26"
+    ],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/830a19f6-6260-4731-b023-ebd5a56de2c3/la-liga.png?width=360&height=225"
+  },
+  {
+    "name": "Copa del Rey",
+    "seasons": [
+      "1909-10",
+      "1911-12",
+      "1912-13",
+      "1919-20",
+      "1921-22",
+      "1924-25",
+      "1925-26",
+      "1927-28",
+      "1941-42",
+      "1950-51",
+      "1951-52",
+      "1952-53",
+      "1956-57",
+      "1958-59",
+      "1962-63",
+      "1967-68",
+      "1970-71",
+      "1977-78",
+      "1980-81",
+      "1982-83",
+      "1987-88",
+      "1989-90",
+      "1996-97",
+      "1997-98",
+      "2008-09",
+      "2011-12",
+      "2014-15",
+      "2015-16",
+      "2016-17",
+      "2017-18",
+      "2020-21",
+      "2024-25"
+    ],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/2fc629b6-b4a7-48e4-906d-e6ec2411c85f/Spanish-Cup.png?width=360&height=225"
+  },
+  {
+    "name": "Spanish Super Cup",
+    "seasons": [
+      "1983-84",
+      "1991-92",
+      "1992-93",
+      "1994-95",
+      "1996-97",
+      "2005-06",
+      "2006-07",
+      "2009-10",
+      "2010-11",
+      "2011-12",
+      "2013-14",
+      "2016-17",
+      "2018-19",
+      "2022-23",
+      "2024-25",
+      "2025-26"
+    ],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/7d7e4bf5-1f11-45ce-9bc8-563a2b8352e0/Supercopa-Espanya.jpg?width=360&height=225"
+  },
+  {
+    "name": "Spanish League Cup",
+    "seasons": ["1982-83", "1985-86"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/62ec584a-5ee9-4182-b618-3e3818b7163d/Copa-de-la-Lliga.jpg?width=360&height=225"
+  },
+  {
+    "name": "Mediterranean League",
+    "seasons": ["1937"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/b454335a-62d4-4876-8fb8-ddf73abaa5c0/Trophy-Silhouette.png?width=360&height=225"
+  },
+  {
+    "name": "Catalan League",
+    "seasons": ["1937-38"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/08/20/b454335a-62d4-4876-8fb8-ddf73abaa5c0/Trophy-Silhouette.png?width=360&height=225"
+  },
+  {
+    "name": "Catalan League Championship",
+    "seasons": [
+      "1901-1902",
+      "1902-03",
+      "1904-05",
+      "1908-09",
+      "1909-10",
+      "1910-11",
+      "1912-13",
+      "1915-16",
+      "1918-19",
+      "1919-20",
+      "1920-21",
+      "1921-22",
+      "1923-24",
+      "1924-25",
+      "1925-26",
+      "1926-27",
+      "1927-28",
+      "1929-30",
+      "1930-31",
+      "1931-32",
+      "1934-35",
+      "1935-36",
+      "1937-38"
+    ],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/ce1aeb52-9491-4f2d-b427-ca447d4b8cac/Campionat-de-Catalunya.jpg?width=360&height=225"
+  },
+  {
+    "name": "Catalan Super Cup",
+    "seasons": ["2014-15", "2017-18"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/10004887-0971-4966-8724-50ed0c9ab560/Supercopa-Catalunya.jpg?width=360&height=225"
+  },
+  {
+    "name": "Catalan Cup",
+    "seasons": [
+      "1990-91",
+      "1992-93",
+      "1999-00",
+      "2003-04",
+      "2004-05",
+      "2006-07",
+      "2012-13",
+      "2013-14"
+    ],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/59f7e7b7-1c32-4fc7-bb86-e92dc13fc9bf/Copa-Catalunya.jpg?width=360&height=225"
+  },
+  {
+    "name": "Eva Duarte Cup",
+    "seasons": ["1948-49", "1951-52", "1952-53"],
+    "image": "https://www.fcbarcelona.com/photo-resources/fcbarcelona/photo/2018/10/17/e8f56e07-5b67-4e22-811e-2315af94d1b3/Eva-Duarte.jpg?width=360&height=225"
+  }
+]

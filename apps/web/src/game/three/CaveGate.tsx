@@ -26,11 +26,13 @@ export function StoneArch({
   spring,
   depth = 0.62,
   trim = '#84605a',
+  stone = '#5b4145',
 }: {
   radius: number;
   spring: number;
   depth?: number;
   trim?: string;
+  stone?: string;
 }) {
   const blocks = useMemo(
     () =>
@@ -52,7 +54,7 @@ export function StoneArch({
           <extrudeGeometry
             args={[shape, { depth, steps: 1, bevelEnabled: false, curveSegments: 5 }]}
           />
-          <meshStandardMaterial color={i % 3 === 0 ? trim : '#5b4145'} roughness={0.85} />
+          <meshStandardMaterial color={i % 3 === 0 ? trim : stone} roughness={0.85} />
         </mesh>
       ))}
       {[-1, 1].flatMap((s) =>
@@ -61,7 +63,7 @@ export function StoneArch({
             key={`${s}:${i}`}
             position={[s * (radius + 0.28), (spring * (i + 0.5)) / 4, 0]}
             size={[0.56, spring / 4 - 0.025, depth]}
-            color={i % 2 ? trim : '#5b4145'}
+            color={i % 2 ? trim : stone}
             solid={false}
           />
         )),
@@ -90,6 +92,7 @@ function Leaf({
   const hinge: V3 = [x + side * half * Math.cos(gate.yaw), y, z - side * half * Math.sin(gate.yaw)];
   const sign = -side;
   const city = gate.id === 'city';
+  const madrid = gate.id === 'real';
   const shape = useMemo(() => {
     const leaf = new Shape();
     leaf.moveTo(0, 0.035);
@@ -129,7 +132,7 @@ function Leaf({
             key={i}
             position={[sign * offset, height / 2 + 0.03, 0.118]}
             size={[0.024, height - 0.045, 0.023]}
-            color={city ? "#18354e" : "#35131c"}
+            color={madrid ? "#b4833a" : city ? "#18354e" : "#35131c"}
             solid={false}
           />
         );
@@ -139,7 +142,7 @@ function Leaf({
           <Box
             position={[(sign * half) / 2, h, 0.13]}
             size={[half - 0.05, 0.18, 0.075]}
-            color={city ? "#213d5a" : "#482631"}
+            color={madrid ? "#243d83" : city ? "#213d5a" : "#482631"}
             solid={false}
           />
           {Array.from({ length: 6 }, (_, i) => (
@@ -176,7 +179,8 @@ export function CaveGate({
   const [x, y, z] = origin;
   const light = useRef<import('three').PointLight>(null);
   const city = gate.id === 'city';
-  const frame = city ? '#253e58' : '#402937';
+  const madrid = gate.id === 'real';
+  const frame = madrid ? '#2b3c72' : city ? '#253e58' : '#402937';
   const sweepGuard = useRef<RapierCollider>(null);
   const english = document.documentElement.lang.toLowerCase().startsWith('en');
   useBeforePhysicsStep(() => {
@@ -196,7 +200,7 @@ export function CaveGate({
       position={origin}
     >
       <group rotation={[0, gate.yaw, 0]}>
-        <StoneArch radius={half + 0.035} spring={spring} depth={0.9} trim={city ? "#7592a6" : "#9b6e54"} />
+        <StoneArch radius={half + 0.035} spring={spring} depth={0.9} trim={madrid ? "#f4e8d7" : city ? "#7592a6" : "#9b6e54"} stone={madrid ? "#b9b2c4" : undefined} />
         {[-1, 1].map((s) => (
           <group key={s}>
             <Box position={[s * 3.8, 3.05, -0.07]} size={[3.3, 6.1, 1.25]} color={frame} />
@@ -209,7 +213,7 @@ export function CaveGate({
           width={4.7}
           height={0.92}
           position={[0, 5.25, 0.68]}
-          background={gate.color}
+          background={madrid ? '#151e4f' : gate.color}
         />
         {flags ??
           [-1, 1].map((side) => (

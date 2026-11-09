@@ -1,7 +1,11 @@
-import { createStore } from './store';
+import { barcaPhoto } from './barcaPhotos';
+import { latestBarcaMatch } from './barcaMatch';
+import { BARCA_SEAT_DIRECTION } from '../../../packages/shared/barcelona/layout';
+import { REAL_SEAT_DIRECTION } from '../../../packages/shared/real/layout';
 import { CITY_SEAT_DIRECTION } from '../../../packages/shared/city/layout';
 import { kopSeatFacing } from '../../../packages/shared/liverpool/layout';
 import './env.ts';
+import { createStore } from './store';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { verifyToken, profileForToken, adminClient, isLinked } from './auth.ts';
@@ -75,7 +79,20 @@ const server = createServer(async (req, res) => {
     } catch(e){const message=(e as Error).message;res.writeHead(message==='AUTH_NOT_CONFIGURED'?503:message==='INVALID_REQUEST'?400:401);res.end(JSON.stringify({error:message==='INVALID_REQUEST'?'Yêu cầu không hợp lệ.':'Phiên đăng nhập chưa hợp lệ hoặc đã hết hạn.'}));}
     return;
   }
+  const photo = req.url?.match(/^\/api\/barcelona\/photo\/([a-z0-9-]+)$/)?.[1];
+  if (req.method === 'GET' && photo) {
+    const image = await barcaPhoto(photo, AbortSignal.timeout(4500)).catch(() => undefined);
+    if (!image) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': image.type, 'Cache-Control': 'public, max-age=86400' });
+    res.end(image.body);
+    return;
+  }
   res.setHeader('Content-Type', 'application/json');
+  if (req.url === '/api/barcelona/result' && req.method === 'GET') {
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.end(JSON.stringify(await latestBarcaMatch()));
+    return;
+  }
   if (req.url === '/api/health') {
     res.end(JSON.stringify({ status: 'ok', players: players.size, uptime: process.uptime() }));
     return;
@@ -293,17 +310,19 @@ io.on('connection', (socket) => {
     } else if (item.kind === 'seat') {
       if (!p.seated) {
         const reachable = clearPath(p.map, p, item);
-        if (!reachable && (p.map === 'liverpool' || p.map === 'city')) return;
-        if (p.map === 'city' && [...(rooms.get(roomOf.get(socket.id)!) ?? [])].some((id) => {
+        if (!reachable && (p.map === 'liverpool' || p.map === 'city' || p.map === 'real' || p.map === 'barcelona')) return;
+        if ((p.map === 'city' || p.map === 'real' || p.map === 'barcelona') && [...(rooms.get(roomOf.get(socket.id)!) ?? [])].some((id) => {
           const other = players.get(id)!;
-          return other.id !== p.id && other.map === 'city' && other.seated && other.x === item.x && other.y === item.y;
+          return other.id !== p.id && other.map === p.map && other.seated && other.x === item.x && other.y === item.y;
         })) {
           socket.emit('notice', 'Chỗ ngồi này đang có người. This seat is occupied.');
           return;
         }
         if (reachable) Object.assign(p, { x: item.x, y: item.y });
         if (p.map === 'liverpool') p.direction = kopSeatFacing(item);
+        if (p.map === 'barcelona') p.direction = BARCA_SEAT_DIRECTION;
         if (p.map === 'city') p.direction = CITY_SEAT_DIRECTION;
+        if (p.map === 'real') p.direction = REAL_SEAT_DIRECTION;
       }
       p.seated = !p.seated;
       p.moving = false;
@@ -360,6 +379,7 @@ io.on('connection', (socket) => {
     p.x = path.point.x;
     p.y = path.point.y;
     p.height = path.surface;
+    gameStore.move(p);
     if (changedZone) {
       gameStore.resetArena(socket.id);
       roomCounts(room);

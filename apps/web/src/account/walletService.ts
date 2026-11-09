@@ -1,7 +1,8 @@
 import { authClient } from '../auth/supabaseClient';
 export type WalletData = {
   balance: string;
-  ledger: { id: string; delta: string; reason: string; created_at: string }[];
+  diamonds?: string;
+  ledger: { id: string; delta: string; currency?: 'xu' | 'kc'; reason: string; created_at: string }[];
   purchases: { id: string; item_id: string; status: string; expires_at: string | null }[];
   items: { id: string; name: string; price_coins: string }[];
 };

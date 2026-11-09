@@ -1,3 +1,5 @@
+import { REAL_BOUNDS, REAL_WIRE } from '../../../../../packages/shared/real/layout';
+import { BARCA_BOUNDS, BARCA_WIRE } from '../../../../../packages/shared/barcelona/layout';
 import { CITY_BOUNDS, CITY_WIRE } from '../../../../../packages/shared/city/layout';
 import {
   caveOffset,
@@ -48,9 +50,9 @@ const refugeLayout = { ...REFUGE_WIRE, bounds: REFUGE_BOUNDS };
 export const layouts = {
   bayern: refugeLayout,
   psg: refugeLayout,
-  real: refugeLayout,
+  real: { ...REAL_WIRE, bounds: REAL_BOUNDS },
   city: { ...CITY_WIRE, bounds: CITY_BOUNDS },
-  barcelona: refugeLayout,
+  barcelona: { ...BARCA_WIRE, bounds: BARCA_BOUNDS },
   liverpool: { scale: LIVERPOOL_SCALE, origin: LIVERPOOL_ORIGIN, bounds: KOP_CAVE.bounds },
   'liverpool-museum': {
     scale: LIVERPOOL_SCALE,

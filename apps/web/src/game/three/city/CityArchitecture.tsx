@@ -8,7 +8,7 @@ export const navy = '#102d51';
 export const blue = '#4696d3';
 export const gold = '#ba873f';
 export const trim = '#f2c175';
-export const stone = '#394e68';
+export const stone = '#233d59';
 export const ice = '#8adaff';
 
 export function CityBox({ position = [0, 0, 0], size, color, metal = 0, glow = 0, solid = false, rotation }: {
@@ -29,16 +29,16 @@ export function CitySign({ position, lines, width, height, maxFontSize }: {
 }
 
 export function CityCrest({ size, position = [0, 0, 0] }: { size: number; position?: V3 }) {
-  const map = useLoader(THREE.TextureLoader, '/art/city/crest.svg');
+  const map = useLoader(THREE.TextureLoader, '/art/city/crest.webp');
   map.colorSpace = THREE.SRGBColorSpace;
   return <group position={position}>
     <mesh rotation={[Math.PI / 2, 0, 0]}>
       <cylinderGeometry args={[size * 0.519, size * 0.519, 0.19, 64]} />
       <meshStandardMaterial color={gold} metalness={0.72} roughness={0.28} />
     </mesh>
-    <mesh position={[0, 0, 0.1]}>
+    <mesh position={[0, 0, 0.123]}>
       <planeGeometry args={[size, size]} />
-      <meshBasicMaterial map={map} transparent />
+      <meshBasicMaterial map={map} transparent depthWrite={false} />
     </mesh>
   </group>;
 }
@@ -170,9 +170,67 @@ export function CityFloor({ width, depth, x = 0, z = -depth / 2 }: {
   </>;
 }
 
+function useMasonry() {
+  const texture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#727f8f';
+    ctx.fillRect(0, 0, 256, 128);
+    for (let row = 0; row < 4; row++) {
+      for (let col = -1; col < 4; col++) {
+        const x = col * 64 + (row % 2) * 32;
+        const y = row * 32;
+        const tone = 182 + Math.abs((row * 13 + ((col + 4) % 4) * 23) % 42);
+        ctx.fillStyle = `rgb(${tone},${tone + 5},${tone + 10})`;
+        ctx.fillRect(x + 1, y + 1, 62, 30);
+        ctx.fillStyle = '#ffffff66';
+        ctx.fillRect(x + 2, y + 2, 60, 1);
+        ctx.fillStyle = '#1823352c';
+        ctx.fillRect(x + 2, y + 29, 60, 2);
+      }
+    }
+    const map = new THREE.CanvasTexture(canvas);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = 4;
+    return map;
+  }, []);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return texture;
+}
+
+function MasonryPanel({
+  width,
+  height,
+  center,
+  texture,
+}: {
+  width: number;
+  height: number;
+  center: V3;
+  texture: THREE.Texture;
+}) {
+  const geometry = useMemo(() => {
+    const plane = new THREE.PlaneGeometry(width, height);
+    const uv = plane.getAttribute('uv');
+    for (let i = 0; i < uv.count; i++)
+      uv.setXY(i, (uv.getX(i) * width) / 7.6, (uv.getY(i) * height) / 3.12);
+    return plane;
+  }, [width, height]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh geometry={geometry} position={center} receiveShadow>
+      <meshStandardMaterial color={stone} map={texture} roughness={0.87} />
+    </mesh>
+  );
+}
+
 export function CityWall({ position, width, height, yaw = 0, gap, gapHeight = 4.85 }: {
   position: V3; width: number; height: number; yaw?: number; gap?: { center: number; width: number }; gapHeight?: number;
 }) {
+  const texture = useMasonry();
   const panels = gap ? [
     { a: -width / 2, b: gap.center - gap.width / 2, low: 0 },
     { a: gap.center + gap.width / 2, b: width / 2, low: 0 },
@@ -181,6 +239,12 @@ export function CityWall({ position, width, height, yaw = 0, gap, gapHeight = 4.
   return <group position={position} rotation={[0, yaw, 0]}>
     {panels.map(({ a, b, low }) => <group key={a}>
       <CityBox position={[(a + b) / 2, (height + low) / 2, 0]} size={[b - a, height - low, 0.64]} color={stone} solid />
+      <MasonryPanel
+        width={b - a}
+        height={height - low}
+        center={[(a + b) / 2, (height + low) / 2, 0.324]}
+        texture={texture}
+      />
       <CuboidCollider position={[(a + b) / 2, (height + low) / 2, 0]} args={[(b - a) / 2, (height - low) / 2, 0.32]} />
       {[0.36, 0.95, 2.58, 4.82, height - 0.22].filter((y) => y > low + 0.15).map((y, i) =>
         <CityBox key={y} position={[(a + b) / 2, y, 0.36]} size={[b - a, i % 2 ? 0.09 : 0.16, 0.16]}
@@ -259,7 +323,7 @@ export function CityVault({ width, depth, spring, rise, ribs, rocky = false }: {
     <mesh geometry={geometry} userData={{ cameraSolid: true }}>
       <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={0.93} />
     </mesh>
-    {ribs.map((z) => <group key={z} position={[0, spring, z]} scale={[1, rise / (width / 2), 1]}>
+    {ribs.map((z) => <group key={z} position={[0, spring - (rocky ? 0.5 : 0), z]} scale={[1, rise / (width / 2), 1]}>
       <mesh>
         <torusGeometry args={[width / 2 - 0.47, 0.37, 6, 40, Math.PI]} />
         <meshStandardMaterial color={rocky ? '#496781' : '#426284'} roughness={0.76} />

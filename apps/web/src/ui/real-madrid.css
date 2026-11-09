@@ -1,0 +1,287 @@
+.real-nav,
+.real-map-toggle,
+.real-nav-toggle {
+  position: absolute;
+  z-index: 4;
+  background: linear-gradient(150deg, #20295d, #0c1029 75%);
+  border: 1px solid #bd9757;
+  border-radius: 12px;
+  color: #fff2d5;
+  box-shadow:
+    0 6px 26px #08052090,
+    inset 0 0 12px #8370bb39;
+}
+.real-nav {
+  top: 154px;
+  left: 16px;
+  width: 222px;
+  padding: 5px;
+  display: grid;
+  gap: 3px;
+}
+.real-nav > div {
+  font:
+    700 15px Georgia,
+    serif;
+  letter-spacing: 0.12em;
+  padding: 9px;
+  color: #ffdc92;
+}
+.real-nav > div span,
+.real-minimap figcaption span {
+  color: #f7bb57;
+}
+.real-nav button,
+.real-list button,
+.real-back,
+.real-filters button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  background: #263461a6;
+  color: #fff1d8;
+  border: 1px solid #b1a3e23d;
+  border-radius: 7px;
+  padding: 7px 9px;
+}
+.real-nav button:hover,
+.real-list button:hover,
+.real-filters button[aria-pressed='true'] {
+  background: #564394;
+  border-color: #deb36a;
+}
+.real-nav button svg {
+  color: #e8bd77;
+  flex-shrink: 0;
+}
+.real-map-toggle {
+  right: 17px;
+  top: 87px;
+  width: 155px;
+  padding: 5px;
+}
+.real-minimap {
+  margin: 0;
+  color: #ffedd0;
+}
+.real-minimap figcaption {
+  font-size: 11px;
+  font-weight: 700;
+  margin: 2px 0 3px;
+}
+.real-minimap svg {
+  width: 100%;
+  height: 103px;
+  display: block;
+}
+.real-minimap.expanded svg {
+  height: min(50vh, 350px);
+  background: #181e43;
+  border-radius: 12px;
+}
+.real-nav-toggle {
+  display: none;
+}
+.real-collection h3 {
+  color: #ffe2a2;
+  margin: 10px 0;
+}
+.real-collection .eyebrow {
+  color: #e5bc77;
+}
+.real-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 14px 0;
+}
+.real-filters span {
+  padding: 5px 9px;
+  border-radius: 5px;
+  background: #2d3874;
+  color: #ffedd2;
+}
+.real-scroll {
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  padding: 2px 1px 11px;
+  scroll-snap-type: x proximity;
+}
+.real-coach-card {
+  flex: 0 0 126px;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid #8d76b5;
+  border-radius: 8px;
+  padding: 6px;
+  background: #1b2352;
+  color: #ffedd2;
+  text-align: left;
+  scroll-snap-align: start;
+}
+.real-coach-card:hover {
+  border-color: #e8bd77;
+}
+.real-portrait {
+  width: 100%;
+  height: 122px;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  border-radius: 4px;
+}
+.real-portrait.fallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  background: radial-gradient(ellipse at top, #614994, #23285b 80%);
+  color: #ffdaa0;
+  padding: 5px;
+  text-align: center;
+}
+.real-portrait.fallback span {
+  font:
+    700 30px Georgia,
+    serif;
+}
+.real-portrait.fallback small {
+  font-size: 10px;
+}
+.real-profile {
+  display: grid;
+  grid-template-columns: minmax(90px, 144px) minmax(0, 1fr);
+  gap: 14px;
+  margin: 14px 0;
+}
+.real-profile .real-portrait {
+  height: 155px;
+}
+.real-profile ul {
+  padding-left: 19px;
+}
+.real-current {
+  display: inline-block;
+  background: #694a92;
+  color: #ffdfa5;
+  border-radius: 4px;
+  padding: 3px 5px;
+  font-size: 10px;
+  margin: 2px;
+}
+.real-source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 12px;
+  color: #d2c3f5;
+  margin-top: 14px;
+}
+.real-source a {
+  color: #ffdd9b;
+}
+.real-list {
+  display: grid;
+  gap: 5px;
+}
+.real-list > p,
+.real-list details {
+  margin: 0;
+  background: #212853;
+  color: #f4e7d0;
+  border: 1px solid #74639863;
+  border-radius: 7px;
+  padding: 8px;
+}
+.real-list summary {
+  cursor: pointer;
+}
+.real-list b,
+.real-list button svg:last-child {
+  margin-left: auto;
+}
+.real-list p > b,
+.real-list summary > b {
+  float: right;
+}
+@media (max-width: 950px), (max-height: 690px) {
+  .real-nav-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    top: 104px;
+    left: 10px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+  .real-nav {
+    display: none;
+    top: 138px;
+    left: 10px;
+    width: min(210px, 55vw);
+    max-height: 57vh;
+    overflow: auto;
+  }
+  .real-nav.show {
+    display: grid;
+  }
+  .real-map-toggle {
+    width: 96px;
+    top: 72px;
+    right: 10px;
+  }
+  .real-minimap svg {
+    height: 66px;
+  }
+}
+.real-gallery {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.real-gallery figure {
+  margin: 0;
+  font-size: 12px;
+}
+.real-archive-photo {
+  display: block;
+  width: 100%;
+  max-height: 225px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #151c46;
+}
+.real-gallery .real-archive-photo {
+  height: 114px;
+  object-fit: cover;
+}
+.real-shell .map-widget,
+.real-shell .grand-altitude {
+  display: none;
+}
+@media (min-width: 951px) and (min-height: 691px) {
+  .real-shell .grand-sidebar {
+    top: 16px;
+    width: 222px;
+    padding-bottom: 0;
+  }
+  .real-shell .grand-sidebar > button,
+  .real-shell .grand-sidebar > p {
+    display: none;
+  }
+  .real-shell .grand-identity {
+    margin-bottom: 0;
+    border-bottom: 0;
+    padding: 0 0 9px;
+  }
+  .real-shell:has(.three-canvas) .area-card {
+    top: 472px;
+    width: 222px;
+    max-width: 222px;
+  }
+}

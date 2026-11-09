@@ -79,7 +79,7 @@ export const cityHonours = [
 
 export const cityTimeline: CityCard[] = [
   card('1880', ['Gốc rễ St Mark’s', 'St Mark’s roots'], ['Đội bóng của nhà thờ St Mark’s là tiền thân của CLB.', 'A team formed by St Mark’s Church became the club’s forerunner.'], history, '1880'),
-  card('1894', ['Tên gọi Manchester City', 'The Manchester City name'], ['Ardwick AFC tái lập với tên Manchester City Football Club.', 'Ardwick AFC reformed as Manchester City Football Club.'], history, '1894'),
+  card('1894', ['Tên gọi Manchester City', 'The Manchester City name'], ['Ardwick AFC tái lập với tên Manchester City Football Club.', 'Ardwick AFC reformed as Manchester City Football Club.'], history, '1894', 'team-1894'),
   card('1968', ['Vô địch quốc gia', 'League champions'], ['City giành chức vô địch quốc gia mùa 1967/68.', 'City won the English top-flight title in 1967/68.'], history, '1968'),
   { ...card('2012', ['Khoảnh khắc 93:20', 'The 93:20 moment'], ['Bàn thắng cuối trận của Agüero trước QPR đem về chức vô địch Premier League đầu tiên.', 'Agüero’s late winner against QPR clinched City’s first Premier League title.'], qpr, '2012', 'parade'), imageCaption: ['Vincent Kompany tại lễ diễu hành vô địch năm 2012', 'Vincent Kompany at City’s 2012 title parade'] },
   card('2018', ['Mùa giải 100 điểm', 'The 100-point season'], ['City đạt 100 điểm ở Premier League mùa 2017/18.', 'City reached 100 points in the 2017/18 Premier League.'], history, '2018'),

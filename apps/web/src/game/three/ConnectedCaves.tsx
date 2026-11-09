@@ -1,3 +1,5 @@
+import { Crystals, Gothic, Lantern as BarcelonaLantern } from './barcelona/BarcelonaArchitecture';
+import { Crystal, Lantern as MadridLantern } from './real/RealArchitecture';
 import { useEffect, useMemo } from 'react';
 import { RigidBody, TrimeshCollider } from '@react-three/rapier';
 import { BufferAttribute, BufferGeometry } from 'three';
@@ -17,6 +19,8 @@ const faces = new Uint32Array([
 function StoneSpan({
   left,
   right,
+  northLeft = left,
+  northRight = right,
   south,
   north,
   bottom,
@@ -25,6 +29,8 @@ function StoneSpan({
 }: {
   left: number;
   right: number;
+  northLeft?: number;
+  northRight?: number;
   south: readonly [number, number];
   north: readonly [number, number];
   bottom: number;
@@ -41,10 +47,10 @@ function StoneSpan({
       right,
       sy + bottom,
       sz,
-      right,
+      northRight,
       ny + bottom,
       nz,
-      left,
+      northLeft,
       ny + bottom,
       nz,
       left,
@@ -53,10 +59,10 @@ function StoneSpan({
       right,
       sy + top,
       sz,
-      right,
+      northRight,
       ny + top,
       nz,
-      left,
+      northLeft,
       ny + top,
       nz,
     ]);
@@ -65,7 +71,7 @@ function StoneSpan({
     geometry.setIndex(new BufferAttribute(faces, 1));
     geometry.computeVertexNormals();
     return { vertices, geometry };
-  }, [left, right, sy, sz, ny, nz, bottom, top]);
+  }, [left, right, northLeft, northRight, sy, sz, ny, nz, bottom, top]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <>
@@ -77,12 +83,51 @@ function StoneSpan({
   );
 }
 
+function CityGateApproach({ gateZ, height, rampStart, rampEnd, floor }: {
+  gateZ: number; height: number; rampStart: number; rampEnd: number; floor: number;
+}) {
+  const outer = half + 0.05;
+  const inner = 1.77;
+  const flareEnd = gateZ - 5.4;
+  const floorAtFlare = height - ((height - floor) * (rampStart - flareEnd)) / (rampStart - rampEnd);
+  return [-1, 1].map((side) => (
+    <group key={side}>
+      <StoneSpan
+        left={side < 0 ? -outer : inner}
+        right={side < 0 ? -inner : outer}
+        south={[height, gateZ - 0.08]}
+        north={[height, rampStart]}
+        bottom={-0.28}
+        top={1.3}
+        color="#496985"
+      />
+      <StoneSpan
+        left={side < 0 ? -outer : inner}
+        right={side < 0 ? -inner : outer}
+        northLeft={side < 0 ? -outer : half}
+        northRight={side < 0 ? -half : outer}
+        south={[height, rampStart]}
+        north={[floorAtFlare, flareEnd]}
+        bottom={-0.28}
+        top={1.3}
+        color="#496985"
+      />
+    </group>
+  ));
+}
+
 export function CaveCorridor({ gate }: { gate: CaveGate }) {
   const cave = CAVES.find((item) => item.id === gate.id)!;
   const entrance = caveEntrance(cave);
   const { rampStart, rampEnd, roomMouth, offset } = CAVE_CONNECTIONS[gate.id];
   const city = gate.id === 'city';
-  const palette = city
+  const madrid = gate.id === 'real';
+  const barcelona = gate.id === 'barcelona';
+  const palette = barcelona
+    ? { floor: '#514e63', landing: '#6c6073', ceiling: '#302b40', wall: '#484358' }
+    : madrid
+    ? { floor: '#ded2ce', landing: '#e0d6d4', ceiling: '#3a3555', wall: '#645e76' }
+    : city
     ? { floor: '#587894', landing: '#6d8ca5', ceiling: '#263c53', wall: '#314b65' }
     : { floor: '#514956', landing: '#60525a', ceiling: '#302b36', wall: '#463b4a' };
   const nodes = [
@@ -94,6 +139,8 @@ export function CaveCorridor({ gate }: { gate: CaveGate }) {
   return (
     <group name={`corridor-${gate.id}`} position={[entrance.x, 0, 0]}>
       <RigidBody type="fixed" colliders={false}>
+        {city && <CityGateApproach gateZ={entrance.z} height={entrance.height}
+          rampStart={rampStart} rampEnd={rampEnd} floor={offset[1]} />}
         {nodes.slice(0, -1).map((south, i) => {
           const north = nodes[i + 1];
           return (
@@ -141,6 +188,16 @@ export function CaveCorridor({ gate }: { gate: CaveGate }) {
           const progress = (index + 0.5) / count;
           const height = south[0] + (north[0] - south[0]) * progress;
           const z = south[1] + (north[1] - south[1]) * progress;
+          if (barcelona) return (
+            <group key={z} position={[0, height, z]}>
+              <Gothic position={[0, 0, 0]} span={2.97} spring={2.19} rise={2.25} />
+              {[-1, 1].map((side) => <group key={side}>
+                <Crystals position={[side * 2.89, 0.42, -0.38]} red={side < 0} scale={0.58} />
+                <BarcelonaLantern position={[side * 2.91, 2.96, 0.18]} scale={0.65} />
+              </group>)}
+              <pointLight position={[0, 3.4, 0.15]} color="#ffc37d" intensity={22} distance={7.8} />
+            </group>
+          );
           return (
             <group key={z} position={[0, height, z]}>
               <mesh position={[0, 1.65, 0]}>
@@ -156,7 +213,11 @@ export function CaveCorridor({ gate }: { gate: CaveGate }) {
                   solid={false}
                 />
               ))}
-              {[-1, 1].map((side) => (
+              {madrid && [-1, 1].map((side) => <group key={side}>
+                <MadridLantern position={[side * 2.85, 2.72, 0.18]} />
+                <Crystal position={[side * 2.9, 0.12, 0.45]} scale={0.58} />
+              </group>)}
+              {!madrid && [-1, 1].map((side) => (
                 <mesh key={side} position={[side * 2.98, 2.4, 0.23]}>
                   <boxGeometry args={[0.18, 0.44, 0.24]} />
                   <meshStandardMaterial

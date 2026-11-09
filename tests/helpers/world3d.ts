@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import type { TeamId } from '../../packages/shared/world';
 const authBase = `http://127.0.0.1:${process.env.FFC_TEST_AUTH_PORT || 3100}`;
 export type State = {
   map: string;
@@ -9,6 +10,7 @@ export type State = {
   corrections: number;
   camera: { x: number; y: number; z: number; yaw: number; pitch: number };
   triangles: number;
+  geometries: number;
   grounded: boolean;
   moving: boolean;
   collisions: number;
@@ -24,7 +26,7 @@ export type State = {
 export async function state(page: Page): Promise<State> {
   return page.evaluate(() => (window as any).__world3d || {});
 }
-export async function loginFixture(page: Page, name: string) {
+export async function loginFixture(page: Page, name: string, team: TeamId = 'united') {
   const result = await fetch(`${authBase}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -37,16 +39,16 @@ export async function loginFixture(page: Page, name: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ nickname: name, favorite_team: 'united', avatar_key: 0 }),
+    body: JSON.stringify({ nickname: name, favorite_team: team, avatar_key: 0 }),
   });
   await page.addInitScript(
     (s) => localStorage.setItem('sb-127-auth-token', JSON.stringify(s)),
     session,
   );
 }
-export async function open(page: Page, live = true, name = 'Fan QA') {
+export async function open(page: Page, live = true, name = 'Fan QA', team: TeamId = 'united') {
   page.on('pageerror', (e) => console.log('Browser error:', e.message));
-  if (live) await loginFixture(page, name);
+  if (live) await loginFixture(page, name, team);
   else await page.route('**/socket.io/**', (r) => r.abort());
   await page.goto('/playtest');
   await expect

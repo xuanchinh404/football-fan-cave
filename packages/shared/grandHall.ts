@@ -1,3 +1,4 @@
+import { stalls, stallZ } from './store/catalog';
 // Metres, Y-up. This is the authoritative layout shared by rendering and Socket.IO validation.
 export const GRAND_SCALE = 0.025;
 export const GRAND_ORIGIN = { x: 3000, y: 3000 };
@@ -255,6 +256,7 @@ export const CAVE_RAILS: GrandSolid[] = avenueCuts.flatMap((c) =>
     base: c.height,
   })),
 );
+export const BANTER_TARGET = { x: -32, y: 1.32, z: 0.1, radius: 1.05 };
 export const GRAND_SOLIDS: GrandSolid[] = [
   { id: 'golden-ball', x: 0, z: 3, w: 6.6, d: 6.6, h: 2.1, base: 0, round: true },
   ...[-1, 1].flatMap((side) => [
@@ -280,18 +282,13 @@ export const GRAND_SOLIDS: GrandSolid[] = [
     h: 5,
     base: 0,
   })),
+  { id: 'arena-target', x: BANTER_TARGET.x, z: BANTER_TARGET.z, w: 2.05, d: 0.13, h: 1.95, base: BANTER_TARGET.y - 0.975 },
   { id: 'arena-back', x: -32, z: -1, w: 15, d: 0.6, h: 7, base: 0 },
   { id: 'arena-west', x: -39.2, z: 3.7, w: 0.5, d: 9, h: 4, base: 0 },
   { id: 'arena-east', x: -24.8, z: 3.7, w: 0.5, d: 9, h: 4, base: 0 },
   { id: 'prediction-orb', x: 24, z: -1.5, w: 2.4, d: 2.4, h: 2, base: 0, round: true },
   { id: 'ranking', x: 31, z: 2.4, w: 5, d: 0.7, h: 6.4, base: 0 },
-  ...[
-    [-24, 19],
-    [-14, 19],
-    [31, 14],
-    [41, 14],
-    [48, 5],
-  ].map(([x, z], i) => ({ id: `stall-${i}`, x, z, w: 5.5, d: 3.2, h: 1.25, base: 0 })),
+  ...stalls.map(({ id, x }) => ({ id, x, z: stallZ, w: 5.7, d: 3.2, h: 4.3, base: 0 })),
   ...[
     [18, 28],
     [25, 29],
@@ -444,11 +441,7 @@ export const GRAND_PLACES = [
   { id: 'prediction', label: 'Đền Dự Đoán · Miễn phí', x: 24, z: 3, kind: 'board' },
   { id: 'photo', label: 'Góc Chụp Ảnh', x: -15, z: 10, kind: 'photo' },
   { id: 'minigame', label: 'Sân Minigame · Sút bóng', x: 14, z: 18, kind: 'minigame' },
-  { id: 'shop', label: 'Quầy Cà Khịa', x: 41, z: 17, kind: 'shop' },
-  { id: 'topup', label: 'Quầy Nạp Xu', x: 31, z: 17, kind: 'wallet' },
-  { id: 'outfit', label: 'Quầy Trang Phục', x: -24, z: 22, kind: 'wallet' },
-  { id: 'effects', label: 'Quầy Hiệu Ứng', x: -14, z: 22, kind: 'wallet' },
-  { id: 'vip', label: 'Quầy VIP', x: 48, z: 8, kind: 'wallet' },
+  ...stalls.map(({ id, name, x }) => ({ id, label: name[0], x, z: stallZ - 2.65, kind: 'shop' as const })),
   { id: 'lounge', label: 'Khu Giao Lưu Fan', x: 25, z: 26, kind: 'event' },
   { id: 'ranking', label: 'Bảng Xếp Hạng Hang · Demo', x: 31, z: 4.5, kind: 'ranking' },
 ] as const;

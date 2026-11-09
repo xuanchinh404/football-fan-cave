@@ -1,3 +1,5 @@
+import { AvatarStoreExtras } from '../../store/avatarStore';
+import type { Loadout } from '../../../../../packages/shared/store/state';
 import { PlayerAvatar3D } from './PlayerAvatar3D';
 import { AssetModel } from './AssetModel';
 import { useEffect, useMemo, useRef } from 'react';
@@ -184,6 +186,8 @@ export function Character({
   jumping = false,
   seated = false,
   hideTemplateCrest,
+  loadout,
+  storeEffects,
 }: {
   color?: string;
   name: string;
@@ -194,6 +198,8 @@ export function Character({
   seated?: boolean;
   gesture?: string;
   hideTemplateCrest?: boolean;
+  loadout?: Loadout;
+  storeEffects?: boolean;
 }) {
   const root = useRef<THREE.Group>(null);
   useFrame((_, dt) => {
@@ -209,10 +215,14 @@ export function Character({
       <group ref={root}>
         <PlayerAvatar3D
           hideTemplateCrest={hideTemplateCrest}
+          loadout={loadout}
+          teamColor={color}
           motion={
             seated
               ? 'SitIdle'
-              : jumping
+              : gesture === 'Throw'
+                ? 'Throw'
+                : jumping
                 ? 'Jump'
                 : moving
                   ? running
@@ -231,6 +241,7 @@ export function Character({
           }
         />
       </group>
+      <AvatarStoreExtras loadout={loadout} facing={direction} effects={storeEffects} />
       {name && <NameTag name={name} color={color} />}
     </group>
   );
